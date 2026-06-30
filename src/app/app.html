@@ -1,0 +1,25 @@
+<main class="page">
+  <section class="hero">
+    <p class="eyebrow">Angular 22</p>
+    <h1>網站開發常用線上工具集合</h1>
+    <p class="intro">
+      這是一個以最新 Angular 建立的 web 介面，集中整理網站開發常見的格式化、轉換與除錯工具。
+    </p>
+  </section>
+
+  <section class="groups" aria-label="工具分類">
+    @for (group of toolGroups; track group.name) {
+      <article class="group-card">
+        <h2>{{ group.name }}</h2>
+        <ul>
+          @for (tool of group.tools; track tool) {
+            <li>
+              <span>{{ tool }}</span>
+              <small>即將推出</small>
+            </li>
+          }
+        </ul>
+      </article>
+    }
+  </section>
+</main>
