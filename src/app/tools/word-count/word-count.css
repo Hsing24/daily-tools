@@ -1,21 +1,29 @@
-/* CSS for WordCount component aligned with DESIGN.md DevTool-Terminal-design-system */
+/* word-count scoped CSS.
+ *
+ * Almost all styling is done with Master CSS atomic classes in the template,
+ * per AGENTS.md. Only the things Master CSS can't cleanly express live here:
+ *   1. the base monospace font for the whole tool,
+ *   2. the textarea placeholder color (a pseudo-element),
+ *   3. the Zsh / p10k powerline breadcrumb chevrons (clip-path polygons).
+ * Per DESIGN.md: zero rounded corners, zero shadows, flat solid fills.
+ */
 
-/* --- Tool Page Wrapper --- */
-.tool-page-wrapper {
-  color: #c9d5e8; /* {colors.ink} */
+.word-count-root {
   font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
 }
 
-/* --- Breadcrumb (Zsh Chevron) --- */
+.word-count-textarea::placeholder {
+  color: #3a4a66; /* {colors.ink-disabled} */
+}
+
+/* --- Breadcrumb (Zsh / powerlevel10k chevron trail) --- */
 .breadcrumb-zsh {
   display: flex;
   align-items: center;
-  margin-bottom: 24px;
   height: 28px;
-  gap: -14px; /* adjacent segments overlap by 14px so the chevron sits over the next segment */
+  margin-bottom: 24px;
 }
 
-/* Base styles for all segments to reset any defaults */
 .breadcrumb-segment-home,
 .breadcrumb-segment-category,
 .breadcrumb-segment-current {
@@ -29,9 +37,10 @@
   box-sizing: border-box;
 }
 
+/* 1st segment — primary (mint / action) */
 .breadcrumb-segment-home {
-  background-color: #15263f; /* {colors.canvas-elevated-2} */
-  color: #e6f1ff; /* {colors.ink-bright} */
+  background-color: #3fe0c5; /* {colors.primary} */
+  color: #0a1a2f; /* {colors.on-primary} */
   padding: 4px 18px 4px 12px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
   margin-right: -14px;
@@ -39,260 +48,31 @@
 }
 
 .breadcrumb-segment-home:hover {
-  background-color: #1e3050;
+  background-color: #6bffe0; /* {colors.primary-bright} */
 }
 
+/* 2nd segment — gold (status) */
 .breadcrumb-segment-category {
-  background-color: #2bae96; /* {colors.primary-dim} */
-  color: #0a1a2f; /* {colors.on-primary} */
+  background-color: #f1b434; /* {colors.gold} */
+  color: #0a1a2f; /* {colors.on-gold} */
   padding: 4px 18px 4px 18px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   margin-right: -14px;
   z-index: 2;
 }
 
+/* 3rd segment — warning (red / destructive = current location) */
 .breadcrumb-segment-current {
-  background-color: #3fe0c5; /* {colors.primary} */
-  color: #0a1a2f; /* {colors.on-primary} */
+  background-color: #e03c31; /* {colors.warning} */
+  color: #ffffff; /* {colors.on-warning} */
   padding: 4px 18px 4px 18px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   z-index: 1;
 }
 
-/* Breadcrumb Collapsing (≤ 767px) */
+/* Breadcrumb collapsing: hide the category segment on narrow viewports (≤ 767px) */
 @media (max-width: 767.98px) {
   .breadcrumb-segment-category {
     display: none;
   }
-}
-
-/* --- Main Tool Panel Container --- */
-.tool-panel {
-  background-color: #122339; /* {colors.canvas-elevated} */
-  color: #c9d5e8; /* {colors.ink} */
-  border: 2px solid #3fe0c5; /* {borders.chunky} */
-  padding: 24px;
-  box-shadow: 4px 4px 0 0 #050e1c; /* {elevation.pixel-md} default */
-  box-sizing: border-box;
-}
-
-/* Focus outline when the whole card is active, if needed, or visual focus highlight */
-.tool-panel:focus-within {
-  border: 2px solid #6bffe0; /* bright highlight border when working on it */
-  box-shadow: 8px 8px 0 0 #050e1c; /* upgrading to pixel-lg shadow on focus */
-}
-
-/* --- Panel Header --- */
-.tool-panel-header {
-  margin-bottom: 24px;
-}
-
-.tool-eyebrow {
-  display: block;
-  font-family: VT323, ui-monospace, monospace;
-  font-size: 18px;
-  color: #6a7c99; /* {colors.ink-muted} */
-  letter-spacing: 2px;
-  line-height: 1.0;
-  margin-bottom: 8px;
-}
-
-.tool-panel-title {
-  font-family: VT323, 'Press Start 2P', ui-monospace, monospace;
-  font-size: 36px;
-  color: #3fe0c5; /* {colors.primary} */
-  line-height: 1.1;
-  margin: 0 0 12px 0;
-  font-weight: 400;
-}
-
-.tool-panel-desc {
-  font-size: 14px;
-  color: #c9d5e8; /* {colors.ink} */
-  line-height: 1.55;
-  margin: 0;
-}
-
-/* --- Alerts --- */
-.alert-box {
-  padding: 12px;
-  margin-bottom: 16px;
-  background-color: #8a2018; /* {colors.warning-dim} */
-  color: #ffffff; /* {colors.on-warning} */
-  border: 2px solid #e03c31; /* {borders.chunky-warning} */
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-/* --- Inputs & Textarea --- */
-.input-group {
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-}
-
-.input-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #e6f1ff; /* {colors.ink-bright} */
-}
-
-.textarea-field {
-  width: 100%;
-  height: 240px;
-  padding: 16px;
-  background-color: #081424; /* {colors.canvas-input} */
-  color: #e6f1ff; /* {colors.ink-bright} */
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  border: 2px solid #1e3050; /* {colors.border-muted} - quiet when unfocused */
-  outline: none;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.textarea-field:focus {
-  border-color: #3fe0c5; /* {colors.primary} and no global outline */
-}
-
-.textarea-field::placeholder {
-  color: #3a4a66; /* {colors.ink-disabled} */
-}
-
-/* --- Action Buttons --- */
-.actions-group {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-/* --- Primary Button (貼上等主要動作) --- */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #3fe0c5; /* {colors.primary} */
-  color: #0a1a2f; /* {colors.on-primary} */
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  border: 2px solid #3fe0c5;
-  padding: 10px 20px;
-  cursor: pointer;
-  box-shadow: 4px 4px 0 0 #050e1c; /* {elevation.pixel-md} */
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
-  outline: none;
-}
-
-.btn-primary:hover,
-.btn-primary:focus-visible {
-  background-color: #6bffe0; /* {colors.primary-bright} */
-  border-color: #6bffe0;
-}
-
-.btn-primary:focus-visible {
-  outline: 2px solid #6bffe0;
-  outline-offset: 2px;
-}
-
-.btn-primary:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 0 0 transparent;
-}
-
-/* --- Warning Button (清除等破壞/警告動作) --- */
-.btn-warning {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #e03c31; /* {colors.warning} */
-  color: #ffffff; /* {colors.on-warning} */
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  border: 2px solid #e03c31;
-  padding: 10px 20px;
-  cursor: pointer;
-  box-shadow: 4px 4px 0 0 #050e1c; /* {elevation.pixel-md} */
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
-  outline: none;
-}
-
-.btn-warning:hover,
-.btn-warning:focus-visible {
-  background-color: #8a2018; /* {colors.warning-dim} */
-  border-color: #e03c31;
-}
-
-.btn-warning:focus-visible {
-  outline: 2px solid #e03c31;
-  outline-offset: 2px;
-}
-
-.btn-warning:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 0 0 transparent;
-}
-
-/* --- Statistics Section -- */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-/* Stats responsive behaviors (1 col -> 2 cols -> 4 cols) */
-@media (max-width: 1023px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.stat-card {
-  padding: 16px;
-  background-color: #15263f; /* {colors.canvas-elevated-2} */
-  border: 2px solid #1e3050; /* {colors.border-muted} */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 2px 2px 0 0 #050e1c; /* {elevation.pixel-sm} */
-  box-sizing: border-box;
-}
-
-.stat-card-highlight {
-  border-color: #f1b434; /* {colors.border-gold} for Word Count (混合) card */
-  box-shadow: 2px 2px 0 0 #050e1c;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #6a7c99; /* {colors.ink-muted} */
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-family: VT323, ui-monospace, monospace;
-  font-size: 42px;
-  color: #3fe0c5; /* {colors.primary} */
-  line-height: 1.0;
-}
-
-.stat-value-highlight {
-  font-family: VT323, ui-monospace, monospace;
-  font-size: 42px;
-  color: #f1b434; /* {colors.gold} */
-  line-height: 1.0;
 }

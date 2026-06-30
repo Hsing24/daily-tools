@@ -166,10 +166,13 @@ borders:
   chunky-warning: "2px solid {colors.border-warning}"
 
 elevation:
+  # Shadows are disabled system-wide. Depth comes ONLY from flat surface-color
+  # stepping (canvas → canvas-elevated → canvas-elevated-2) and chunky borders.
+  # The pixel-* tokens are retained for reference but MUST resolve to none.
   none: "0 0 0 0 transparent"
-  pixel-sm: "2px 2px 0 0 {colors.canvas-deep}"
-  pixel-md: "4px 4px 0 0 {colors.canvas-deep}"
-  pixel-lg: "8px 8px 0 0 {colors.canvas-deep}"
+  pixel-sm: "0 0 0 0 transparent"
+  pixel-md: "0 0 0 0 transparent"
+  pixel-lg: "0 0 0 0 transparent"
 
 components:
   global-sidebar:
@@ -223,22 +226,22 @@ components:
     height: 28px
     gap: -14px # adjacent segments overlap by 14px so the chevron sits over the next segment
   breadcrumb-segment-home:
-    backgroundColor: "{colors.canvas-elevated-2}"
-    textColor: "{colors.ink-bright}"
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
     padding: 4px 18px 4px 12px
     clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)"
   breadcrumb-segment-category:
-    backgroundColor: "{colors.primary-dim}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.gold}"
+    textColor: "{colors.on-gold}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
     padding: 4px 18px 4px 18px
     clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)"
   breadcrumb-segment-current:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.warning}"
+    textColor: "{colors.on-warning}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
     padding: 4px 18px 4px 18px
@@ -263,50 +266,49 @@ components:
     textColor: "{colors.on-primary}"
     typography: "{typography.mono-button}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.primary}"
+    border: none
     padding: 10px 20px
-    elevation: "{elevation.pixel-md}"
+    elevation: "{elevation.none}"
   button-primary-active:
     backgroundColor: "{colors.primary-bright}"
     textColor: "{colors.on-primary}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.primary-bright}"
+    border: none
     elevation: "{elevation.none}"
-    transform: "translate(4px, 4px)"
   button-primary-disabled:
     backgroundColor: "{colors.canvas-elevated}"
     textColor: "{colors.ink-disabled}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.border-muted}"
+    border: none
     elevation: "{elevation.none}"
   button-secondary:
     backgroundColor: "{colors.gold}"
     textColor: "{colors.on-gold}"
     typography: "{typography.mono-button}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.gold}"
+    border: none
     padding: 10px 20px
-    elevation: "{elevation.pixel-md}"
+    elevation: "{elevation.none}"
   button-warning:
     backgroundColor: "{colors.warning}"
     textColor: "{colors.on-warning}"
     typography: "{typography.mono-button}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.warning}"
+    border: none
     padding: 10px 20px
-    elevation: "{elevation.pixel-md}"
+    elevation: "{elevation.none}"
   button-ghost:
     backgroundColor: transparent
     textColor: "{colors.primary}"
     typography: "{typography.mono-button}"
     rounded: "{rounded.none}"
-    border: "{borders.chunky}"
+    border: none
     padding: 10px 20px
   button-ghost-focus:
     backgroundColor: "{colors.canvas-elevated}"
     textColor: "{colors.primary-bright}"
     rounded: "{rounded.none}"
-    border: "2px solid {colors.primary-bright}"
+    border: none
   key-chip:
     backgroundColor: "{colors.canvas-elevated-2}"
     textColor: "{colors.ink-bright}"
@@ -420,9 +422,9 @@ Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Netw
 - A single mint-green action color (`{colors.primary}` — #3FE0C5) carries every interactive surface — no second brand color exists.
 - Three semantic accents only: mint (action), gold (status/secondary), red (destructive).
 - Chunky pixel borders at 2px (default) and 4px (focused / modal); zero rounded corners anywhere.
-- Hard pixel-offset elevation (`4px 4px 0 0 canvas-deep`) — no blurred drop-shadows, ever.
+- No shadows anywhere — depth comes only from flat surface-color stepping and chunky borders; buttons are flat, borderless solid-color blocks.
 - One ambient effect: the CRT scanline overlay (~4% alpha repeating gradient).
-- Zsh-style chevron breadcrumb segments — geometry built with `clip-path`, not SVG, so they scale crisply.
+- Zsh-style chevron breadcrumb segments — a powerline "arrow trail" (cf. powerlevel10k / p10k prompt) built with `clip-path`, not SVG, so they scale crisply. Segment fills run mint → gold → red (action → status → destructive).
 - Cmd+K command palette as the primary input modality; every tool reachable in ≤ 2 keystrokes.
 - Text-only sidebar nav — no icons (PRD §2 requirement).
 - Desktop-first layout optimized for wide-screen terminal simulations; mobile is a graceful degradation, not a primary target.
@@ -562,15 +564,13 @@ DevTool Terminal does not aspire to modern marketing-page whitespace. The produc
 
 | Level | Treatment | Use |
 |---|---|---|
-| Flat | No border, no shadow | Sidebar nav items, breadcrumb segments, body copy |
+| Flat | No border, no shadow | Sidebar nav items, breadcrumb segments, buttons, body copy |
 | Hairline | `{borders.hairline}` (1px `{colors.border-muted}`) | In-panel dividers, key-chip outlines, default text-input |
-| Chunky | `{borders.chunky}` (2px `{colors.border-default}`) | Tool panels, primary buttons, focused inputs, toasts |
+| Chunky | `{borders.chunky}` (2px `{colors.border-default}`) | Tool panels, focused inputs |
 | Chunky Thick | `{borders.chunky-thick}` (4px `{colors.border-default}`) | Focused/modal panel, Cmd+K modal box |
-| Pixel Drop SM | `{elevation.pixel-sm}` (2px 2px 0 0) | Toasts, key chips, subtle raised elements |
-| Pixel Drop MD | `{elevation.pixel-md}` (4px 4px 0 0) | Default elevation for primary, secondary, warning buttons |
-| Pixel Drop LG | `{elevation.pixel-lg}` (8px 8px 0 0) | Cmd+K modal, focused tool panel |
+| Shadows | Disabled system-wide | Never — use surface stepping or border thickness instead |
 
-**Shadow philosophy.** Elevation is rendered exclusively as **hard pixel-offset shadows** — `Npx Npx 0 0 {colors.canvas-deep}` — never with a blur radius. On active/pressed states, the shadow collapses to `0 0 0 0 transparent` and the element translates by the same offset (`translate(4px, 4px)` for `{component.button-primary-active}`), producing the unmistakable "pixel button being pressed into the canvas" feel. This is the system-wide micro-interaction, equivalent to Apple's `scale(0.95)` but with retro grammar.
+**Shadow philosophy.** There are **no shadows** in this system — no blur, and no hard pixel-offset drops either. Elevation is communicated purely through flat surface-color stepping (`canvas → canvas-elevated → canvas-elevated-2`) and chunky borders. On active/pressed states, buttons brighten their fill (`{colors.primary}` → `{colors.primary-bright}`) rather than moving or dropping a shadow. This keeps every surface a flat, crisp pixel block.
 
 ### CRT Scanline Treatment
 
@@ -617,7 +617,7 @@ The Zsh-style breadcrumb segments are the closest the system gets to a non-recta
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   ```
 - **Overlap**: adjacent segments are negatively margined by `-14px` so the right chevron of segment N sits over segment N+1. The chevron reads as "pointing to the next segment."
-- **Color progression**: home → `{colors.canvas-elevated-2}` (muted) → category → `{colors.primary-dim}` → current → `{colors.primary}` (full mint). Visually walks from muted to bright as the user descends into the tool.
+- **Color progression**: home → `{colors.primary}` (mint / action) → category → `{colors.gold}` (status) → current → `{colors.warning}` (red / destructive). The trail walks through all three semantic accents, mirroring a powerlevel10k (p10k) shell prompt.
 
 ### Image & Icon Policy
 
@@ -642,11 +642,11 @@ The Zsh-style breadcrumb segments are the closest the system gets to a non-recta
 
 ### Breadcrumb (Zsh Chevron)
 
-**`breadcrumb-zsh`** — A horizontal sequence of three colored chevron segments rendered above each tool's title: Home > Category > Current Tool. Height 28px, segments overlap by 14px to create the continuous "arrow trail" pattern. Each segment is a single `<a>` (or `<span>` on the current item) with `clip-path` shaping.
+**`breadcrumb-zsh`** — A horizontal sequence of three colored chevron segments rendered above each tool's title: Home > Category > Current Tool. Height 28px, segments overlap by 14px to create the continuous powerline "arrow trail" pattern of a Zsh / powerlevel10k (p10k) prompt. Each segment is a single `<a>` (or `<span>` on the current item) with `clip-path` shaping. The fills run through the three semantic accents in order — action → status → destructive.
 
-- `{component.breadcrumb-segment-home}` — `{colors.canvas-elevated-2}` fill, `{colors.ink-bright}` text. Always reads "DevTool".
-- `{component.breadcrumb-segment-category}` — `{colors.primary-dim}` fill, `{colors.on-primary}` text. The tool category (e.g., "Encoders", "Formatters").
-- `{component.breadcrumb-segment-current}` — `{colors.primary}` fill, `{colors.on-primary}` text. The current tool name.
+- `{component.breadcrumb-segment-home}` — `{colors.primary}` (mint) fill, `{colors.on-primary}` text. Always reads "DevTool".
+- `{component.breadcrumb-segment-category}` — `{colors.gold}` fill, `{colors.on-gold}` text. The tool category (e.g., "Encoders", "Formatters").
+- `{component.breadcrumb-segment-current}` — `{colors.warning}` (red) fill, `{colors.on-warning}` text. The current tool name.
 
 ### Tool Panel
 
@@ -658,14 +658,14 @@ The Zsh-style breadcrumb segments are the closest the system gets to a non-recta
 
 ### Buttons
 
-All buttons are sharp rectangles. All carry a 4px hard pixel-offset shadow by default. Active state collapses the shadow and translates the button by the same offset — producing the "pixel press" feel.
+All buttons are sharp, **borderless**, flat solid-color rectangles — no border and no shadow. They read as pixel blocks. Active state brightens the fill instead of moving or dropping a shadow.
 
-- **`button-primary`** — Background `{colors.primary}`, text `{colors.on-primary}` (canvas dark) in `{typography.mono-button}` (14px / 600 / +1px tracking), 2px mint border, padding 10px × 20px, `{elevation.pixel-md}`. The default action button.
-- **`button-primary-active`** — Background brightens to `{colors.primary-bright}`, shadow collapses, button translates `4px 4px`.
-- **`button-primary-disabled`** — Background `{colors.canvas-elevated}`, text `{colors.ink-disabled}`, 2px `{colors.border-muted}` border. No shadow. Cursor `not-allowed`.
-- **`button-secondary`** — Same chassis as primary but on gold. Used for secondary affirmative actions ("Copy", "Save Preset"). Never used for the page's primary action.
-- **`button-warning`** — Same chassis on warning red. Used for destructive actions ("Reset", "Clear All", "Delete History").
-- **`button-ghost`** — Transparent background, mint border, mint text. Used inside dense surfaces where a filled button would dominate. Focus state fills with `{colors.canvas-elevated}` and brightens text to `{colors.primary-bright}`.
+- **`button-primary`** — Background `{colors.primary}`, text `{colors.on-primary}` (canvas dark) in `{typography.mono-button}` (14px / 600 / +1px tracking), no border, padding 10px × 20px, no shadow. The default action button.
+- **`button-primary-active`** — Background brightens to `{colors.primary-bright}`. No translate, no shadow.
+- **`button-primary-disabled`** — Background `{colors.canvas-elevated}`, text `{colors.ink-disabled}`, no border. Cursor `not-allowed`.
+- **`button-secondary`** — Same borderless chassis on gold. Used for secondary affirmative actions ("Copy", "Save Preset"). Never used for the page's primary action.
+- **`button-warning`** — Same borderless chassis on warning red. Used for destructive actions ("Reset", "Clear All", "Delete History").
+- **`button-ghost`** — Transparent background, mint text, no border. Used inside dense surfaces where a filled button would dominate. Focus state fills with `{colors.canvas-elevated}` and brightens text to `{colors.primary-bright}`.
 
 ### Inputs
 
@@ -705,7 +705,8 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 ### Do
 - Use `{colors.primary}` (mint #3FE0C5) for every interactive element. Gold and red are reserved for status and destructive actions, never as a third action color.
 - Render all text — body, button, code, headline — in a monospace face. VT323 for pixel display, IBM Plex Mono for everything else.
-- Apply hard pixel-offset shadows (`Npx Npx 0 0 {colors.canvas-deep}`) for elevation. Collapse shadow + translate on active state to get the "pixel press" effect.
+- Apply **no shadows** — not even hard pixel-offset drops. Convey depth with flat surface-color stepping (`canvas → canvas-elevated → canvas-elevated-2`) and chunky borders. On a button's active state, brighten the fill instead.
+- Keep buttons **borderless**: flat solid-color blocks with no border and no shadow. Distinguish them by fill color (mint / gold / red), not by outline.
 - Build chevron breadcrumb shapes with `clip-path`, not SVG, so they remain crisp at any size.
 - Overlay the canvas with the CRT scanline gradient at exactly ~4% alpha. Gate any flicker animation behind `prefers-reduced-motion: no-preference`.
 - Use chunky 2px borders by default and 4px borders for focused/modal surfaces. Border color signals semantic intent (mint = action/focused, gold = warning, red = error).
@@ -714,7 +715,8 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 
 ### Don't
 - Don't add `border-radius` anywhere. The pixel-terminal grammar collapses if any corner is rounded.
-- Don't use blurred drop-shadows (`box-shadow: 0 4px 12px rgba(...)`). All elevation is hard-edged.
+- Don't use any shadows — neither blurred drop-shadows (`box-shadow: 0 4px 12px rgba(...)`) nor hard pixel-offset drops. Depth is surface stepping + borders only.
+- Don't give buttons a border. Buttons are flat, borderless solid-color blocks; the fill color carries the meaning.
 - Don't introduce gradients as backgrounds. The CRT scanline is the only repeating pattern.
 - Don't use proportional fonts (sans-serif, serif). The whole layout assumes monospace cell width.
 - Don't use weight 500 or italic. The ladder is 400 / 600 only; emphasis is weight or color, never slant.
