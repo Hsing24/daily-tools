@@ -230,3 +230,18 @@
     transition: none;
   }
 }
+
+/* --- CRT Scanline Ambient Overlay (DESIGN.md) --- */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(63, 224, 197, 0.04) 0px,
+    rgba(63, 224, 197, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}

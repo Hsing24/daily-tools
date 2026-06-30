@@ -1,0 +1,108 @@
+<div class="tool-page-wrapper">
+  <!-- Zsh-style Breadcrumbs -->
+  <nav class="breadcrumb-zsh" aria-label="導覽路徑">
+    <a routerLink="/" class="breadcrumb-segment-home">DevTool</a>
+    <span class="breadcrumb-segment-category">文字工具</span>
+    <span class="breadcrumb-segment-current">字數統計</span>
+  </nav>
+
+  <!-- Main Tool Panel Container -->
+  <div class="tool-panel">
+    <!-- Panel Header -->
+    <div class="tool-panel-header">
+      <span class="tool-eyebrow">TEXT UTILITIES v1.0.0</span>
+      <h2 class="tool-panel-title">字數統計 (Word Count)</h2>
+      <p class="tool-panel-desc">
+        分析您輸入的文字，依據混合規則提供精準的字元數、字數與行數統計。適合中英混排、含 emoji 的內容統計。
+      </p>
+    </div>
+
+    <!-- Alert/Error Area -->
+    @if (alertMessage()) {
+      <div
+        data-testid="alert-message"
+        role="alert"
+        aria-live="assertive"
+        class="alert-box"
+      >
+        ⚠️ {{ alertMessage() }}
+      </div>
+    }
+
+    <!-- Inputs & Textarea -->
+    <div class="input-group">
+      <label for="word-count-input" class="input-label">請輸入、貼上欲統計之文字：</label>
+      <textarea
+        id="word-count-input"
+        #textarea
+        [value]="text()"
+        (input)="onInput(textarea.value)"
+        placeholder="請在此輸入或貼上文字，系統將即時進行字數計算..."
+        class="textarea-field"
+      ></textarea>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions-group">
+      <button
+        type="button"
+        data-testid="btn-paste"
+        (click)="paste()"
+        class="btn-primary"
+      >
+        貼上文字
+      </button>
+      <button
+        type="button"
+        data-testid="btn-clear"
+        (click)="clear()"
+        class="btn-warning"
+      >
+        清除內容
+      </button>
+    </div>
+
+    <!-- Statistics Section -->
+    <div
+      class="stats-grid"
+      role="status"
+      aria-live="polite"
+    >
+      <!-- 字元數 (含空白) -->
+      <div class="stat-card">
+        <span class="stat-label">字元數 (含空白)</span>
+        <span
+          data-testid="stat-chars-with-spaces"
+          class="stat-value"
+        >{{ stats().charactersWithSpaces }}</span>
+      </div>
+
+      <!-- 字元數 (不含空白) -->
+      <div class="stat-card">
+        <span class="stat-label">字元數 (不含空白)</span>
+        <span
+          data-testid="stat-chars-no-spaces"
+          class="stat-value"
+        >{{ stats().charactersNoSpaces }}</span>
+      </div>
+
+      <!-- 字數 (混合) -->
+      <div class="stat-card stat-card-highlight">
+        <span class="stat-label">字數 (混合規則)</span>
+        <span
+          data-testid="stat-words"
+          class="stat-value-highlight"
+        >{{ stats().words }}</span>
+      </div>
+
+      <!-- 行數 -->
+      <div class="stat-card">
+        <span class="stat-label">行數</span>
+        <span
+          data-testid="stat-lines"
+          class="stat-value"
+        >{{ stats().lines }}</span>
+      </div>
+    </div>
+  </div>
+</div>

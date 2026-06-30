@@ -27,9 +27,9 @@ description: "Task list for 字數統計工具 implementation"
 
 **Purpose**: 建立工具目錄、元件骨架、路由與目錄登錄
 
-- [ ] T001 在 `src/app/tools/word-count/` 建立 standalone 元件骨架：`word-count.ts`（`selector: 'app-word-count'`、`templateUrl`、`styleUrl`，class `WordCount`）、`word-count.html`（暫置最小標記）、`word-count.css`（空）
-- [ ] T002 [P] 在 `src/app/app.routes.ts` 的 `Layout` children 新增 lazy route：`{ path: 'word-count', loadComponent: () => import('./tools/word-count/word-count').then((m) => m.WordCount) }`
-- [ ] T003 [P] 在 `src/app/layout/layout.ts` 的 `toolGroups` 新增分組「文字工具」，項目 `{ label: '字數統計', route: 'word-count', available: true }`
+- [X] T001 在 `src/app/tools/word-count/` 建立 standalone 元件骨架：`word-count.ts`（`selector: 'app-word-count'`、`templateUrl`、`styleUrl`，class `WordCount`）、`word-count.html`（暫置最小標記）、`word-count.css`（空）
+- [X] T002 [P] 在 `src/app/app.routes.ts` 的 `Layout` children 新增 lazy route：`{ path: 'word-count', loadComponent: () => import('./tools/word-count/word-count').then((m) => m.WordCount) }`
+- [X] T003 [P] 在 `src/app/layout/layout.ts` 的 `toolGroups` 新增分組「文字工具」，項目 `{ label: '字數統計', route: 'word-count', available: true }`
 
 **Checkpoint**: 路由可導覽至空白的 `app-word-count` 頁面，側欄出現可點擊的「字數統計」
 
@@ -41,8 +41,8 @@ description: "Task list for 字數統計工具 implementation"
 
 **⚠️ CRITICAL**: US1 與 US2 皆依賴此計算函式，必須先完成
 
-- [ ] T004 [P] 依 [contracts/word-count-stats.md](contracts/word-count-stats.md) 的驗收範例表，在 `src/app/tools/word-count/word-count-stats.spec.ts` 撰寫 `computeTextStats` 單元測試（涵蓋空字串、`hello world`、`你好世界`、`你好 world`、純空白、多行、尾端換行、emoji（每個算 1 字）、全形標點），確認測試先 FAIL
-- [ ] T005 在 `src/app/tools/word-count/word-count-stats.ts` 實作 `TextStats` 介面與純函式 `computeTextStats(text: string): TextStats`：碼點計字元數、`\s` 判空白、CJK（`/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu`）與 emoji（`/\p{Extended_Pictographic}/gu`）各計數後替換為空白，剩餘以 `/\s+/` 分詞，三者相加、行數空字串為 0 否則 `split(/\r\n|\r|\n/).length`，使 T004 測試全綠
+- [X] T004 [P] 依 [contracts/word-count-stats.md](contracts/word-count-stats.md) 的驗收範例表，在 `src/app/tools/word-count/word-count-stats.spec.ts` 撰寫 `computeTextStats` 單元測試（涵蓋空字串、`hello world`、`你好世界`、`你好 world`、純空白、多行、尾端換行、emoji（每個算 1 字）、全形標點），確認測試先 FAIL
+- [X] T005 在 `src/app/tools/word-count/word-count-stats.ts` 實作 `TextStats` 介面與純函式 `computeTextStats(text: string): TextStats`：碼點計字元數、`\s` 判空白、CJK（`/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu`）與 emoji（`/\p{Extended_Pictographic}/gu`）各計數後替換為空白，剩餘以 `/\s+/` 分詞，三者相加、行數空字串為 0 否則 `split(/\r\n|\r|\n/).length`，使 T004 測試全綠
 
 **Checkpoint**: 核心計算函式通過所有契約範例測試，可被元件取用
 
@@ -56,15 +56,15 @@ description: "Task list for 字數統計工具 implementation"
 
 ### Tests for User Story 1 ⚠️（先寫並確認 FAIL）
 
-- [ ] T006 [US1] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫測試：設定 textarea 值並觸發 `input` 後，`await fixture.whenStable()`，統計 DOM 顯示對應數字；初始（空）狀態四項顯示 0
-- [ ] T007 [US1] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫「貼上」測試：stub `navigator.clipboard.readText` 回傳文字 → 按貼上後內容取代輸入區並更新統計；stub reject → 顯示提示訊息（jsdom 需 stub clipboard）
+- [X] T006 [US1] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫測試：設定 textarea 值並觸發 `input` 後，`await fixture.whenStable()`，統計 DOM 顯示對應數字；初始（空）狀態四項顯示 0
+- [X] T007 [US1] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫「貼上」測試：stub `navigator.clipboard.readText` 回傳文字 → 按貼上後內容取代輸入區並更新統計；stub reject → 顯示提示訊息（jsdom 需 stub clipboard）
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] 在 `src/app/tools/word-count/word-count.ts` 加入 `text = signal('')` 與 `stats = computed(() => computeTextStats(this.text()))`，並提供 `onInput(value: string)` 更新 text signal
-- [ ] T009 [US1] 在 `src/app/tools/word-count/word-count.html` 加入 `<label for>` 關聯的 `<textarea>`（`(input)` 綁定）與下方統計區（四項：字元數、不含空白字元數、字數、行數），統計區加 `role="status" aria-live="polite"`，空狀態顯示 0
-- [ ] T010 [US1] 在 `word-count.ts` 加入 `paste()` 方法：以 try/catch 呼叫 `navigator.clipboard.readText()`，成功則 `text.set(...)`；失敗/不支援則設定 zh-Hant 提示訊息 signal；在 `word-count.html` 加入「貼上」`<button type="button">` 與提示訊息顯示區（`aria-live`）
-- [ ] T011 [US1] 在 `word-count.html`/`word-count.css` 套用 DESIGN.md token：面板 `tool-panel`、輸入區 `text-input`/`textarea-code` 取向、「貼上」`button-primary`、統計數字 `pixel-h3`/`mono-h4`、標籤 `mono-caption`；零圓角/陰影/漸層，焦點 outline 保留
+- [X] T008 [US1] 在 `src/app/tools/word-count/word-count.ts` 加入 `text = signal('')` 與 `stats = computed(() => computeTextStats(this.text()))`，並提供 `onInput(value: string)` 更新 text signal
+- [X] T009 [US1] 在 `src/app/tools/word-count/word-count.html` 加入 `<label for>` 關聯的 `<textarea>`（`(input)` 綁定）與下方統計區（四項：字元數、不含空白字元數、字數、行數），統計區加 `role="status" aria-live="polite"`，空狀態顯示 0
+- [X] T010 [US1] 在 `word-count.ts` 加入 `paste()` 方法：以 try/catch 呼叫 `navigator.clipboard.readText()`，成功則 `text.set(...)`；失敗/不支援則設定 zh-Hant 提示訊息 signal；在 `word-count.html` 加入「貼上」`<button type="button">` 與提示訊息顯示區（`aria-live`）
+- [X] T011 [US1] 在 `word-count.html`/`word-count.css` 套用 DESIGN.md token：面板 `tool-panel`、輸入區 `text-input`/`textarea-code` 取向、「貼上」`button-primary`、統計數字 `pixel-h3`/`mono-h4`、標籤 `mono-caption`；零圓角/陰影/漸層，焦點 outline 保留
 
 **Checkpoint**: US1 可獨立運作——輸入/貼上即時更新四項統計，MVP 可展示
 
@@ -78,12 +78,12 @@ description: "Task list for 字數統計工具 implementation"
 
 ### Tests for User Story 2 ⚠️（先寫並確認 FAIL）
 
-- [ ] T012 [US2] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫測試：設定內容後按「清除」按鈕，確認 textarea 值為空且四項統計顯示 0；空狀態下再次按「清除」不報錯
+- [X] T012 [US2] 在 `src/app/tools/word-count/word-count.spec.ts` 撰寫測試：設定內容後按「清除」按鈕，確認 textarea 值為空且四項統計顯示 0；空狀態下再次按「清除」不報錯
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] 在 `src/app/tools/word-count/word-count.ts` 加入 `clear()` 方法將 `text.set('')`（並清空任何提示訊息）
-- [ ] T014 [US2] 在 `src/app/tools/word-count/word-count.html` 加入「清除」`<button type="button">`（DESIGN.md `button-warning`）綁定 `clear()`
+- [X] T013 [US2] 在 `src/app/tools/word-count/word-count.ts` 加入 `clear()` 方法將 `text.set('')`（並清空任何提示訊息）
+- [X] T014 [US2] 在 `src/app/tools/word-count/word-count.html` 加入「清除」`<button type="button">`（DESIGN.md `button-warning`）綁定 `clear()`
 
 **Checkpoint**: US1 與 US2 皆可獨立運作
 
@@ -93,9 +93,9 @@ description: "Task list for 字數統計工具 implementation"
 
 **Purpose**: 跨故事的收尾與驗證
 
-- [ ] T015 [P] 無障礙複查：Tab 走訪 textarea/貼上/清除焦點可見、`<label>` 關聯、統計與提示為 live region（對照 spec FR-011）
-- [ ] T016 執行 [quickstart.md](quickstart.md) 手動驗收 6 項情境
-- [ ] T017 執行 `source ~/.nvm/nvm.sh && nvm use 26 && pnpm test && pnpm run build`，確認測試全綠且建置成功；必要時以 Prettier 預設格式化新檔
+- [X] T015 [P] 無障礙複查：Tab 走訪 textarea/貼上/清除焦點可見、`<label>` 關聯、統計與提示為 live region（對照 spec FR-011）
+- [X] T016 執行 [quickstart.md](quickstart.md) 手動驗收 6 項情境
+- [X] T017 執行 `source ~/.nvm/nvm.sh && nvm use 26 && pnpm test && pnpm run build`，確認測試全綠且建置成功；必要時以 Prettier 預設格式化新檔
 
 ---
 
