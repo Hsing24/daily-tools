@@ -1,21 +1,21 @@
-<main class="page">
-  <section class="hero">
-    <p class="eyebrow">Angular 22</p>
-    <h1>網站開發常用線上工具集合</h1>
-    <p class="intro">
+<main class="min-h:100vh p:64 bg:#111827 fg:#e2e8f0">
+  <section class="max-w:1080 m:auto mb:32">
+    <p class="m:0 mb:12 fg:#38bdf8 font:700 letter-spacing:.08em text-transform:uppercase">Angular 22</p>
+    <h1 class="m:0 font-size:56 line-height:1.15">網站開發常用線上工具集合</h1>
+    <p class="max-w:768 mt:16 mb:0 fg:#cbd5e1 font-size:18 line-height:1.7">
       這是一個以最新 Angular 建立的 web 介面，集中整理網站開發常見的格式化、轉換與除錯工具。
     </p>
   </section>
 
-  <section class="groups" aria-label="工具分類">
+  <section class="max-w:1080 m:auto d:grid grid-template-columns:repeat(auto-fit,minmax(240px,1fr)) gap:16" aria-label="工具分類">
     @for (group of toolGroups; track group.name) {
-      <article class="group-card">
-        <h2>{{ group.name }}</h2>
-        <ul>
+      <article class="p:24 bg:#0f172a border:1|solid|#334155 border-radius:16">
+        <h2 class="m:0 mb:16 font-size:20">{{ group.name }}</h2>
+        <ul class="m:0 p:0 list-style:none">
           @for (tool of group.tools; track tool) {
-            <li>
+            <li class="d:flex ai:center jc:space-between gap:16 py:12 border-top:1|solid|#334155">
               <span>{{ tool }}</span>
-              <small>即將推出</small>
+              <small class="fg:#38bdf8 white-space:nowrap">即將推出</small>
             </li>
           }
         </ul>

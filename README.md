@@ -5,18 +5,18 @@
 ## Development
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ## Build
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Test
 
 ```bash
-npm test
+pnpm test
 ```
