@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PAGES_ARTIFACT_PATH: dist/daily-tools/browser
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,17 +27,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.x
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build
-        run: npm run build -- --base-href "/daily-tools/"
+        run: npm run build -- --base-href "/${{ github.event.repository.name }}/"
 
       - name: Add SPA fallback
-        run: cp dist/daily-tools/browser/index.html dist/daily-tools/browser/404.html
+        run: cp "$PAGES_ARTIFACT_PATH/index.html" "$PAGES_ARTIFACT_PATH/404.html"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -43,7 +45,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/daily-tools/browser
+          path: ${{ env.PAGES_ARTIFACT_PATH }}
 
   deploy:
     environment:
