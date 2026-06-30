@@ -40,7 +40,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm run build -- --base-href "/${{ github.event.repository.name }}/"
+        run: pnpm run build --base-href "/${{ github.event.repository.name }}/"
 
       - name: Add SPA fallback
         run: cp "$PAGES_ARTIFACT_PATH/index.html" "$PAGES_ARTIFACT_PATH/404.html"
