@@ -12,8 +12,8 @@
       <article class="group-card p:24 bg:rgba(15,23,42,.72) backdrop-filter:blur(10px) border:1|solid|#334155 border-radius:16">
         <h2 class="m:0 mb:16 font-size:20">{{ group.name }}</h2>
         <ul class="m:0 p:0 list-style:none">
-          @for (tool of group.tools; track tool) {
-            <li class="d:flex ai:center jc:space-between gap:16 py:12">
+          @for (tool of group.tools; track tool; let isFirst = $first) {
+            <li class="d:flex ai:center jc:space-between gap:16 py:12" [style.border-top]="isFirst ? '0' : '1px solid #334155'">
               <span>{{ tool }}</span>
               <small class="fg:#38bdf8 white-space:nowrap">即將推出</small>
             </li>
