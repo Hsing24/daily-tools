@@ -1,0 +1,78 @@
+/* word-count scoped CSS.
+ *
+ * Almost all styling is done with Master CSS atomic classes in the template,
+ * per AGENTS.md. Only the things Master CSS can't cleanly express live here:
+ *   1. the base monospace font for the whole tool,
+ *   2. the textarea placeholder color (a pseudo-element),
+ *   3. the Zsh / p10k powerline breadcrumb chevrons (clip-path polygons).
+ * Per DESIGN.md: zero rounded corners, zero shadows, flat solid fills.
+ */
+
+.word-count-root {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+}
+
+.word-count-textarea::placeholder {
+  color: #3a4a66; /* {colors.ink-disabled} */
+}
+
+/* --- Breadcrumb (Zsh / powerlevel10k chevron trail) --- */
+.breadcrumb-zsh {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  margin-bottom: 24px;
+}
+
+.breadcrumb-segment-home,
+.breadcrumb-segment-category,
+.breadcrumb-segment-current {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* 1st segment — primary (mint / action) */
+.breadcrumb-segment-home {
+  background-color: #3fe0c5; /* {colors.primary} */
+  color: #0a1a2f; /* {colors.on-primary} */
+  padding: 4px 18px 4px 12px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+  margin-right: -14px;
+  z-index: 3;
+}
+
+.breadcrumb-segment-home:hover {
+  background-color: #6bffe0; /* {colors.primary-bright} */
+}
+
+/* 2nd segment — gold (status) */
+.breadcrumb-segment-category {
+  background-color: #f1b434; /* {colors.gold} */
+  color: #0a1a2f; /* {colors.on-gold} */
+  padding: 4px 18px 4px 18px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  margin-right: -14px;
+  z-index: 2;
+}
+
+/* 3rd segment — warning (red / destructive = current location) */
+.breadcrumb-segment-current {
+  background-color: #e03c31; /* {colors.warning} */
+  color: #ffffff; /* {colors.on-warning} */
+  padding: 4px 18px 4px 18px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  z-index: 1;
+}
+
+/* Breadcrumb collapsing: hide the category segment on narrow viewports (≤ 767px) */
+@media (max-width: 767.98px) {
+  .breadcrumb-segment-category {
+    display: none;
+  }
+}

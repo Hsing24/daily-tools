@@ -1,0 +1,131 @@
+<div class="word-count-root color:#C9D5E8">
+  <!-- Zsh / p10k-style powerline breadcrumbs (clip-path geometry lives in scoped CSS) -->
+  <nav class="breadcrumb-zsh" aria-label="導覽路徑">
+    <a routerLink="/" class="breadcrumb-segment-home">DevTool</a>
+    <span class="breadcrumb-segment-category">文字工具</span>
+    <span class="breadcrumb-segment-current">字數統計</span>
+  </nav>
+
+  <!-- Tool panel: chunky mint border, flat surface, no shadow -->
+  <div class="bg:#122339 border:2px|solid|#3FE0C5 p:24">
+    <!-- Header -->
+    <div class="mb:24">
+      <span
+        class="d:block font-family:VT323,monospace f:18 color:#6A7C99 letter-spacing:2px line-height:1 mb:8"
+        >TEXT UTILITIES v1.0.0</span
+      >
+      <h2
+        class="font-family:VT323,monospace f:36 font-weight:400 color:#3FE0C5 line-height:1.1 mt:0 mb:12"
+      >
+        字數統計 (Word Count)
+      </h2>
+      <p class="f:14 color:#C9D5E8 line-height:1.55 m:0">
+        分析您輸入的文字，依據混合規則提供精準的字元數、字數與行數統計。適合中英混排、含
+        emoji 的內容統計。
+      </p>
+    </div>
+
+    @if (alertMessage()) {
+      <div
+        data-testid="alert-message"
+        role="alert"
+        aria-live="assertive"
+        class="bg:#8A2018 color:#FFFFFF border:2px|solid|#E03C31 p:12 mb:16 f:12 line-height:1.4"
+      >
+        ⚠️ {{ alertMessage() }}
+      </div>
+    }
+
+    <!-- Input -->
+    <div class="d:block mb:16">
+      <label
+        for="word-count-input"
+        class="d:block mb:8 f:14 f:bold color:#E6F1FF"
+        >請輸入、貼上欲統計之文字：</label
+      >
+      <textarea
+        id="word-count-input"
+        #textarea
+        [value]="text()"
+        (input)="onInput(textarea.value)"
+        placeholder="請在此輸入或貼上文字，系統將即時進行字數計算..."
+        class="word-count-textarea w:100% h:240 p:16 bg:#081424 color:#E6F1FF border:2px|solid|#1E3050 border:2px|solid|#3FE0C5:focus outline:none f:14 line-height:1.6 resize:vertical box-sizing:border-box"
+      ></textarea>
+    </div>
+
+    <!-- Actions: flat, borderless, shadowless pixel buttons -->
+    <div class="d:flex gap:16 mb:24 flex-wrap:wrap">
+      <button
+        type="button"
+        data-testid="btn-paste"
+        (click)="paste()"
+        class="bg:#3FE0C5 color:#0A1A2F px:20 py:10 f:14 f:bold letter-spacing:1px border:0 outline:none cursor:pointer bg:#6BFFE0:hover bg:#6BFFE0:active outline:2px|solid|#6BFFE0:focus-visible outline-offset:2px:focus-visible"
+      >
+        貼上文字
+      </button>
+      <button
+        type="button"
+        data-testid="btn-clear"
+        (click)="clear()"
+        class="bg:#E03C31 color:#FFFFFF px:20 py:10 f:14 f:bold letter-spacing:1px border:0 outline:none cursor:pointer bg:#8A2018:hover bg:#8A2018:active outline:2px|solid|#E03C31:focus-visible outline-offset:2px:focus-visible"
+      >
+        清除內容
+      </button>
+    </div>
+
+    <!-- Statistics -->
+    <div
+      class="d:grid grid-cols:1 grid-cols:2@xs grid-cols:4@md gap:16"
+      role="status"
+      aria-live="polite"
+    >
+      <!-- 字元數 (含空白) -->
+      <div
+        class="p:16 bg:#15263F border:2px|solid|#1E3050 d:flex flex:col justify-content:center align-items:center"
+      >
+        <span class="f:12 color:#6A7C99 mb:4">字元數 (含空白)</span>
+        <span
+          data-testid="stat-chars-with-spaces"
+          class="font-family:VT323,monospace f:42 color:#3FE0C5 line-height:1"
+          >{{ stats().charactersWithSpaces }}</span
+        >
+      </div>
+
+      <!-- 字元數 (不含空白) -->
+      <div
+        class="p:16 bg:#15263F border:2px|solid|#1E3050 d:flex flex:col justify-content:center align-items:center"
+      >
+        <span class="f:12 color:#6A7C99 mb:4">字元數 (不含空白)</span>
+        <span
+          data-testid="stat-chars-no-spaces"
+          class="font-family:VT323,monospace f:42 color:#3FE0C5 line-height:1"
+          >{{ stats().charactersNoSpaces }}</span
+        >
+      </div>
+
+      <!-- 字數 (混合) — gold highlight -->
+      <div
+        class="p:16 bg:#15263F border:2px|solid|#F1B434 d:flex flex:col justify-content:center align-items:center"
+      >
+        <span class="f:12 color:#6A7C99 mb:4">字數 (混合規則)</span>
+        <span
+          data-testid="stat-words"
+          class="font-family:VT323,monospace f:42 color:#F1B434 line-height:1"
+          >{{ stats().words }}</span
+        >
+      </div>
+
+      <!-- 行數 -->
+      <div
+        class="p:16 bg:#15263F border:2px|solid|#1E3050 d:flex flex:col justify-content:center align-items:center"
+      >
+        <span class="f:12 color:#6A7C99 mb:4">行數</span>
+        <span
+          data-testid="stat-lines"
+          class="font-family:VT323,monospace f:42 color:#3FE0C5 line-height:1"
+          >{{ stats().lines }}</span
+        >
+      </div>
+    </div>
+  </div>
+</div>

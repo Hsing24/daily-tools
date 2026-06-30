@@ -1,0 +1,247 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #0a1a2f;
+}
+
+/* --- Skip link (WCAG 2.4.1) --- */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 50;
+  padding: 8px 16px;
+  background: #3fe0c5;
+  color: #0a1a2f;
+  font: 600 14px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --- Top prompt bar --- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 16px;
+  background: #050e1c;
+  border-bottom: 2px solid #3fe0c5;
+}
+
+.brand {
+  color: #3fe0c5;
+  font: 500 16px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+  letter-spacing: 0.5px;
+}
+
+.brand::before {
+  content: '> ';
+  color: #6bffe0;
+}
+
+.hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid #3fe0c5;
+  color: #3fe0c5;
+  cursor: pointer;
+}
+
+.hamburger-bars,
+.hamburger-bars::before,
+.hamburger-bars::after {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: currentcolor;
+}
+
+.hamburger-bars {
+  position: relative;
+}
+
+.hamburger-bars::before,
+.hamburger-bars::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+
+.hamburger-bars::before {
+  top: -5px;
+}
+
+.hamburger-bars::after {
+  top: 5px;
+}
+
+/* --- Body: sidebar + main --- */
+.body {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 24px 16px;
+  background: #050e1c;
+  border-right: 2px solid #3fe0c5;
+  overflow-y: auto;
+}
+
+.tool-nav {
+  display: block;
+}
+
+.section-label {
+  margin: 16px 12px 8px;
+  color: #6a7c99;
+  font: 400 18px VT323, ui-monospace, monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.section-label:first-child {
+  margin-top: 0;
+}
+
+.tool-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-link,
+.nav-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font: 400 14px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+}
+
+.nav-link {
+  color: #c9d5e8;
+  text-decoration: none;
+  border-left: 4px solid transparent;
+}
+
+.nav-link:hover {
+  background: #122339;
+  color: #3fe0c5;
+}
+
+.nav-link.active {
+  background: #122339;
+  color: #3fe0c5;
+  font-weight: 600;
+  border-left-color: #3fe0c5;
+}
+
+.nav-disabled {
+  color: #3a4a66;
+  cursor: not-allowed;
+}
+
+.nav-disabled small {
+  color: #6a7c99;
+  white-space: nowrap;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 32px;
+  background: #0a1a2f;
+  color: #c9d5e8;
+}
+
+.scrim {
+  display: none;
+}
+
+/* --- Focus visibility (WCAG 2.4.7) --- */
+.skip-link:focus-visible,
+.hamburger:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid #6bffe0;
+  outline-offset: 2px;
+}
+
+.main:focus-visible {
+  outline: none;
+}
+
+/* --- Tablet / mobile: collapse sidebar into an off-canvas drawer --- */
+@media (max-width: 1023.98px) {
+  .sidebar {
+    position: fixed;
+    top: 40px;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 40px 0 0 0;
+    z-index: 30;
+    background: rgba(5, 14, 28, 0.7);
+  }
+}
+
+/* --- Desktop: sidebar is always visible, hamburger hidden --- */
+@media (min-width: 1024px) {
+  .hamburger {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link,
+  .sidebar {
+    transition: none;
+  }
+}
+
+/* --- CRT Scanline Ambient Overlay (DESIGN.md) --- */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(63, 224, 197, 0.04) 0px,
+    rgba(63, 224, 197, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
