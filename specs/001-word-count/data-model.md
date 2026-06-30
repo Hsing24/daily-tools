@@ -20,7 +20,7 @@
 |------|------|------|---------|
 | charactersWithSpaces | `number` | 全部字元數（含空白），以 Unicode 碼點計 | 0 |
 | charactersNoSpaces | `number` | 不含任何空白字元的字元數（碼點） | 0 |
-| words | `number` | 字數＝CJK 字元數 ＋ 非 CJK 空白分隔詞段數 | 0 |
+| words | `number` | 字數＝CJK 字元數 ＋ emoji 數 ＋ 其餘空白分隔詞段數 | 0 |
 | lines | `number` | 行數；空字串為 0，否則為換行分割段數 | 0 |
 
 - **不變式（invariants）**：

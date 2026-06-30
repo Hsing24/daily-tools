@@ -4,17 +4,20 @@
 
 ## R1. CJK 字數的計算演算法
 
-- **Decision**: 以 Unicode property escape 正規表示式辨識 CJK 字元，計數後將其替換為空白，剩餘內容以空白分詞；`words = CJK 字元數 + 非 CJK 詞段數`。CJK 範圍涵蓋 Han、Hiragana、Katakana、Hangul：
+- **Decision**: 以 Unicode property escape 正規表示式辨識 CJK 與 emoji 字元，各自計數後替換為空白，剩餘內容以空白分詞；`words = CJK 字元數 + emoji 數 + 其餘詞段數`。CJK 範圍涵蓋 Han、Hiragana、Katakana、Hangul； emoji 以 `\p{Extended_Pictographic}` 辨識：
   ```ts
   const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu;
+  const EMOJI = /\p{Extended_Pictographic}/gu;
   const cjk = (text.match(CJK) ?? []).length;
-  const other = text.replace(CJK, ' ').split(/\s+/).filter(Boolean).length;
-  const words = cjk + other;
+  const emoji = (text.match(EMOJI) ?? []).length;
+  const other = text.replace(CJK, ' ').replace(EMOJI, ' ').split(/\s+/).filter(Boolean).length;
+  const words = cjk + emoji + other;
   ```
-- **Rationale**: 對 zh-Hant 使用者，「字數」直覺上即每個漢字一個字；對中英混排同時保留英文的詞計算，兩者相加最符合預期（Clarify Q1=A）。Unicode property escape 比手寫碼點範圍更正確且可讀，避免遺漏擴展區。
+- **Rationale**: 對 zh-Hant 使用者，「字數」直覺上即每個漢字一個字；emoji 同樣被使用者視為一個「字」，故逐個計入（分析階段補定）；對中英混排同時保留英文的詞計算，三者相加最符合預期（Clarify Q1=A）。`\p{Emoji}` 會詤包含 ASCII 數字 0-9，故採不含數字的 `\p{Extended_Pictographic}`。Unicode property escape 比手寫碼點範圍更正確且可讀，避免遺漏擴展區。
 - **Alternatives considered**:
   - 純空白分詞：中文整段算 1 個字，明顯不符 zh-Hant 預期 → 拒絕。
   - 字數 = 字元數：失去英文「詞」的語意，且與「字元數」欄位重複 → 拒絕。
+  - 以 `\p{Emoji}` 辨識 emoji：會把 ASCII 數字算成字 → 拒絕，改用 `\p{Extended_Pictographic}`。
   - 手寫 `\u4E00-\u9FFF` 等碼點範圍：易遺漏 Ext A/B、可讀性差 → 拒絕。
 
 ## R2. 字元數與 emoji / 代理對（surrogate pair）
