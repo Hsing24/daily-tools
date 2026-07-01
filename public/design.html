@@ -63,6 +63,19 @@
         --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
         --font-mono:
           "IBM Plex Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+
+        --space-xxs: 2px;
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 12px;
+        --space-lg: 16px;
+        --space-xl: 24px;
+        --space-xxl: 32px;
+        --space-section: 48px;
+
+        --elevation-sm: 2px 2px 0 0 var(--canvas-deep);
+        --elevation-md: 4px 4px 0 0 var(--canvas-deep);
+        --elevation-lg: 8px 8px 0 0 var(--canvas-deep);
       }
 
       * {
@@ -1213,6 +1226,121 @@
         letter-spacing: 0.5px;
       }
 
+      /* Spacing Scale */
+      .spacing-table {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .spacing-row {
+        display: grid;
+        grid-template-columns: 150px 70px 1fr;
+        align-items: center;
+        gap: 16px;
+      }
+      .spacing-token {
+        font-family: var(--font-mono);
+        color: var(--ink-bright);
+      }
+      .spacing-value {
+        font-family: var(--font-mono);
+        color: var(--ink-muted);
+      }
+      .spacing-bar-container {
+        display: flex;
+        align-items: center;
+      }
+      .spacing-bar {
+        height: 16px;
+        background-color: var(--primary);
+      }
+
+      /* Shapes & Elevation */
+      .elevation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-top: 16px;
+      }
+      .elevation-card {
+        background-color: var(--canvas-elevated);
+        border: 2px solid var(--border-default);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: none;
+      }
+      .elevation-card.elev-sm {
+        box-shadow: var(--elevation-sm);
+      }
+      .elevation-card.elev-md {
+        box-shadow: var(--elevation-md);
+      }
+      .elevation-card.elev-lg {
+        box-shadow: var(--elevation-lg);
+      }
+      .elevation-card h4 {
+        margin: 0;
+        color: var(--ink-bright);
+        font-size: 16px;
+        font-family: var(--font-mono);
+      }
+      .elevation-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--ink-muted);
+        font-family: var(--font-mono);
+      }
+      .elevation-card code {
+        background-color: var(--canvas-deep);
+        padding: 4px 8px;
+        color: var(--primary);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        word-break: break-all;
+      }
+
+      .elevation-interactive {
+        margin-top: 32px;
+        padding: 24px;
+        background-color: var(--canvas-elevated-2);
+        border: 2px solid var(--border-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .elevation-interactive-title {
+        margin: 0;
+        color: var(--ink-bright);
+        font-size: 16px;
+        font-family: var(--font-mono);
+      }
+      .elevation-interactive p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--ink);
+      }
+      .elevation-btn-demo {
+        align-self: flex-start;
+        background-color: var(--primary);
+        color: var(--on-primary);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        border: 2px solid var(--primary);
+        padding: 10px 20px;
+        box-shadow: var(--elevation-md);
+        cursor: pointer;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
+      }
+      .elevation-btn-demo:active {
+        box-shadow: none;
+        transform: translate(4px, 4px);
+      }
+
+
       @media (max-width: 1180px) {
         .hero-grid,
         .section-head,
@@ -1383,7 +1511,7 @@
 
         <div class="nav-label">Index</div>
         <nav class="side-nav" aria-label="頁面區塊">
-          <a href="#colors">01 色彩與表面</a>
+          <a href="#colors">01 色彩、間距與深度</a>
           <a href="#typography">02 字體級距</a>
           <a href="#components">03 元件樣本</a>
           <a href="#layout">04 工具配置</a>
@@ -1919,6 +2047,104 @@ daily-tools::design-system
                     <p>程式碼註解。</p>
                   </article>
                 </div>
+              </div>
+            </div>
+
+            <!-- 間距尺規 Spacing Scale -->
+            <div class="swatch-category" style="margin-top: 48px;">
+              <h3 class="swatch-cat-title">間距尺規 Spacing Scale</h3>
+              <p style="margin: 8px 0 16px; color: var(--ink-muted);">
+                以 4px 為基準的緊湊型間距系統，對齊終端機高密度排版特色。
+              </p>
+              <div class="spacing-table">
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.xxs}</span>
+                  <span class="spacing-value">2px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-xxs);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.xs}</span>
+                  <span class="spacing-value">4px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-xs);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.sm}</span>
+                  <span class="spacing-value">8px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-sm);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.md}</span>
+                  <span class="spacing-value">12px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-md);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.lg}</span>
+                  <span class="spacing-value">16px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-lg);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.xl}</span>
+                  <span class="spacing-value">24px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-xl);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.xxl}</span>
+                  <span class="spacing-value">32px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-xxl);" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div class="spacing-row">
+                  <span class="spacing-token">{spacing.section}</span>
+                  <span class="spacing-value">48px</span>
+                  <div class="spacing-bar-container">
+                    <div class="spacing-bar" style="width: var(--space-section);" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 形狀與陰影層級 Shapes & Elevation -->
+            <div class="swatch-category" style="margin-top: 48px;">
+              <h3 class="swatch-cat-title">形狀與陰影層級 Shapes & Elevation</h3>
+              <p style="margin: 8px 0 16px; color: var(--ink-muted);">
+                全域規則 <code>border-radius: 0px</code> (<code>{rounded.none}</code>)，所有元件皆為硬角矩形。深度以硬邊像素陰影（無模糊）呈現。
+              </p>
+              
+              <div class="elevation-grid">
+                <article class="elevation-card elev-sm">
+                  <h4>{elevation.pixel-sm}</h4>
+                  <p>適用於 Toast、Key chips 等輕量懸浮元件。</p>
+                  <code>box-shadow: 2px 2px 0 0 var(--canvas-deep)</code>
+                </article>
+                <article class="elevation-card elev-md">
+                  <h4>{elevation.pixel-md}</h4>
+                  <p>適用於按鈕、預設面板等中量級深度元件。</p>
+                  <code>box-shadow: 4px 4px 0 0 var(--canvas-deep)</code>
+                </article>
+                <article class="elevation-card elev-lg">
+                  <h4>{elevation.pixel-lg}</h4>
+                  <p>適用於命令面板 Cmd+K、聚焦面板等重量級懸浮元件。</p>
+                  <code>box-shadow: 8px 8px 0 0 var(--canvas-deep)</code>
+                </article>
+              </div>
+
+              <div class="elevation-interactive">
+                <h4 class="elevation-interactive-title">互動按壓效果</h4>
+                <p>點擊下方按鈕以展示像素按鈕按壓時，陰影消失且位移回彈的 retro 微互動效果：</p>
+                <button class="elevation-btn-demo" type="button">PRESS ME</button>
               </div>
             </div>
           </section>
