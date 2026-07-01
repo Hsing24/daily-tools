@@ -819,34 +819,135 @@
       .type-name {
         color: var(--primary);
         font-weight: 600;
+        font-size: 14px;
       }
 
-      .type-sample-display {
+      /* 14 Typography Scale Tokens */
+      .type-pixel-display {
+        font-family: var(--font-pixel);
+        font-size: 64px;
+        font-weight: 400;
+        line-height: 1.0;
+        letter-spacing: 0;
         color: var(--ink-bright);
+      }
+
+      .type-pixel-h1 {
         font-family: var(--font-pixel);
         font-size: 48px;
+        font-weight: 400;
         line-height: 1.05;
+        letter-spacing: 0;
+        color: var(--ink-bright);
       }
 
-      .type-sample-h2 {
-        color: var(--ink-bright);
+      .type-pixel-h2 {
         font-family: var(--font-pixel);
         font-size: 36px;
+        font-weight: 400;
         line-height: 1.1;
+        letter-spacing: 0;
+        color: var(--ink-bright);
       }
 
-      .type-sample-body {
-        color: var(--ink);
-        font-size: 16px;
-        line-height: 1.5;
+      .type-pixel-h3 {
+        font-family: var(--font-pixel);
+        font-size: 28px;
+        font-weight: 400;
+        line-height: 1.15;
+        letter-spacing: 0;
+        color: var(--ink-bright);
       }
 
-      .type-sample-caption {
+      .type-pixel-eyebrow {
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        font-weight: 400;
+        line-height: 1.0;
+        letter-spacing: 2px;
         color: var(--ink-muted);
-        font-size: 12px;
-        letter-spacing: 0.5px;
-        line-height: 1.4;
         text-transform: uppercase;
+      }
+
+      .type-mono-h4 {
+        font-family: var(--font-mono);
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: 0;
+        color: var(--ink-bright);
+      }
+
+      .type-mono-body-lg {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 1.5;
+        letter-spacing: 0;
+        color: var(--ink);
+      }
+
+      .type-mono-body {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.55;
+        letter-spacing: 0;
+        color: var(--ink);
+      }
+
+      .type-mono-body-strong {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.55;
+        letter-spacing: 0;
+        color: var(--ink-bright);
+      }
+
+      .type-mono-prompt {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.0;
+        letter-spacing: 0;
+        color: var(--primary);
+      }
+
+      .type-mono-caption {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.4;
+        letter-spacing: 0.5px;
+        color: var(--ink-muted);
+      }
+
+      .type-mono-key-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.0;
+        letter-spacing: 1px;
+        color: var(--ink-bright);
+      }
+
+      .type-mono-button {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.0;
+        letter-spacing: 1px;
+        color: var(--primary);
+      }
+
+      .type-mono-code {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.6;
+        letter-spacing: 0;
+        color: var(--primary-bright);
       }
 
       .component-grid {
@@ -1839,28 +1940,86 @@ daily-tools::design-system
 
             <div class="type-scale" aria-label="字體級距範例">
               <div class="type-row">
-                <div class="type-name">pixel-display</div>
-                <div class="type-sample-display">CRT READY</div>
-                <code>64px / 400 / 1.0</code>
+                <div class="type-name">{typography.pixel-display}</div>
+                <div class="type-pixel-display">SYSTEM FAILURE</div>
+                <code>64px / 400 / 1.0 / 0</code>
               </div>
               <div class="type-row">
-                <div class="type-name">pixel-h2</div>
-                <div class="type-sample-h2">工具系統標題</div>
-                <code>36px / 400 / 1.1</code>
+                <div class="type-name">{typography.pixel-h1}</div>
+                <div class="type-pixel-h1">JSON FORMATTER</div>
+                <code>48px / 400 / 1.05 / 0</code>
               </div>
               <div class="type-row">
-                <div class="type-name">mono-body-lg</div>
-                <div class="type-sample-body">
-                  用來說明工具行為、輸入輸出與錯誤狀態的主要文字。
+                <div class="type-name">{typography.pixel-h2}</div>
+                <div class="type-pixel-h2">工具系統設定與狀態</div>
+                <code>36px / 400 / 1.1 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.pixel-h3}</div>
+                <div class="type-pixel-h3">新增快捷鍵設定視窗</div>
+                <code>28px / 400 / 1.15 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.pixel-eyebrow}</div>
+                <div class="type-pixel-eyebrow">ENCODERS / DECODERS</div>
+                <code>18px / 400 / 1.0 / 2px</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-h4}</div>
+                <div class="type-mono-h4">輸入區塊 (Input Payload)</div>
+                <code>20px / 600 / 1.3 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-body-lg}</div>
+                <div class="type-mono-body-lg">
+                  請在此輸入您需要處理的原始 JSON 字串或進行檔案拖放。
                 </div>
-                <code>16px / 400 / 1.5</code>
+                <code>16px / 400 / 1.5 / 0</code>
               </div>
               <div class="type-row">
-                <div class="type-name">mono-caption</div>
-                <div class="type-sample-caption">
-                  BUILD SHA / THEME / STATUS
+                <div class="type-name">{typography.mono-body}</div>
+                <div class="type-mono-body">
+                  預設段落文字，用於所有終端機介面的操作標籤與按鈕輔助文字。
                 </div>
-                <code>12px / 400 / 1.4</code>
+                <code>14px / 400 / 1.55 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-body-strong}</div>
+                <div class="type-mono-body-strong">
+                  特別強化的重要警示文字或目前所在的麵包屑段落標籤。
+                </div>
+                <code>14px / 600 / 1.55 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-prompt}</div>
+                <div class="type-mono-prompt">
+                  user@devtool-terminal ~/json-formatter $
+                </div>
+                <code>16px / 500 / 1.0 / 0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-caption}</div>
+                <div class="type-mono-caption">
+                  版權所有 &copy; 2026 DEVTOOL TERMINAL. BUILD SHA: 8a7d3f2.
+                </div>
+                <code>12px / 400 / 1.4 / 0.5px</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-key-chip}</div>
+                <div class="type-mono-key-chip">CTRL + SHIFT + P</div>
+                <code>11px / 600 / 1.0 / 1px</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-button}</div>
+                <div class="type-mono-button">執行格式化 (RUN)</div>
+                <code>14px / 600 / 1.0 / 1px</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">{typography.mono-code}</div>
+                <div class="type-mono-code">
+                  const formatter = (data) =&gt; JSON.stringify(data, null, 2);
+                </div>
+                <code>14px / 400 / 1.6 / 0</code>
               </div>
             </div>
           </section>
