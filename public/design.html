@@ -313,6 +313,14 @@
         background: var(--canvas-elevated);
       }
 
+      .side-nav a.is-active {
+        color: var(--primary);
+        background: var(--canvas-elevated);
+        border-left: 2px solid var(--primary);
+        padding-left: 10px; /* compensate border-left width */
+        font-weight: 600;
+      }
+
       .main-shell {
         min-width: 0;
         background: var(--canvas);
@@ -2975,6 +2983,55 @@ daily-tools::design-system
 
       btnMonokai.addEventListener('click', function () { applyTheme('monokai'); });
       btnSolarized.addEventListener('click', function () { applyTheme('solarized'); });
+    })();
+
+    // ── Scrollspy ──────────────────────────────────────────────────
+    (function () {
+      var navLinks = document.querySelectorAll('.side-nav a[href^="#"]');
+      var activeLink = null;
+
+      function setActive(link) {
+        if (activeLink === link) return;
+        if (activeLink) activeLink.classList.remove('is-active');
+        activeLink = link;
+        if (activeLink) activeLink.classList.add('is-active');
+      }
+
+      // 建立 section-id 至 nav-link 的映射
+      var linkMap = {};
+      navLinks.forEach(function (a) {
+        var id = a.getAttribute('href').slice(1);
+        linkMap[id] = a;
+      });
+
+      // 記錄可見的 section，取最靠近頂部的一個
+      var visibleSections = new Set();
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            visibleSections.add(entry.target.id);
+          } else {
+            visibleSections.delete(entry.target.id);
+          }
+        });
+        // 找到在 navLinks 順序中最先出現的可見 section
+        var topLink = null;
+        navLinks.forEach(function (a) {
+          var id = a.getAttribute('href').slice(1);
+          if (visibleSections.has(id) && !topLink) topLink = a;
+        });
+        setActive(topLink);
+      }, {
+        root: null,
+        rootMargin: '-56px 0px -30% 0px', /* prompt-bar 高度偏移 */
+        threshold: 0
+      });
+
+      Object.keys(linkMap).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
     })();
   </script>
 </html>
