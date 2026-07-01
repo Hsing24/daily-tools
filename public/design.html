@@ -290,14 +290,19 @@
       .key-button,
       .ghost-button,
       .button,
+      .button-secondary,
       .warning-button {
         min-height: 44px;
-        border: 0;
         font-family: var(--font-mono);
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
       }
 
       .key-button {
+        border: 0;
         display: inline-grid;
         min-width: 44px;
         place-items: center;
@@ -487,40 +492,128 @@
         padding: 10px 20px;
         background: var(--primary);
         color: var(--on-primary);
+        font-family: var(--font-mono);
         font-size: 14px;
         font-weight: 600;
         letter-spacing: 1px;
         line-height: 1;
+        border: 2px solid var(--primary);
+        box-shadow: var(--elevation-md);
+        cursor: pointer;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
       }
 
-      .button:hover {
+      .button:hover,
+      .button.hover-state {
         background: var(--primary-bright);
+        border-color: var(--primary-bright);
       }
 
-      .ghost-button {
+      .button:active {
+        box-shadow: none;
+        transform: translate(4px, 4px);
+      }
+
+      .button:focus-visible {
+        outline: 2px solid var(--primary-bright);
+        outline-offset: 4px;
+      }
+
+      .button-secondary {
         padding: 10px 20px;
-        background: transparent;
-        color: var(--primary);
+        background: var(--gold);
+        color: var(--on-gold);
+        font-family: var(--font-mono);
         font-size: 14px;
         font-weight: 600;
         letter-spacing: 1px;
         line-height: 1;
+        border: 2px solid var(--gold);
+        box-shadow: var(--elevation-md);
+        cursor: pointer;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
       }
 
-      .ghost-button:hover,
-      .ghost-button:focus-visible {
-        background: var(--canvas-elevated);
-        color: var(--primary-bright);
+      .button-secondary:hover,
+      .button-secondary.hover-state {
+        background: var(--gold-bright);
+        border-color: var(--gold-bright);
+      }
+
+      .button-secondary:active {
+        box-shadow: none;
+        transform: translate(4px, 4px);
+      }
+
+      .button-secondary:focus-visible {
+        outline: 2px solid var(--gold-bright);
+        outline-offset: 4px;
       }
 
       .warning-button {
         padding: 10px 20px;
         background: var(--warning);
         color: var(--on-warning);
+        font-family: var(--font-mono);
         font-size: 14px;
         font-weight: 600;
         letter-spacing: 1px;
         line-height: 1;
+        border: 2px solid var(--warning);
+        box-shadow: var(--elevation-md);
+        cursor: pointer;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
+      }
+
+      .warning-button:hover,
+      .warning-button.hover-state {
+        background: var(--border-warning);
+      }
+
+      .warning-button:active {
+        box-shadow: none;
+        transform: translate(4px, 4px);
+      }
+
+      .warning-button:focus-visible {
+        outline: 2px solid var(--border-warning);
+        outline-offset: 4px;
+      }
+
+      .ghost-button {
+        padding: 10px 20px;
+        background: transparent;
+        color: var(--primary);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        line-height: 1;
+        border: 2px solid var(--primary);
+        cursor: pointer;
+        transition: background 0.05s ease, color 0.05s ease, border-color 0.05s ease;
+      }
+
+      .ghost-button:hover,
+      .ghost-button.hover-state,
+      .ghost-button:focus-visible,
+      .ghost-button.focus-state {
+        background: var(--canvas-elevated);
+        color: var(--primary-bright);
+        border-color: var(--primary-bright);
+        outline: none;
+      }
+
+      .button:disabled,
+      .button-secondary:disabled,
+      .warning-button:disabled,
+      .ghost-button:disabled {
+        background: var(--canvas-elevated);
+        color: var(--ink-disabled);
+        border-color: var(--border-muted);
+        box-shadow: none !important;
+        transform: none !important;
+        cursor: not-allowed;
       }
 
       .terminal-card {
@@ -1009,6 +1102,7 @@
         color: var(--ink-bright);
         font-family: var(--font-mono);
         font-size: 14px;
+        box-sizing: border-box;
       }
 
       input {
@@ -1024,14 +1118,90 @@
       }
 
       input:focus,
-      textarea:focus {
+      input.focus-state,
+      textarea:focus,
+      textarea.focus-state {
         border-color: var(--primary);
+        outline: none;
+      }
+
+      /* 錯誤狀態 (Error State) */
+      .form-field.error-state input,
+      .form-field.error-state textarea,
+      input.error-state,
+      textarea.error-state {
+        border-color: var(--warning);
+      }
+
+      .form-field.error-state .helper-text {
+        color: var(--warning);
       }
 
       .helper-text {
         color: var(--ink-muted);
         font-size: 12px;
         letter-spacing: 0.5px;
+      }
+
+      /* Segmented Control 分段控制器 */
+      .segmented-control {
+        display: inline-flex;
+        border: 2px solid var(--primary);
+        background: transparent;
+        padding: 0;
+        width: fit-content;
+      }
+
+      .segmented-item {
+        min-height: 40px;
+        padding: 10px 16px;
+        background: transparent;
+        color: var(--primary);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        border: 0;
+        cursor: pointer;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .segmented-item:not(:last-child) {
+        border-right: 2px solid var(--primary);
+      }
+
+      .segmented-item.active {
+        background: var(--primary);
+        color: var(--on-primary);
+      }
+
+      .segmented-item:hover:not(.active) {
+        background: var(--canvas-elevated-2);
+        color: var(--primary-bright);
+      }
+
+      /* 代碼區域 textarea-code */
+      .textarea-code {
+        width: 100%;
+        min-height: 132px;
+        background: var(--syntax-monokai-bg);
+        color: var(--syntax-monokai-fg);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        line-height: 1.6;
+        border: 2px solid var(--primary);
+        padding: 16px;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+
+      .textarea-code:focus,
+      .textarea-code.focus-state {
+        border-color: var(--primary-bright);
+        outline: none;
       }
 
       .layout-preview {
@@ -1338,6 +1508,100 @@
       .elevation-btn-demo:active {
         box-shadow: none;
         transform: translate(4px, 4px);
+      }
+      .elevation-btn-demo:focus-visible {
+        outline: 2px solid var(--primary-bright);
+        outline-offset: 4px;
+      }
+
+      /* Form States and Segmented Controls */
+      .form-field input.error-state {
+        border-color: var(--border-warning);
+        color: var(--border-warning);
+      }
+      .form-field input.error-state:focus {
+        border-color: var(--border-warning);
+        outline: none;
+      }
+      .error-text {
+        color: var(--border-warning);
+        font-size: 12px;
+        margin-top: 4px;
+        font-family: var(--font-mono);
+        font-weight: 600;
+      }
+      
+      /* Segmented Control */
+      .segmented-control {
+        display: inline-flex;
+        border: 2px solid var(--primary);
+        padding: 2px;
+        background: var(--canvas-deep);
+        align-self: flex-start;
+      }
+      .segmented-control button {
+        background: transparent;
+        color: var(--primary);
+        border: 0;
+        padding: 6px 16px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.05s ease, color 0.05s ease;
+      }
+      .segmented-control button.active {
+        background: var(--primary);
+        color: var(--on-primary);
+      }
+      .segmented-control button:hover:not(.active) {
+        background: var(--canvas-elevated);
+        color: var(--primary-bright);
+      }
+      .segmented-control button:focus-visible {
+        outline: 1px solid var(--primary-bright);
+      }
+
+      /* Semantic Toasts */
+      .toast {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px;
+        background: var(--canvas-elevated);
+        box-shadow: var(--elevation-sm);
+        text-align: left;
+      }
+      .toast-success {
+        border: 2px solid var(--border-default);
+      }
+      .toast-success h4 {
+        color: var(--primary);
+      }
+      .toast-warning {
+        border: 2px solid var(--border-gold);
+      }
+      .toast-warning h4 {
+        color: var(--gold);
+      }
+      .toast-error {
+        border: 2px solid var(--border-warning);
+      }
+      .toast-error h4 {
+        color: var(--warning);
+      }
+      .toast h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: var(--font-mono);
+      }
+      .toast p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--ink);
+        font-family: var(--font-mono);
+        line-height: 1.4;
       }
 
 
@@ -2275,10 +2539,35 @@ daily-tools::design-system
               <article class="component-panel">
                 <h3>Buttons</h3>
                 <p>操作色只有 mint。Gold 與 red 只能表達語意狀態。</p>
-                <div class="button-row">
-                  <button class="button" type="button">格式化</button>
-                  <button class="ghost-button" type="button">複製輸出</button>
-                  <button class="warning-button" type="button">清除</button>
+                <div class="button-row" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Primary (Normal)</span>
+                    <button class="button" type="button">格式化</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Primary (Hover/Focus)</span>
+                    <button class="button hover-state" type="button">格式化</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Primary (Disabled)</span>
+                    <button class="button" type="button" disabled>格式化</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Secondary (Gold)</span>
+                    <button class="button-secondary" type="button">確定修改</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Warning (Red)</span>
+                    <button class="warning-button" type="button">清除</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Ghost</span>
+                    <button class="ghost-button" type="button">複製輸出</button>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span class="helper-text" style="font-size: 11px; color: var(--ink-muted);">Ghost (Hover/Focus)</span>
+                    <button class="ghost-button hover-state" type="button">複製輸出</button>
+                  </div>
                 </div>
               </article>
 
@@ -2448,35 +2737,62 @@ daily-tools::design-system
 
             <div class="component-grid">
               <article class="component-panel">
-                <h3>Search</h3>
-                <div class="form-field">
-                  <label for="tool-search">搜尋工具</label>
-                  <input
-                    id="tool-search"
-                    type="search"
-                    placeholder="json / regex / base64"
-                    autocomplete="off"
-                  />
-                  <p class="helper-text">搜尋結果會在 Cmd+K 與側欄同步。</p>
+                <h3>Inputs & Selection</h3>
+                <div class="sample-stack" style="gap: 16px;">
+                  <div class="form-field">
+                    <label for="tool-search-normal">搜尋工具 (預設 / Focus)</label>
+                    <input
+                      id="tool-search-normal"
+                      type="search"
+                      placeholder="json / regex / base64"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="tool-search-error">搜尋工具 (錯誤狀態)</label>
+                    <input
+                      id="tool-search-error"
+                      class="error-state"
+                      type="search"
+                      value="invalid-regex["
+                      autocomplete="off"
+                    />
+                    <span class="error-text">錯誤：Regex 未閉合的字元集合 ([)</span>
+                  </div>
+                  <div class="form-field">
+                    <label>Segmented Control (主題切換)</label>
+                    <div class="segmented-control">
+                      <button class="active" type="button">MONOKAI</button>
+                      <button type="button">SOLARIZED</button>
+                    </div>
+                  </div>
                 </div>
               </article>
               <article class="component-panel">
                 <h3>Code Area</h3>
                 <div class="form-field">
-                  <label for="code-input">輸入內容</label>
-                  <textarea id="code-input" spellcheck="false">
+                  <label for="code-input">代碼輸入槽 (Monokai)</label>
+                  <textarea id="code-input" spellcheck="false" class="palette-syntax-monokai-bg" style="color: var(--syntax-monokai-fg); border-color: var(--primary); resize: vertical;">
 {"theme":"monokai","rounded":false}</textarea>
                 </div>
               </article>
-              <article class="component-panel">
-                <h3>Status Toast</h3>
-                <p style="color: var(--primary); font-weight: 600">
-                  已複製到剪貼簿
-                </p>
-                <p>
-                  toast 使用 elevated 背景、語意色文字與 chunky
-                  border；錯誤訊息要說明修正方向。
-                </p>
+              <article class="component-panel" style="gap: 12px;">
+                <h3>Semantic Toasts</h3>
+                <p class="helper-text">使用 elevated 背景、2px 語意邊框與 pixel-sm 陰影。</p>
+                <div class="sample-stack" style="gap: 12px;">
+                  <div class="toast toast-success">
+                    <h4>{component.toast-success}</h4>
+                    <p>已成功複製格式化後的 JSON 至剪貼簿。</p>
+                  </div>
+                  <div class="toast toast-warning">
+                    <h4>{component.toast-warning}</h4>
+                    <p>此工具目前為 BETA 測試版本，請小心使用。</p>
+                  </div>
+                  <div class="toast toast-error">
+                    <h4>{component.toast-error}</h4>
+                    <p>格式化失敗：JSON 語法錯誤 (Line 2)。</p>
+                  </div>
+                </div>
               </article>
             </div>
           </section>
