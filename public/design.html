@@ -1,0 +1,1630 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevTool Terminal Design System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --primary: #3fe0c5;
+        --primary-bright: #6bffe0;
+        --primary-dim: #2bae96;
+        --gold: #f1b434;
+        --gold-bright: #ffd166;
+        --warning: #e03c31;
+        --canvas: #0a1a2f;
+        --canvas-deep: #050e1c;
+        --canvas-elevated: #122339;
+        --canvas-elevated-2: #15263f;
+        --canvas-input: #081424;
+        --surface-overlay: rgba(10, 26, 47, 0.85);
+        --scanline-tint: rgba(63, 224, 197, 0.04);
+        --ink-bright: #e6f1ff;
+        --ink: #c9d5e8;
+        --ink-muted: #6a7c99;
+        --ink-disabled: #3a4a66;
+        --on-primary: #0a1a2f;
+        --on-warning: #ffffff;
+        --border-muted: #1e3050;
+        --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
+        --font-mono:
+          "IBM Plex Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        pointer-events: none;
+        content: "";
+        background-image: repeating-linear-gradient(
+          0deg,
+          var(--scanline-tint) 0,
+          var(--scanline-tint) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      }
+
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      a:visited {
+        color: var(--primary);
+      }
+
+      a:hover {
+        color: var(--primary-bright);
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--primary-bright);
+        outline-offset: 4px;
+      }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 30;
+        padding: 10px 16px;
+        transform: translateY(-160%);
+        background: var(--primary);
+        color: var(--on-primary);
+        font-weight: 600;
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .page-shell {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        padding: 24px 16px;
+        overflow-y: auto;
+        background: var(--canvas-deep);
+        border-right: 2px solid var(--primary);
+      }
+
+      .brand {
+        display: grid;
+        gap: 8px;
+        padding-bottom: 24px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border-muted);
+      }
+
+      .brand-mark {
+        color: var(--primary);
+        font-family: var(--font-pixel);
+        font-size: 48px;
+        line-height: 1;
+      }
+
+      .brand-name {
+        color: var(--ink-bright);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .brand-meta {
+        color: var(--ink-muted);
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+
+      .nav-label {
+        margin: 24px 0 8px;
+        color: var(--ink-muted);
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        letter-spacing: 2px;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .side-nav {
+        display: grid;
+        gap: 2px;
+      }
+
+      .side-nav a {
+        display: block;
+        min-height: 44px;
+        padding: 10px 12px;
+        color: var(--ink);
+      }
+
+      .side-nav a:hover,
+      .side-nav a:focus-visible {
+        color: var(--ink-bright);
+        background: var(--canvas-elevated);
+      }
+
+      .main-shell {
+        min-width: 0;
+        background: var(--canvas);
+      }
+
+      .prompt-bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 32px;
+        background: var(--canvas-deep);
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .prompt-path {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .prompt-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .key-button,
+      .ghost-button,
+      .button,
+      .warning-button {
+        min-height: 44px;
+        border: 0;
+        font-family: var(--font-mono);
+        cursor: pointer;
+      }
+
+      .key-button {
+        display: inline-grid;
+        min-width: 44px;
+        place-items: center;
+        padding: 0 10px;
+        background: transparent;
+        color: var(--primary);
+      }
+
+      .key-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 24px;
+        padding: 4px 8px;
+        background: var(--canvas-elevated-2);
+        border: 1px solid var(--border-muted);
+        color: var(--ink-bright);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+
+      main {
+        display: grid;
+        gap: 48px;
+        padding: 32px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 24px;
+        min-height: calc(100vh - 104px);
+        align-content: center;
+      }
+
+      .breadcrumb {
+        display: flex;
+        min-width: 0;
+        min-height: 28px;
+        align-items: center;
+      }
+
+      .breadcrumb a,
+      .breadcrumb span {
+        position: relative;
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        padding: 4px 18px 4px 18px;
+        color: var(--on-primary);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .breadcrumb a:nth-child(1) {
+        z-index: 3;
+      }
+
+      .breadcrumb a:first-child {
+        padding-left: 12px;
+        background: var(--primary);
+        clip-path: polygon(
+          0 0,
+          calc(100% - 14px) 0,
+          100% 50%,
+          calc(100% - 14px) 100%,
+          0 100%
+        );
+      }
+
+      .breadcrumb a:nth-child(2) {
+        z-index: 2;
+        margin-left: -14px;
+        background: var(--gold);
+        color: var(--on-primary);
+        clip-path: polygon(
+          0 0,
+          calc(100% - 14px) 0,
+          100% 50%,
+          calc(100% - 14px) 100%,
+          14px 100%,
+          0 50%
+        );
+      }
+
+      .breadcrumb span {
+        z-index: 1;
+        margin-left: -14px;
+        background: var(--warning);
+        color: var(--on-warning);
+        clip-path: polygon(
+          0 0,
+          calc(100% - 14px) 0,
+          100% 50%,
+          calc(100% - 14px) 100%,
+          14px 100%,
+          0 50%
+        );
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        display: grid;
+        align-content: center;
+        gap: 20px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        letter-spacing: 2px;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2 {
+        color: var(--ink-bright);
+        font-family: var(--font-pixel);
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 11ch;
+        font-size: 64px;
+        line-height: 1;
+      }
+
+      h2 {
+        font-size: 36px;
+        line-height: 1.1;
+      }
+
+      h3 {
+        color: var(--ink-bright);
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+
+      .lead {
+        max-width: 68ch;
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .command-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        color: var(--ink-bright);
+      }
+
+      .prompt-glyph {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .button {
+        padding: 10px 20px;
+        background: var(--primary);
+        color: var(--on-primary);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+
+      .button:hover {
+        background: var(--primary-bright);
+      }
+
+      .ghost-button {
+        padding: 10px 20px;
+        background: transparent;
+        color: var(--primary);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+
+      .ghost-button:hover,
+      .ghost-button:focus-visible {
+        background: var(--canvas-elevated);
+        color: var(--primary-bright);
+      }
+
+      .warning-button {
+        padding: 10px 20px;
+        background: var(--warning);
+        color: var(--on-warning);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+
+      .terminal-card {
+        display: grid;
+        min-height: 100%;
+        background: var(--canvas-elevated);
+        border: 2px solid var(--primary);
+      }
+
+      .terminal-card header {
+        display: flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 16px;
+        background: var(--canvas-deep);
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+
+      .terminal-card pre {
+        margin: 0;
+        padding: 24px;
+        overflow: auto;
+        color: var(--ink-bright);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre;
+      }
+
+      .section {
+        display: grid;
+        gap: 24px;
+        scroll-margin-top: 72px;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 0.75fr) minmax(280px, 0.45fr);
+        gap: 24px;
+        align-items: end;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--primary);
+      }
+
+      .section-kicker {
+        color: var(--gold);
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        letter-spacing: 2px;
+        line-height: 1;
+      }
+
+      .section-note {
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .surface-stack {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border: 2px solid var(--primary);
+      }
+
+      .surface-step {
+        min-height: 160px;
+        padding: 24px;
+        border-right: 2px solid var(--primary);
+      }
+
+      .surface-step:last-child {
+        border-right: 0;
+      }
+
+      .surface-step:nth-child(1) {
+        background: var(--canvas);
+      }
+
+      .surface-step:nth-child(2) {
+        background: var(--canvas-elevated);
+      }
+
+      .surface-step:nth-child(3) {
+        background: var(--canvas-elevated-2);
+      }
+
+      .surface-step code,
+      .swatch code,
+      .type-row code {
+        color: var(--primary-bright);
+        font-family: var(--font-mono);
+      }
+
+      .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .swatch {
+        display: grid;
+        gap: 12px;
+        min-height: 178px;
+        padding: 16px;
+        background: var(--canvas-elevated);
+        border: 2px solid var(--primary);
+      }
+
+      .swatch-token {
+        min-height: 64px;
+        border: 2px solid var(--border-muted);
+      }
+
+      .swatch strong {
+        color: var(--ink-bright);
+      }
+
+      .swatch p {
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .palette-primary {
+        background: var(--primary);
+      }
+
+      .palette-gold {
+        background: var(--gold);
+      }
+
+      .palette-warning {
+        background: var(--warning);
+      }
+
+      .palette-canvas {
+        background: var(--canvas);
+      }
+
+      .palette-deep {
+        background: var(--canvas-deep);
+      }
+
+      .palette-elevated {
+        background: var(--canvas-elevated);
+      }
+
+      .palette-input {
+        background: var(--canvas-input);
+      }
+
+      .palette-ink {
+        background: var(--ink-bright);
+      }
+
+      .type-scale {
+        display: grid;
+        border: 2px solid var(--primary);
+      }
+
+      .type-row {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) minmax(220px, 0.35fr);
+        gap: 16px;
+        align-items: center;
+        padding: 18px 24px;
+        background: var(--canvas-elevated);
+        border-bottom: 1px solid var(--border-muted);
+      }
+
+      .type-row:last-child {
+        border-bottom: 0;
+      }
+
+      .type-name {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .type-sample-display {
+        color: var(--ink-bright);
+        font-family: var(--font-pixel);
+        font-size: 48px;
+        line-height: 1.05;
+      }
+
+      .type-sample-h2 {
+        color: var(--ink-bright);
+        font-family: var(--font-pixel);
+        font-size: 36px;
+        line-height: 1.1;
+      }
+
+      .type-sample-body {
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .type-sample-caption {
+        color: var(--ink-muted);
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        line-height: 1.4;
+        text-transform: uppercase;
+      }
+
+      .component-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .component-panel {
+        display: grid;
+        gap: 16px;
+        min-height: 240px;
+        padding: 24px;
+        background: var(--canvas-elevated);
+        border: 2px solid var(--primary);
+      }
+
+      .component-panel:focus-within {
+        border-width: 4px;
+      }
+
+      .sample-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .form-field {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        color: var(--ink-bright);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 2px solid var(--border-muted);
+        background: var(--canvas-input);
+        color: var(--ink-bright);
+        font-family: var(--font-mono);
+        font-size: 14px;
+      }
+
+      input {
+        min-height: 44px;
+        padding: 10px 12px;
+      }
+
+      textarea {
+        min-height: 132px;
+        padding: 16px;
+        line-height: 1.6;
+        resize: vertical;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: var(--primary);
+      }
+
+      .helper-text {
+        color: var(--ink-muted);
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+
+      .layout-preview {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        min-height: 520px;
+        border: 2px solid var(--primary);
+        background: var(--canvas);
+      }
+
+      .preview-sidebar {
+        padding: 24px 16px;
+        background: var(--canvas-deep);
+        border-right: 2px solid var(--primary);
+      }
+
+      .preview-main {
+        display: grid;
+        grid-template-rows: 40px minmax(0, 1fr);
+        min-width: 0;
+      }
+
+      .preview-prompt {
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        background: var(--canvas-deep);
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .preview-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1fr);
+        gap: 0;
+        padding: 24px;
+      }
+
+      .preview-panel {
+        min-width: 0;
+        padding: 24px;
+        background: var(--canvas-elevated);
+        border: 2px solid var(--primary);
+      }
+
+      .preview-divider {
+        background: var(--primary);
+      }
+
+      .preview-list {
+        display: grid;
+        gap: 8px;
+        padding: 0;
+        margin: 16px 0 0;
+        list-style: none;
+      }
+
+      .preview-list li {
+        min-height: 36px;
+        padding: 8px 12px;
+        color: var(--ink);
+      }
+
+      .preview-list li:first-child {
+        background: var(--canvas-elevated);
+        border-left: 4px solid var(--primary);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 2px solid var(--primary);
+      }
+
+      .tool-tile {
+        display: grid;
+        gap: 12px;
+        min-height: 220px;
+        padding: 24px;
+        background: var(--canvas-elevated);
+        border-right: 2px solid var(--primary);
+      }
+
+      .tool-tile:nth-child(2n) {
+        background: var(--canvas-elevated-2);
+      }
+
+      .tool-tile:last-child {
+        border-right: 0;
+      }
+
+      .tool-tile .status {
+        color: var(--gold);
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        letter-spacing: 2px;
+      }
+
+      .tool-tile p {
+        color: var(--ink);
+      }
+
+      .spec-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--canvas-elevated);
+        border: 2px solid var(--primary);
+      }
+
+      .spec-table caption {
+        padding: 0 0 12px;
+        color: var(--ink-bright);
+        font-weight: 600;
+        text-align: left;
+      }
+
+      .spec-table th,
+      .spec-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-muted);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .spec-table th {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .spec-table tr:last-child th,
+      .spec-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .cmdk-demo {
+        max-width: 720px;
+        padding: 24px;
+        background: var(--canvas-elevated);
+        border: 4px solid var(--primary);
+      }
+
+      .cmdk-input {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--primary);
+      }
+
+      .cmdk-input span {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .cmdk-list {
+        display: grid;
+        gap: 4px;
+        padding: 16px 0 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .cmdk-list li {
+        display: flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 12px;
+      }
+
+      .cmdk-list li:first-child {
+        background: var(--primary-dim);
+        border-left: 4px solid var(--primary);
+        color: var(--on-primary);
+        font-weight: 600;
+      }
+
+      .footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 24px;
+        justify-content: space-between;
+        padding: 16px 32px;
+        background: var(--canvas-deep);
+        border-top: 1px solid var(--border-muted);
+        color: var(--ink-muted);
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+
+      @media (max-width: 1180px) {
+        .hero-grid,
+        .section-head,
+        .component-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .swatch-grid,
+        .tile-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .tool-tile:nth-child(2) {
+          border-right: 0;
+        }
+
+        .tool-tile:nth-child(3) {
+          border-top: 2px solid var(--primary);
+        }
+
+        .tool-tile:nth-child(4) {
+          border-top: 2px solid var(--primary);
+        }
+      }
+
+      @media (max-width: 1023px) {
+        .page-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: sticky;
+          top: 0;
+          z-index: 12;
+          display: grid;
+          grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+          gap: 12px 24px;
+          height: auto;
+          padding: 12px 16px;
+          border-right: 0;
+          border-bottom: 2px solid var(--primary);
+        }
+
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding-bottom: 0;
+          margin-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .brand-mark {
+          font-size: 32px;
+        }
+
+        .brand-meta,
+        .nav-label {
+          display: none;
+        }
+
+        .side-nav {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          min-width: 0;
+          overflow-x: auto;
+          scrollbar-color: var(--primary) var(--canvas-deep);
+        }
+
+        .side-nav a {
+          flex: 0 0 auto;
+          border: 1px solid var(--border-muted);
+          white-space: nowrap;
+        }
+
+        h1 {
+          max-width: 14ch;
+          font-size: 48px;
+        }
+
+        .layout-preview {
+          grid-template-columns: 1fr;
+        }
+
+        .preview-sidebar {
+          border-right: 0;
+          border-bottom: 2px solid var(--primary);
+        }
+      }
+
+      @media (max-width: 767px) {
+        .prompt-bar,
+        main,
+        .footer {
+          padding-inline: 16px;
+        }
+
+        main {
+          gap: 40px;
+        }
+
+        .hero {
+          min-height: auto;
+          align-content: start;
+          padding-top: 16px;
+        }
+
+        h1 {
+          font-size: 36px;
+        }
+
+        h2 {
+          font-size: 28px;
+        }
+
+        .breadcrumb a:nth-child(2) {
+          display: none;
+        }
+
+        .breadcrumb span {
+          margin-left: -14px;
+        }
+
+        .swatch-grid,
+        .surface-stack,
+        .tile-grid,
+        .type-row,
+        .preview-workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .surface-step,
+        .tool-tile {
+          border-right: 0;
+          border-bottom: 2px solid var(--primary);
+        }
+
+        .surface-step:last-child,
+        .tool-tile:last-child {
+          border-bottom: 0;
+        }
+
+        .preview-divider {
+          width: 100%;
+          height: 2px;
+        }
+
+        .side-nav {
+          align-items: stretch;
+        }
+
+        .prompt-path {
+          max-width: 62vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
+    <div class="page-shell">
+      <aside class="sidebar" aria-label="設計系統導覽">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">&gt;_</div>
+          <div class="brand-name">Daily Tools</div>
+          <div class="brand-meta">CRT interface / alpha spec</div>
+        </div>
+
+        <div class="nav-label">Index</div>
+        <nav class="side-nav" aria-label="頁面區塊">
+          <a href="#colors">01 色彩與表面</a>
+          <a href="#typography">02 字體級距</a>
+          <a href="#components">03 元件樣本</a>
+          <a href="#layout">04 工具配置</a>
+          <a href="#tiles">05 工具磁磚</a>
+          <a href="#command">06 Cmd+K</a>
+          <a href="#forms">07 表單</a>
+          <a href="#responsive">08 響應式</a>
+        </nav>
+      </aside>
+
+      <div class="main-shell">
+        <div class="prompt-bar" role="status" aria-live="polite">
+          <span class="prompt-path"
+            >user@daily-tools ~/design-system $ inspect --theme crt</span
+          >
+          <div class="prompt-actions">
+            <span class="key-chip">MONOKAI</span>
+            <button
+              class="key-button"
+              type="button"
+              aria-label="開啟命令面板範例"
+            >
+              <span class="key-chip">⌘K</span>
+            </button>
+          </div>
+        </div>
+
+        <main id="main-content" tabindex="-1">
+          <section class="hero" aria-labelledby="page-title">
+            <nav class="breadcrumb" aria-label="麵包屑">
+              <a href="#main-content">DevTool</a>
+              <a href="#layout">System</a>
+              <span aria-current="page">Design</span>
+            </nav>
+
+            <div class="hero-grid">
+              <div class="hero-copy">
+                <p class="eyebrow">Design System Analysis</p>
+                <h1 id="page-title">DevTool Terminal</h1>
+                <p class="lead">
+                  這是一份以 daily-tools 為主角的設計系統展示頁。區塊節奏參考
+                  getdesign.md 的分析頁，視覺語言則完全遵循 DESIGN.md：深藍 CRT
+                  畫布、mint
+                  綠互動訊號、硬邊框、零圓角、零陰影，以及鍵盤優先的工具介面。
+                </p>
+                <div class="command-line" aria-label="頁面摘要">
+                  <span class="prompt-glyph">&gt;</span>
+                  <span>single action color</span>
+                  <span class="key-chip">#3FE0C5</span>
+                  <span>chunky borders</span>
+                  <span class="key-chip">2PX / 4PX</span>
+                </div>
+                <div class="button-row" aria-label="主要操作範例">
+                  <a class="button" href="#components">查看元件</a>
+                  <a class="ghost-button" href="#responsive">檢視響應式規則</a>
+                </div>
+              </div>
+
+              <article class="terminal-card" aria-label="終端機畫面範例">
+                <header>
+                  <span>design.md preview</span>
+                  <span>alpha</span>
+                </header>
+                <pre>
+daily-tools::design-system
+├─ colors
+│  ├─ action: mint only
+│  ├─ status: gold
+│  └─ danger: warning red
+├─ surfaces
+│  ├─ canvas
+│  ├─ elevated
+│  └─ input slot
+├─ components
+│  ├─ prompt bar
+│  ├─ zsh breadcrumb
+│  ├─ tool panel
+│  └─ cmd+k palette
+└─ rule
+   no radius, no shadow, no extra accent</pre>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="colors" aria-labelledby="colors-title">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">01 — Color Palette</p>
+                <h2 id="colors-title">一個 mint action，三個語意訊號。</h2>
+              </div>
+              <p class="section-note">
+                參考頁以藍色統一互動，本頁改以 Pantone 333c 等價的 mint
+                綠承擔所有互動狀態。Gold 只做狀態，Red 只做破壞或錯誤。
+              </p>
+            </div>
+
+            <div class="surface-stack" aria-label="表面階層">
+              <article class="surface-step">
+                <h3>Canvas</h3>
+                <p><code>#0A1A2F</code></p>
+                <p>主畫布。所有工具頁都從這個深藍終端底色開始。</p>
+              </article>
+              <article class="surface-step">
+                <h3>Elevated</h3>
+                <p><code>#122339</code></p>
+                <p>工具面板與重點容器。深度由表面階層提供，不靠陰影。</p>
+              </article>
+              <article class="surface-step">
+                <h3>Nested</h3>
+                <p><code>#15263F</code></p>
+                <p>面板內的鍵帽、列表選取列、次級資料槽。</p>
+              </article>
+            </div>
+
+            <div class="swatch-grid" aria-label="色票">
+              <article class="swatch">
+                <div
+                  class="swatch-token palette-primary"
+                  aria-hidden="true"
+                ></div>
+                <strong>Primary Mint</strong>
+                <code>#3FE0C5</code>
+                <p>所有連結、焦點、主操作、prompt glyph。</p>
+              </article>
+              <article class="swatch">
+                <div class="swatch-token palette-gold" aria-hidden="true"></div>
+                <strong>Status Gold</strong>
+                <code>#F1B434</code>
+                <p>非阻斷狀態、次要訊息、breadcrumb category。</p>
+              </article>
+              <article class="swatch">
+                <div
+                  class="swatch-token palette-warning"
+                  aria-hidden="true"
+                ></div>
+                <strong>Warning Red</strong>
+                <code>#E03C31</code>
+                <p>錯誤、重設、破壞性操作，不做品牌裝飾。</p>
+              </article>
+              <article class="swatch">
+                <div class="swatch-token palette-deep" aria-hidden="true"></div>
+                <strong>Canvas Deep</strong>
+                <code>#050E1C</code>
+                <p>側欄、prompt bar、footer、modal scrim 基底。</p>
+              </article>
+              <article class="swatch">
+                <div
+                  class="swatch-token palette-canvas"
+                  aria-hidden="true"
+                ></div>
+                <strong>Canvas</strong>
+                <code>#0A1A2F</code>
+                <p>主內容背景，承接 CRT scanline overlay。</p>
+              </article>
+              <article class="swatch">
+                <div
+                  class="swatch-token palette-elevated"
+                  aria-hidden="true"
+                ></div>
+                <strong>Elevated</strong>
+                <code>#122339</code>
+                <p>工具面板、Cmd+K modal、active nav item。</p>
+              </article>
+              <article class="swatch">
+                <div
+                  class="swatch-token palette-input"
+                  aria-hidden="true"
+                ></div>
+                <strong>Input Slot</strong>
+                <code>#081424</code>
+                <p>文字輸入與 textarea 的凹槽色。</p>
+              </article>
+              <article class="swatch">
+                <div class="swatch-token palette-ink" aria-hidden="true"></div>
+                <strong>Ink Bright</strong>
+                <code>#E6F1FF</code>
+                <p>標題、強調文字、鍵帽文字。</p>
+              </article>
+            </div>
+          </section>
+
+          <section
+            class="section"
+            id="typography"
+            aria-labelledby="typography-title"
+          >
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">02 — Typography Scale</p>
+                <h2 id="typography-title">
+                  VT323 顯示字，IBM Plex Mono 操作字。
+                </h2>
+              </div>
+              <p class="section-note">
+                文字本身就是終端機的品牌資產。顯示層保持 pixel
+                flavor，操作層保持單寬可讀性；不使用斜體、不使用 500 或 700。
+              </p>
+            </div>
+
+            <div class="type-scale" aria-label="字體級距範例">
+              <div class="type-row">
+                <div class="type-name">pixel-display</div>
+                <div class="type-sample-display">CRT READY</div>
+                <code>64px / 400 / 1.0</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">pixel-h2</div>
+                <div class="type-sample-h2">工具系統標題</div>
+                <code>36px / 400 / 1.1</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">mono-body-lg</div>
+                <div class="type-sample-body">
+                  用來說明工具行為、輸入輸出與錯誤狀態的主要文字。
+                </div>
+                <code>16px / 400 / 1.5</code>
+              </div>
+              <div class="type-row">
+                <div class="type-name">mono-caption</div>
+                <div class="type-sample-caption">
+                  BUILD SHA / THEME / STATUS
+                </div>
+                <code>12px / 400 / 1.4</code>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="section"
+            id="components"
+            aria-labelledby="components-title"
+          >
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">03 — Component Variants</p>
+                <h2 id="components-title">
+                  按鈕是實心像素塊，面板是硬邊工具槽。
+                </h2>
+              </div>
+              <p class="section-note">
+                參考頁的 pills 與圓角卡片在這裡被替換成終端語法：borderless
+                button、2px panel、4px focus/modal。
+              </p>
+            </div>
+
+            <div class="component-grid">
+              <article class="component-panel">
+                <h3>Buttons</h3>
+                <p>操作色只有 mint。Gold 與 red 只能表達語意狀態。</p>
+                <div class="button-row">
+                  <button class="button" type="button">格式化</button>
+                  <button class="ghost-button" type="button">複製輸出</button>
+                  <button class="warning-button" type="button">清除</button>
+                </div>
+              </article>
+
+              <article class="component-panel">
+                <h3>Tool Panel</h3>
+                <p>
+                  標準工具容器。背景固定 elevated，chunky border 是主要結構線。
+                </p>
+                <div class="command-line">
+                  <span class="prompt-glyph">&gt;</span>
+                  <span>panel.focus()</span>
+                  <span class="key-chip">TAB</span>
+                </div>
+              </article>
+
+              <article class="component-panel">
+                <h3>Key Chips</h3>
+                <p>
+                  鍵帽是資訊，不是裝飾。可操作的觸發器必須包在 44px button 裡。
+                </p>
+                <div class="button-row">
+                  <span class="key-chip">⌘K</span>
+                  <span class="key-chip">ESC</span>
+                  <span class="key-chip">ENTER</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="layout" aria-labelledby="layout-title">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">04 — Layout Chassis</p>
+                <h2 id="layout-title">
+                  240px 側欄，加上一個可工作的工具畫布。
+                </h2>
+              </div>
+              <p class="section-note">
+                這個區塊對應參考頁的產品 tile preview，但改為 daily-tools
+                真正會使用的工具機殼：sidebar、prompt bar、breadcrumb、dual
+                pane。
+              </p>
+            </div>
+
+            <article class="layout-preview" aria-label="工具配置預覽">
+              <div class="preview-sidebar">
+                <div class="brand-name">TOOLS</div>
+                <ul class="preview-list">
+                  <li>文字統計</li>
+                  <li>JSON Formatter</li>
+                  <li>Base64</li>
+                  <li>Regex Tester</li>
+                </ul>
+              </div>
+              <div class="preview-main">
+                <div class="preview-prompt">~/tools/word-count $ analyze</div>
+                <div class="preview-workspace">
+                  <div class="preview-panel">
+                    <h3>Input</h3>
+                    <p>
+                      textarea-code 使用 Monokai 類型槽，焦點時維持 2px mint
+                      border。
+                    </p>
+                  </div>
+                  <div class="preview-divider" aria-hidden="true"></div>
+                  <div class="preview-panel">
+                    <h3>Stats</h3>
+                    <p>輸出是資料密集面板，數字、標籤與狀態都維持單寬對齊。</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="section" id="tiles" aria-labelledby="tiles-title">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">05 — Tool Tiles</p>
+                <h2 id="tiles-title">色塊交替就是分隔線。</h2>
+              </div>
+              <p class="section-note">
+                參考頁使用 edge-to-edge product tiles。本頁保留緊密排列，但用
+                canvas-elevated 階層與 mint 邊線建立工具目錄。
+              </p>
+            </div>
+
+            <div class="tile-grid" aria-label="工具磁磚範例">
+              <article class="tool-tile">
+                <span class="status">LIVE</span>
+                <h3>文字統計</h3>
+                <p>字元、單字、句子、閱讀時間，即時回饋。</p>
+                <a href="#layout">查看配置</a>
+              </article>
+              <article class="tool-tile">
+                <span class="status">NEXT</span>
+                <h3>JSON Formatter</h3>
+                <p>左右分欄，輸入與格式化輸出由 2px divider 切開。</p>
+                <a href="#components">查看元件</a>
+              </article>
+              <article class="tool-tile">
+                <span class="status">QUEUE</span>
+                <h3>Base64</h3>
+                <p>編碼、解碼、複製結果，所有操作沿用 mint CTA。</p>
+                <a href="#colors">查看色票</a>
+              </article>
+              <article class="tool-tile">
+                <span class="status">QUEUE</span>
+                <h3>Regex Tester</h3>
+                <p>捕獲群組和 match 結果以表格式資料呈現。</p>
+                <a href="#responsive">查看規則</a>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="command" aria-labelledby="command-title">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">06 — Command Palette</p>
+                <h2 id="command-title">Cmd+K 是主要入口，不是附加捷徑。</h2>
+              </div>
+              <p class="section-note">
+                每個工具兩次按鍵內可抵達。modal 使用 4px mint
+                border，列表選取列使用 primary-dim 與左側 4px 狀態條。
+              </p>
+            </div>
+
+            <article class="cmdk-demo" aria-label="Cmd+K 命令面板範例">
+              <div class="cmdk-input">
+                <span aria-hidden="true">&gt;</span>
+                <label class="sr-only" for="command-search">搜尋工具</label>
+                <input
+                  id="command-search"
+                  type="search"
+                  value="json"
+                  aria-describedby="command-help"
+                />
+              </div>
+              <p class="helper-text" id="command-help">
+                輸入工具名稱，Enter 開啟選取項目。
+              </p>
+              <ul class="cmdk-list">
+                <li>
+                  <span>JSON Formatter</span><span class="key-chip">ENTER</span>
+                </li>
+                <li>
+                  <span>JSON Minifier</span><span class="key-chip">⌘2</span>
+                </li>
+                <li>
+                  <span>JSON to TypeScript</span
+                  ><span class="key-chip">⌘3</span>
+                </li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="section" id="forms" aria-labelledby="forms-title">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">07 — Forms</p>
+                <h2 id="forms-title">輸入欄位像凹槽，焦點就是 mint 邊框。</h2>
+              </div>
+              <p class="section-note">
+                placeholder 只做提示，不取代
+                label。互動元素保留可見焦點，最小觸控目標維持 44px。
+              </p>
+            </div>
+
+            <div class="component-grid">
+              <article class="component-panel">
+                <h3>Search</h3>
+                <div class="form-field">
+                  <label for="tool-search">搜尋工具</label>
+                  <input
+                    id="tool-search"
+                    type="search"
+                    placeholder="json / regex / base64"
+                    autocomplete="off"
+                  />
+                  <p class="helper-text">搜尋結果會在 Cmd+K 與側欄同步。</p>
+                </div>
+              </article>
+              <article class="component-panel">
+                <h3>Code Area</h3>
+                <div class="form-field">
+                  <label for="code-input">輸入內容</label>
+                  <textarea id="code-input" spellcheck="false">
+{"theme":"monokai","rounded":false}</textarea>
+                </div>
+              </article>
+              <article class="component-panel">
+                <h3>Status Toast</h3>
+                <p style="color: var(--primary); font-weight: 600">
+                  已複製到剪貼簿
+                </p>
+                <p>
+                  toast 使用 elevated 背景、語意色文字與 chunky
+                  border；錯誤訊息要說明修正方向。
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section
+            class="section"
+            id="responsive"
+            aria-labelledby="responsive-title"
+          >
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">08 — Responsive Rules</p>
+                <h2 id="responsive-title">桌面優先，手機優雅降級。</h2>
+              </div>
+              <p class="section-note">
+                daily-tools
+                是寬螢幕工作介面。小尺寸保持功能可讀，但不假裝每個工具都能在
+                320px 下完整展示。
+              </p>
+            </div>
+
+            <table class="spec-table">
+              <caption>
+                版面斷點與行為
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">斷點</th>
+                  <th scope="col">寬度</th>
+                  <th scope="col">行為</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Mobile</th>
+                  <td>≤ 639px</td>
+                  <td>
+                    單欄、breadcrumb 隱藏 category、dual-pane 改垂直堆疊。
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Tablet</th>
+                  <td>640–1023px</td>
+                  <td>側欄改為上方索引區，主要畫布全寬。</td>
+                </tr>
+                <tr>
+                  <th scope="row">Desktop</th>
+                  <td>≥ 1024px</td>
+                  <td>240px 固定側欄，prompt bar sticky，工具面板雙欄。</td>
+                </tr>
+                <tr>
+                  <th scope="row">Wide</th>
+                  <td>≥ 1440px</td>
+                  <td>維持密集資訊配置，不額外增加 marketing whitespace。</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </main>
+
+        <footer class="footer">
+          <span>daily-tools design.html / alpha</span>
+          <span>theme: DevTool Terminal / scanline 4%</span>
+          <a href="https://getdesign.md/design-md/apple/preview"
+            >reference structure: getdesign.md</a
+          >
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>
