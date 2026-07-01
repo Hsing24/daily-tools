@@ -55,6 +55,7 @@ Push to `main` triggers [`.github/workflows/deploy-pages.yml`](.github/workflows
 ## Conventions worth knowing
 
 - **Language.** All user-facing strings are zh-Hant. Match the existing tone (concise, slightly playful).
+- **Agent response language.** 所有的對話、描述、解釋與回覆皆必須使用繁體中文 (zh-Hant / zh-tw) 撰寫。若是專有名詞、程式碼符號或技術用語（例如 Standalone Component、Master CSS、RxJS、Signals 等），請維持英文原文。
 - **Control flow.** Use the built-in `@if` / `@for` / `@switch` block syntax (already used in `app.html`) — do not import `*ngIf` / `*ngFor` directives.
 - **Accessibility.** UI is interactive-tool-heavy; keep keyboard support, labels, and contrast in line with WCAG 2.2 AA. The terminal aesthetic in DESIGN.md must not sacrifice focus indicators.
 - **Prettier** is installed with default config. No project-specific `.prettierrc`; do not introduce one without discussion.
