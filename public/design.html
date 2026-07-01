@@ -70,6 +70,18 @@
         );
       }
 
+      @keyframes crt-flicker {
+        0% { opacity: 0.045; }
+        50% { opacity: 0.038; }
+        100% { opacity: 0.045; }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        body::before {
+          animation: crt-flicker 0.15s infinite;
+        }
+      }
+
       a {
         color: var(--primary);
         text-decoration: none;
