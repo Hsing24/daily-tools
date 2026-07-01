@@ -78,6 +78,68 @@
         --elevation-lg: 8px 8px 0 0 var(--canvas-deep);
       }
 
+      /* ── Solarized Dark 主題覆寫 ────────────────────────────── */
+      [data-theme="solarized"] {
+        color-scheme: dark;
+        --primary: #268bd2;
+        --primary-bright: #4db8ff;
+        --primary-dim: #1a6a9e;
+        --gold: #b58900;
+        --gold-bright: #dba800;
+        --gold-dim: #7a5b00;
+        --warning: #dc322f;
+        --warning-dim: #921f1d;
+        --canvas: #002b36;
+        --canvas-deep: #00212b;
+        --canvas-elevated: #073642;
+        --canvas-elevated-2: #0a3d4a;
+        --canvas-input: #001d26;
+        --surface-overlay: rgba(0, 43, 54, 0.88);
+        --scanline-tint: rgba(38, 139, 210, 0.04);
+        --ink-bright: #fdf6e3;
+        --ink: #839496;
+        --ink-muted: #4f6e77;
+        --ink-disabled: #264a54;
+        --on-primary: #fdf6e3;
+        --on-gold: #fdf6e3;
+        --on-warning: #fdf6e3;
+        --border-default: #268bd2;
+        --border-muted: #0d4050;
+        --border-gold: #b58900;
+        --border-warning: #dc322f;
+      }
+
+      /* ── 主題切換器樣式 ──────────────────────────────────────── */
+      .theme-switcher {
+        display: inline-flex;
+        border: 1px solid var(--border-muted);
+        overflow: hidden;
+      }
+      .theme-btn {
+        background: transparent;
+        color: var(--ink-muted);
+        border: 0;
+        padding: 4px 10px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: background 0.1s ease, color 0.1s ease;
+      }
+      .theme-btn.active {
+        background: var(--primary);
+        color: var(--on-primary);
+      }
+      .theme-btn:hover:not(.active) {
+        background: var(--canvas-elevated);
+        color: var(--ink);
+      }
+      .theme-btn:focus-visible {
+        outline: 1px solid var(--primary-bright);
+        outline-offset: -2px;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -1792,7 +1854,20 @@
             >user@daily-tools ~/design-system $ inspect --theme crt</span
           >
           <div class="prompt-actions">
-            <span class="key-chip">MONOKAI</span>
+            <div class="theme-switcher" role="group" aria-label="語法主題切換">
+              <button
+                id="theme-btn-monokai"
+                class="theme-btn active"
+                type="button"
+                aria-pressed="true"
+              >MONOKAI</button>
+              <button
+                id="theme-btn-solarized"
+                class="theme-btn"
+                type="button"
+                aria-pressed="false"
+              >SOLARIZED</button>
+            </div>
             <button
               class="key-button"
               type="button"
@@ -2863,4 +2938,43 @@ daily-tools::design-system
       </div>
     </div>
   </body>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btnMonokai = document.getElementById('theme-btn-monokai');
+      var btnSolarized = document.getElementById('theme-btn-solarized');
+      var segMonokai = document.querySelector('.segmented-control button:first-child');
+      var segSolarized = document.querySelector('.segmented-control button:last-child');
+
+      function applyTheme(theme) {
+        if (theme === 'solarized') {
+          root.setAttribute('data-theme', 'solarized');
+          btnMonokai.classList.remove('active');
+          btnMonokai.setAttribute('aria-pressed', 'false');
+          btnSolarized.classList.add('active');
+          btnSolarized.setAttribute('aria-pressed', 'true');
+          if (segMonokai) { segMonokai.classList.remove('active'); }
+          if (segSolarized) { segSolarized.classList.add('active'); }
+        } else {
+          root.removeAttribute('data-theme');
+          btnMonokai.classList.add('active');
+          btnMonokai.setAttribute('aria-pressed', 'true');
+          btnSolarized.classList.remove('active');
+          btnSolarized.setAttribute('aria-pressed', 'false');
+          if (segMonokai) { segMonokai.classList.add('active'); }
+          if (segSolarized) { segSolarized.classList.remove('active'); }
+        }
+        try { sessionStorage.setItem('ds-theme', theme); } catch(e) {}
+      }
+
+      // 還原上次選擇
+      try {
+        var saved = sessionStorage.getItem('ds-theme');
+        if (saved === 'solarized') applyTheme('solarized');
+      } catch(e) {}
+
+      btnMonokai.addEventListener('click', function () { applyTheme('monokai'); });
+      btnSolarized.addEventListener('click', function () { applyTheme('solarized'); });
+    })();
+  </script>
 </html>
