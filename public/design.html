@@ -18,7 +18,9 @@
         --primary-dim: #2bae96;
         --gold: #f1b434;
         --gold-bright: #ffd166;
+        --gold-dim: #b8830a;
         --warning: #e03c31;
+        --warning-dim: #8a2018;
         --canvas: #0a1a2f;
         --canvas-deep: #050e1c;
         --canvas-elevated: #122339;
@@ -31,8 +33,33 @@
         --ink-muted: #6a7c99;
         --ink-disabled: #3a4a66;
         --on-primary: #0a1a2f;
+        --on-gold: #0a1a2f;
         --on-warning: #ffffff;
+        --border-default: #3fe0c5;
         --border-muted: #1e3050;
+        --border-gold: #f1b434;
+        --border-warning: #e03c31;
+
+        /* Syntax — Monokai */
+        --syntax-monokai-bg: #272822;
+        --syntax-monokai-fg: #f8f8f2;
+        --syntax-monokai-keyword: #f92672;
+        --syntax-monokai-string: #e6db74;
+        --syntax-monokai-number: #ae81ff;
+        --syntax-monokai-function: #a6e22e;
+        --syntax-monokai-property: #66d9ef;
+        --syntax-monokai-comment: #75715e;
+
+        /* Syntax — Solarized Dark */
+        --syntax-solarized-bg: #002b36;
+        --syntax-solarized-fg: #839496;
+        --syntax-solarized-keyword: #859900;
+        --syntax-solarized-string: #2aa198;
+        --syntax-solarized-number: #d33682;
+        --syntax-solarized-function: #268bd2;
+        --syntax-solarized-property: #b58900;
+        --syntax-solarized-comment: #586e75;
+
         --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
         --font-mono:
           "IBM Plex Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
@@ -71,14 +98,20 @@
       }
 
       @keyframes crt-flicker {
-        0% { opacity: 0.045; }
-        50% { opacity: 0.038; }
-        100% { opacity: 0.045; }
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.88;
+        }
+        100% {
+          opacity: 1;
+        }
       }
 
       @media (prefers-reduced-motion: no-preference) {
         body::before {
-          animation: crt-flicker 0.15s infinite;
+          animation: crt-flicker 0.1s infinite;
         }
       }
 
@@ -603,36 +636,165 @@
         line-height: 1.4;
       }
 
+      .swatch-categories {
+        display: grid;
+        gap: 32px;
+      }
+
+      .swatch-category {
+        display: grid;
+        gap: 16px;
+      }
+
+      .swatch-cat-title {
+        color: var(--primary);
+        font-family: var(--font-pixel);
+        font-size: 24px;
+        border-bottom: 2px solid var(--border-muted);
+        padding-bottom: 8px;
+        margin: 16px 0 0;
+      }
+
       .palette-primary {
         background: var(--primary);
       }
-
+      .palette-primary-bright {
+        background: var(--primary-bright);
+      }
+      .palette-primary-dim {
+        background: var(--primary-dim);
+      }
       .palette-gold {
         background: var(--gold);
       }
-
+      .palette-gold-bright {
+        background: var(--gold-bright);
+      }
+      .palette-gold-dim {
+        background: var(--gold-dim);
+      }
       .palette-warning {
         background: var(--warning);
       }
-
+      .palette-warning-dim {
+        background: var(--warning-dim);
+      }
       .palette-canvas {
         background: var(--canvas);
       }
+      .palette-canvas-deep {
+        background: var(--canvas-deep);
+      }
+      .palette-canvas-elevated {
+        background: var(--canvas-elevated);
+      }
+      .palette-canvas-elevated-2 {
+        background: var(--canvas-elevated-2);
+      }
+      .palette-canvas-input {
+        background: var(--canvas-input);
+      }
+      .palette-surface-overlay {
+        background: var(--surface-overlay);
+      }
+      .palette-scanline-tint {
+        background: var(--scanline-tint);
+      }
+      .palette-ink-bright {
+        background: var(--ink-bright);
+      }
+      .palette-ink {
+        background: var(--ink);
+      }
+      .palette-ink-muted {
+        background: var(--ink-muted);
+      }
+      .palette-ink-disabled {
+        background: var(--ink-disabled);
+      }
+      .palette-on-primary {
+        background: var(--on-primary);
+      }
+      .palette-on-gold {
+        background: var(--on-gold);
+      }
+      .palette-on-warning {
+        background: var(--on-warning);
+      }
+      .palette-border-default {
+        background: var(--border-default);
+      }
+      .palette-border-muted {
+        background: var(--border-muted);
+      }
+      .palette-border-gold {
+        background: var(--border-gold);
+      }
+      .palette-border-warning {
+        background: var(--border-warning);
+      }
 
+      /* Aliases for backwards compatibility or legacy uses */
       .palette-deep {
         background: var(--canvas-deep);
       }
-
       .palette-elevated {
         background: var(--canvas-elevated);
       }
-
       .palette-input {
         background: var(--canvas-input);
       }
 
-      .palette-ink {
-        background: var(--ink-bright);
+      /* Syntax Highlighting — Monokai */
+      .palette-syntax-monokai-bg {
+        background: var(--syntax-monokai-bg);
+      }
+      .palette-syntax-monokai-fg {
+        background: var(--syntax-monokai-fg);
+      }
+      .palette-syntax-monokai-keyword {
+        background: var(--syntax-monokai-keyword);
+      }
+      .palette-syntax-monokai-string {
+        background: var(--syntax-monokai-string);
+      }
+      .palette-syntax-monokai-number {
+        background: var(--syntax-monokai-number);
+      }
+      .palette-syntax-monokai-function {
+        background: var(--syntax-monokai-function);
+      }
+      .palette-syntax-monokai-property {
+        background: var(--syntax-monokai-property);
+      }
+      .palette-syntax-monokai-comment {
+        background: var(--syntax-monokai-comment);
+      }
+
+      /* Syntax Highlighting — Solarized Dark */
+      .palette-syntax-solarized-bg {
+        background: var(--syntax-solarized-bg);
+      }
+      .palette-syntax-solarized-fg {
+        background: var(--syntax-solarized-fg);
+      }
+      .palette-syntax-solarized-keyword {
+        background: var(--syntax-solarized-keyword);
+      }
+      .palette-syntax-solarized-string {
+        background: var(--syntax-solarized-string);
+      }
+      .palette-syntax-solarized-number {
+        background: var(--syntax-solarized-number);
+      }
+      .palette-syntax-solarized-function {
+        background: var(--syntax-solarized-function);
+      }
+      .palette-syntax-solarized-property {
+        background: var(--syntax-solarized-property);
+      }
+      .palette-syntax-solarized-comment {
+        background: var(--syntax-solarized-comment);
       }
 
       .type-scale {
@@ -1232,70 +1394,428 @@ daily-tools::design-system
               </article>
             </div>
 
-            <div class="swatch-grid" aria-label="色票">
-              <article class="swatch">
-                <div
-                  class="swatch-token palette-primary"
-                  aria-hidden="true"
-                ></div>
-                <strong>Primary Mint</strong>
-                <code>#3FE0C5</code>
-                <p>所有連結、焦點、主操作、prompt glyph。</p>
-              </article>
-              <article class="swatch">
-                <div class="swatch-token palette-gold" aria-hidden="true"></div>
-                <strong>Status Gold</strong>
-                <code>#F1B434</code>
-                <p>非阻斷狀態、次要訊息、breadcrumb category。</p>
-              </article>
-              <article class="swatch">
-                <div
-                  class="swatch-token palette-warning"
-                  aria-hidden="true"
-                ></div>
-                <strong>Warning Red</strong>
-                <code>#E03C31</code>
-                <p>錯誤、重設、破壞性操作，不做品牌裝飾。</p>
-              </article>
-              <article class="swatch">
-                <div class="swatch-token palette-deep" aria-hidden="true"></div>
-                <strong>Canvas Deep</strong>
-                <code>#050E1C</code>
-                <p>側欄、prompt bar、footer、modal scrim 基底。</p>
-              </article>
-              <article class="swatch">
-                <div
-                  class="swatch-token palette-canvas"
-                  aria-hidden="true"
-                ></div>
-                <strong>Canvas</strong>
-                <code>#0A1A2F</code>
-                <p>主內容背景，承接 CRT scanline overlay。</p>
-              </article>
-              <article class="swatch">
-                <div
-                  class="swatch-token palette-elevated"
-                  aria-hidden="true"
-                ></div>
-                <strong>Elevated</strong>
-                <code>#122339</code>
-                <p>工具面板、Cmd+K modal、active nav item。</p>
-              </article>
-              <article class="swatch">
-                <div
-                  class="swatch-token palette-input"
-                  aria-hidden="true"
-                ></div>
-                <strong>Input Slot</strong>
-                <code>#081424</code>
-                <p>文字輸入與 textarea 的凹槽色。</p>
-              </article>
-              <article class="swatch">
-                <div class="swatch-token palette-ink" aria-hidden="true"></div>
-                <strong>Ink Bright</strong>
-                <code>#E6F1FF</code>
-                <p>標題、強調文字、鍵帽文字。</p>
-              </article>
+            <div class="swatch-categories">
+              <!-- Category 1: 品牌與強調色 Brand & Accent -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">品牌與強調色 Brand & Accent</h3>
+                <div class="swatch-grid" aria-label="品牌與強調色">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-primary"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Primary Mint</strong>
+                    <code>#3FE0C5</code>
+                    <p>所有連結、焦點、主操作、prompt glyph。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-primary-bright"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Mint Bright</strong>
+                    <code>#6BFFE0</code>
+                    <p>按鈕活動狀態或輸入游標閃爍色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-primary-dim"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Mint Dim</strong>
+                    <code>#2BAE96</code>
+                    <p>麵包屑上游、選取列背景或已停用主要狀態。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-gold"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Status Gold</strong>
+                    <code>#F1B434</code>
+                    <p>非阻斷狀態、次要訊息、BETA 標籤。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-gold-bright"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Gold Bright</strong>
+                    <code>#FFD166</code>
+                    <p>金色懸停或高亮狀態。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-gold-dim"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Gold Dim</strong>
+                    <code>#B8830A</code>
+                    <p>昏暗金色狀態色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-warning"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Warning Red</strong>
+                    <code>#E03C31</code>
+                    <p>錯誤、重設、破壞性操作，不做品牌裝飾。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-warning-dim"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Warning Dim</strong>
+                    <code>#8A2018</code>
+                    <p>昏暗警告紅 / 錯誤細部。</p>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Category 2: 表面與畫布 Surfaces -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">表面與畫布 Surfaces</h3>
+                <div class="swatch-grid" aria-label="表面與畫布">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-canvas"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Canvas</strong>
+                    <code>#0A1A2F</code>
+                    <p>主內容背景，承接 CRT scanline overlay。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-canvas-deep"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Canvas Deep</strong>
+                    <code>#050E1C</code>
+                    <p>側欄、prompt bar、footer、modal scrim 基底。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-canvas-elevated"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Canvas Elevated</strong>
+                    <code>#122339</code>
+                    <p>工具面板、Cmd+K modal、active nav item。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-canvas-elevated-2"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Canvas Elevated 2</strong>
+                    <code>#15263F</code>
+                    <p>面板內的鍵帽、列表選取列、次級資料槽。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-canvas-input"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Input Slot</strong>
+                    <code>#081424</code>
+                    <p>文字輸入與 textarea 的凹槽色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-surface-overlay"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Surface Overlay</strong>
+                    <code>rgba(10, 26, 47, 0.85)</code>
+                    <p>Cmd+K 彈窗背後的遮罩。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-scanline-tint"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Scanline Tint</strong>
+                    <code>rgba(63, 224, 197, 0.04)</code>
+                    <p>CRT 掃描線疊加層。</p>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Category 3: 文字 Text -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">文字 Text</h3>
+                <div class="swatch-grid" aria-label="文字配色">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-ink-bright"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Ink Bright</strong>
+                    <code>#E6F1FF</code>
+                    <p>標題、強調文字、鍵帽文字。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-ink"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Ink</strong>
+                    <code>#C9D5E8</code>
+                    <p>預設內文。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-ink-muted"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Ink Muted</strong>
+                    <code>#6A7C99</code>
+                    <p>說明文字、副標、頁尾、分隔線。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-ink-disabled"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Ink Disabled</strong>
+                    <code>#3A4A66</code>
+                    <p>禁用狀態或 placeholder 文字。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-on-primary"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>On Primary</strong>
+                    <code>#0A1A2F</code>
+                    <p>Mint 綠背景上的前景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-on-gold"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>On Gold</strong>
+                    <code>#0A1A2F</code>
+                    <p>金色背景上的前景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-on-warning"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>On Warning</strong>
+                    <code>#FFFFFF</code>
+                    <p>警告背景上的前景色。</p>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Category 4: 邊框 Borders -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">邊框 Borders</h3>
+                <div class="swatch-grid" aria-label="邊框配色">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-border-default"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Border Default</strong>
+                    <code>#3FE0C5</code>
+                    <p>預設 Mint 綠邊框。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-border-muted"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Border Muted</strong>
+                    <code>#1E3050</code>
+                    <p>細線分線、預設輸入框框線。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-border-gold"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Border Gold</strong>
+                    <code>#F1B434</code>
+                    <p>金色狀態指示邊框。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-border-warning"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Border Warning</strong>
+                    <code>#E03C31</code>
+                    <p>紅色警告邊框。</p>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Category 5: 代碼語意色 Monokai Syntax -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">代碼語意色 Monokai Syntax</h3>
+                <div class="swatch-grid" aria-label="Monokai 代碼語意色">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-bg"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai BG</strong>
+                    <code>#272822</code>
+                    <p>程式碼編輯器背景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-fg"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai FG</strong>
+                    <code>#F8F8F2</code>
+                    <p>程式碼編輯器預設前景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-keyword"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai Keyword</strong>
+                    <code>#F92672</code>
+                    <p>保留字、關鍵字。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-string"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai String</strong>
+                    <code>#E6DB74</code>
+                    <p>字串常數。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-number"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai Number</strong>
+                    <code>#AE81FF</code>
+                    <p>數值常數與布林值。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-function"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai Function</strong>
+                    <code>#A6E22E</code>
+                    <p>函式宣告與呼叫名稱。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-property"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai Property</strong>
+                    <code>#66D9EF</code>
+                    <p>屬性名稱與變數名稱。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-monokai-comment"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Monokai Comment</strong>
+                    <code>#75715E</code>
+                    <p>程式碼註解。</p>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Category 6: 代碼語意色 Solarized Dark Syntax -->
+              <div class="swatch-category">
+                <h3 class="swatch-cat-title">
+                  代碼語意色 Solarized Dark Syntax
+                </h3>
+                <div class="swatch-grid" aria-label="Solarized Dark 代碼語意色">
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-bg"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized BG</strong>
+                    <code>#002B36</code>
+                    <p>Solarized 編輯器背景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-fg"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized FG</strong>
+                    <code>#839496</code>
+                    <p>Solarized 編輯器預設前景色。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-keyword"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized Keyword</strong>
+                    <code>#859900</code>
+                    <p>保留字、關鍵字。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-string"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized String</strong>
+                    <code>#2AA198</code>
+                    <p>字串常數。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-number"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized Number</strong>
+                    <code>#D33682</code>
+                    <p>數值常數與布林值。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-function"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized Function</strong>
+                    <code>#268BD2</code>
+                    <p>函式宣告與呼叫名稱。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-property"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized Property</strong>
+                    <code>#B58900</code>
+                    <p>屬性名稱與變數名稱。</p>
+                  </article>
+                  <article class="swatch">
+                    <div
+                      class="swatch-token palette-syntax-solarized-comment"
+                      aria-hidden="true"
+                    ></div>
+                    <strong>Solarized Comment</strong>
+                    <code>#586E75</code>
+                    <p>程式碼註解。</p>
+                  </article>
+                </div>
+              </div>
             </div>
           </section>
 
