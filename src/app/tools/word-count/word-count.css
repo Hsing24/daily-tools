@@ -1,19 +1,342 @@
 /* word-count scoped CSS.
- *
- * Almost all styling is done with Master CSS atomic classes in the template,
- * per AGENTS.md. Only the things Master CSS can't cleanly express live here:
- *   1. the base monospace font for the whole tool,
- *   2. the textarea placeholder color (a pseudo-element),
- *   3. the Zsh / p10k powerline breadcrumb chevrons (clip-path polygons).
- * Per DESIGN.md: zero rounded corners, zero shadows, flat solid fills.
+ * 
+ * 視覺遵循 DESIGN.md 規範，並參考確認過的 public/design.html 呈現。
+ * 本檔案在 :host 定義了核心設計系統變數（與 design.html 保持一致），
+ * 以確保元件的視覺獨立、像素風 CRT 終端機美感與高質感微互動。
  */
 
-.word-count-root {
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+:host {
+  display: block;
+  /* 品牌與語意顏色 */
+  --primary: #3fe0c5;
+  --primary-bright: #6bffe0;
+  --primary-dim: #2bae96;
+  --gold: #f1b434;
+  --gold-bright: #ffd166;
+  --gold-dim: #b8830a;
+  --warning: #e03c31;
+  --warning-dim: #8a2018;
+
+  /* 面板與背景 */
+  --canvas: #0a1a2f;
+  --canvas-deep: #050e1c;
+  --canvas-elevated: #122339;
+  --canvas-elevated-2: #15263f;
+  --canvas-input: #081424;
+
+  /* 文字 */
+  --ink-bright: #e6f1ff;
+  --ink: #c9d5e8;
+  --ink-muted: #6a7c99;
+  --ink-disabled: #3a4a66;
+  --on-primary: #0a1a2f;
+  --on-gold: #0a1a2f;
+  --on-warning: #ffffff;
+
+  /* 邊框 */
+  --border-default: #3fe0c5;
+  --border-muted: #1e3050;
+  --border-gold: #f1b434;
+  --border-warning: #e03c31;
+
+  /* 字型 */
+  --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+
+  /* 硬像素陰影 (Hard Pixel-offset Shadows) */
+  --elevation-sm: 2px 2px 0 0 var(--canvas-deep);
+  --elevation-md: 4px 4px 0 0 var(--canvas-deep);
+  --elevation-lg: 8px 8px 0 0 var(--canvas-deep);
+
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+/* --- Container Panel --- */
+.tool-panel {
+  background-color: var(--canvas-elevated);
+  border: 2px solid var(--border-default);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* --- Text Utility Headers --- */
+.tool-eyebrow {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: var(--ink-muted);
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.tool-title {
+  font-family: var(--font-pixel);
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--primary);
+  line-height: 1.1;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.tool-description {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* --- Textarea Form Input --- */
+.word-count-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink-bright);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.word-count-textarea {
+  width: 100%;
+  height: 240px;
+  padding: 16px;
+  background-color: var(--canvas-input);
+  color: var(--ink-bright);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  border: 2px solid var(--border-muted);
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.1s ease;
+  caret-color: var(--primary);
+  caret-shape: block; /* Chrome 86+ support block cursor style */
+}
+
+.word-count-textarea:focus {
+  border-color: var(--primary);
+  outline: none;
 }
 
 .word-count-textarea::placeholder {
-  color: #3a4a66; /* {colors.ink-disabled} */
+  color: var(--ink-disabled);
+}
+
+/* --- Button Group & Actions --- */
+.actions-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* Base button styles with Retro click feedback */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  background-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1;
+  border: 2px solid var(--primary);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.05s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-bright);
+  border-color: var(--primary-bright);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--primary-bright);
+  outline-offset: 4px;
+}
+
+.btn-primary:disabled {
+  background-color: var(--canvas-elevated);
+  color: var(--ink-disabled);
+  border-color: var(--border-muted);
+  cursor: not-allowed;
+}
+
+.btn-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  background-color: var(--warning);
+  color: var(--on-warning);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1;
+  border: 2px solid var(--warning);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.05s ease;
+}
+
+.btn-warning:hover {
+  background-color: var(--border-warning);
+  border-color: var(--border-warning);
+}
+
+.btn-warning:focus-visible {
+  outline: 2px solid var(--border-warning);
+  outline-offset: 4px;
+}
+
+.btn-warning:disabled {
+  background-color: var(--canvas-elevated);
+  color: var(--ink-disabled);
+  border-color: var(--border-muted);
+  cursor: not-allowed;
+}
+
+/* --- Alert Messages --- */
+.alert-box {
+  background-color: var(--warning-dim);
+  color: var(--on-warning);
+  border: 2px solid var(--border-warning);
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* --- Terminal Style Statistics Output --- */
+.terminal-output {
+  background-color: var(--canvas-deep);
+  border: 2px solid var(--border-default);
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  margin-top: 24px;
+}
+
+.terminal-output-header {
+  background-color: var(--canvas-elevated-2);
+  border-bottom: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+.terminal-title {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.terminal-status {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.terminal-output-body {
+  padding: 16px;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.terminal-line {
+  color: var(--ink-muted);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.terminal-line .prompt-symbol {
+  color: var(--primary);
+  margin-right: 8px;
+}
+
+.terminal-line .command-text {
+  color: var(--ink-bright);
+}
+
+.stats-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  animation: fadeInUpRow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes fadeInUpRow {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 60px;
+  }
+}
+
+.stats-row .label {
+  color: var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.stats-row .dots {
+  flex-grow: 1;
+  border-bottom: 2px dotted var(--border-muted);
+  margin: 0 12px;
+  position: relative;
+  top: -4px;
+}
+
+.stats-row .value {
+  font-family: var(--font-pixel);
+  font-size: 28px;
+  color: var(--primary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.stats-row.highlight .label {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.stats-row.highlight .value {
+  color: var(--gold);
+}
+
+.terminal-divider {
+  border-top: 2px dashed var(--border-muted);
+  margin: 16px 0 8px 0;
+}
+
+.terminal-footer-line {
+  color: var(--primary-dim);
+  font-size: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* --- Breadcrumb (Zsh / powerlevel10k chevron trail) --- */
@@ -30,17 +353,20 @@
   display: inline-flex;
   align-items: center;
   height: 28px;
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
   box-sizing: border-box;
+  position: relative;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 /* 1st segment — primary (mint / action) */
 .breadcrumb-segment-home {
-  background-color: #3fe0c5; /* {colors.primary} */
-  color: #0a1a2f; /* {colors.on-primary} */
+  background-color: var(--primary);
+  color: var(--on-primary);
   padding: 4px 18px 4px 12px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
   margin-right: -14px;
@@ -48,13 +374,13 @@
 }
 
 .breadcrumb-segment-home:hover {
-  background-color: #6bffe0; /* {colors.primary-bright} */
+  background-color: var(--primary-bright);
 }
 
 /* 2nd segment — gold (status) */
 .breadcrumb-segment-category {
-  background-color: #f1b434; /* {colors.gold} */
-  color: #0a1a2f; /* {colors.on-gold} */
+  background-color: var(--gold);
+  color: var(--on-gold);
   padding: 4px 18px 4px 18px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   margin-right: -14px;
@@ -63,8 +389,8 @@
 
 /* 3rd segment — warning (red / destructive = current location) */
 .breadcrumb-segment-current {
-  background-color: #e03c31; /* {colors.warning} */
-  color: #ffffff; /* {colors.on-warning} */
+  background-color: var(--warning);
+  color: var(--on-warning);
   padding: 4px 18px 4px 18px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   z-index: 1;
@@ -76,3 +402,5 @@
     display: none;
   }
 }
+
+

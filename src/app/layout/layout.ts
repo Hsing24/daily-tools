@@ -33,30 +33,6 @@ export class Layout {
 
   protected readonly toolGroups: readonly ToolGroup[] = [
     {
-      name: "格式化與轉換",
-      tools: [
-        { label: "JSON Formatter", available: false },
-        { label: "HTML Preview", available: false },
-        { label: "Base64 Encoder / Decoder", available: false },
-      ],
-    },
-    {
-      name: "網路與 API",
-      tools: [
-        { label: "URL Encoder / Decoder", available: false },
-        { label: "HTTP Header Viewer", available: false },
-        { label: "JWT Decoder", available: false },
-      ],
-    },
-    {
-      name: "前端樣式與除錯",
-      tools: [
-        { label: "Color Converter", available: false },
-        { label: "CSS Unit Helper", available: false },
-        { label: "Regex Tester", available: false },
-      ],
-    },
-    {
       name: "文字工具",
       tools: [{ label: "字數統計", route: "word-count", available: true }],
     },

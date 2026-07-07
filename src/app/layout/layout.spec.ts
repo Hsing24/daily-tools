@@ -15,12 +15,12 @@ describe("Layout", () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it("should render the four tool groups in the sidebar", async () => {
+  it("should render the active tool group in the sidebar", async () => {
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelectorAll(".section-label").length).toBe(4);
+    expect(compiled.querySelectorAll(".section-label").length).toBe(1);
   });
 
   it("should keep the sidebar closed by default", async () => {
