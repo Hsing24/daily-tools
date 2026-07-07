@@ -50,15 +50,15 @@
         --syntax-monokai-property: #66d9ef;
         --syntax-monokai-comment: #75715e;
 
-        /* Syntax — Solarized Dark */
-        --syntax-solarized-bg: #002b36;
-        --syntax-solarized-fg: #839496;
+        /* Syntax — Solarized Light */
+        --syntax-solarized-bg: #fdf6e3;
+        --syntax-solarized-fg: #657b83;
         --syntax-solarized-keyword: #859900;
         --syntax-solarized-string: #2aa198;
         --syntax-solarized-number: #d33682;
         --syntax-solarized-function: #268bd2;
         --syntax-solarized-property: #b58900;
-        --syntax-solarized-comment: #586e75;
+        --syntax-solarized-comment: #93a1a1;
 
         --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
         --font-mono:
@@ -78,33 +78,33 @@
         --elevation-lg: 8px 8px 0 0 var(--canvas-deep);
       }
 
-      /* ── Solarized Dark 主題覆寫 ────────────────────────────── */
+      /* ── Solarized Light 主題覆寫 ────────────────────────────── */
       [data-theme="solarized"] {
-        color-scheme: dark;
+        color-scheme: light;
         --primary: #268bd2;
-        --primary-bright: #4db8ff;
-        --primary-dim: #1a6a9e;
+        --primary-bright: #1a6a9e;
+        --primary-dim: #93a1a1;
         --gold: #b58900;
-        --gold-bright: #dba800;
-        --gold-dim: #7a5b00;
+        --gold-bright: #7a5b00;
+        --gold-dim: #cb4b16;
         --warning: #dc322f;
         --warning-dim: #921f1d;
-        --canvas: #002b36;
-        --canvas-deep: #00212b;
-        --canvas-elevated: #073642;
-        --canvas-elevated-2: #0a3d4a;
-        --canvas-input: #001d26;
-        --surface-overlay: rgba(0, 43, 54, 0.88);
-        --scanline-tint: rgba(38, 139, 210, 0.04);
-        --ink-bright: #fdf6e3;
-        --ink: #839496;
-        --ink-muted: #4f6e77;
-        --ink-disabled: #264a54;
+        --canvas: #fdf6e3;
+        --canvas-deep: #eee8d5;
+        --canvas-elevated: #eee8d5;
+        --canvas-elevated-2: #e4ddc6;
+        --canvas-input: #eee8d5;
+        --surface-overlay: rgba(253, 246, 227, 0.85);
+        --scanline-tint: rgba(38, 139, 210, 0.05);
+        --ink-bright: #073642;
+        --ink: #586e75;
+        --ink-muted: #93a1a1;
+        --ink-disabled: #b5c2c2;
         --on-primary: #fdf6e3;
         --on-gold: #fdf6e3;
         --on-warning: #fdf6e3;
         --border-default: #268bd2;
-        --border-muted: #0d4050;
+        --border-muted: #93a1a1;
         --border-gold: #b58900;
         --border-warning: #dc322f;
       }
@@ -1967,13 +1967,13 @@
                 class="theme-btn active"
                 type="button"
                 aria-pressed="true"
-              >MONOKAI</button>
+              >MONOKAI DARK</button>
               <button
                 id="theme-btn-solarized"
                 class="theme-btn"
                 type="button"
                 aria-pressed="false"
-              >SOLARIZED</button>
+              >SOLARIZED LIGHT</button>
             </div>
             <button
               id="cmd-k-btn"

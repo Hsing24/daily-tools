@@ -20,7 +20,7 @@ describe("Layout", () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelectorAll(".section-label").length).toBe(1);
+    expect(compiled.querySelectorAll(".nav-label").length).toBe(1);
   });
 
   it("should keep the sidebar closed by default", async () => {
@@ -37,7 +37,7 @@ describe("Layout", () => {
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const button = compiled.querySelector(".hamburger") as HTMLButtonElement;
+    const button = compiled.querySelector(".hamburger-btn") as HTMLButtonElement;
 
     button.click();
     await fixture.whenStable();
@@ -51,7 +51,7 @@ describe("Layout", () => {
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const button = compiled.querySelector(".hamburger") as HTMLButtonElement;
+    const button = compiled.querySelector(".hamburger-btn") as HTMLButtonElement;
 
     button.click();
     await fixture.whenStable();

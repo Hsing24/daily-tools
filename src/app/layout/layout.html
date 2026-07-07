@@ -2,61 +2,100 @@
 
 <div class="scanline-overlay" aria-hidden="true"></div>
 
-<div class="shell">
-  <header class="topbar">
-    <button
-      #hamburger
-      type="button"
-      class="hamburger"
-      [attr.aria-expanded]="sidebarOpen()"
-      aria-controls="tool-sidebar"
-      aria-label="切換工具選單"
-      (click)="toggleSidebar()"
-    >
-      <span class="hamburger-bars" aria-hidden="true"></span>
-    </button>
-    <span class="brand">daily-tools</span>
-  </header>
+<div class="page-shell">
+  @if (sidebarOpen()) {
+    <div class="scrim" (click)="closeSidebar()" aria-hidden="true"></div>
+  }
 
-  <div class="body">
-    @if (sidebarOpen()) {
-      <div class="scrim" (click)="closeSidebar()" aria-hidden="true"></div>
-    }
+  <aside
+    #sidebar
+    id="tool-sidebar"
+    class="sidebar"
+    [class.is-open]="sidebarOpen()"
+    aria-label="工具選單"
+  >
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">&gt;_</div>
+      <div class="brand-name">Daily Tools</div>
+      <div class="brand-meta">CRT interface / alpha spec</div>
+    </div>
 
-    <aside
-      #sidebar
-      id="tool-sidebar"
-      class="sidebar"
-      [class.is-open]="sidebarOpen()"
-    >
-      <nav class="tool-nav" aria-label="工具清單">
-        @for (group of toolGroups; track group.name) {
-          <p class="section-label">{{ group.name }}</p>
-          <ul class="tool-list">
-            @for (tool of group.tools; track tool.label) {
-              <li>
-                @if (tool.available && tool.route) {
-                  <a
-                    class="nav-link"
-                    [routerLink]="tool.route"
-                    routerLinkActive="active"
-                    (click)="closeSidebar()"
-                  >{{ tool.label }}</a>
-                } @else {
-                  <span class="nav-disabled">
-                    {{ tool.label }}
-                    <small>即將推出</small>
-                  </span>
-                }
-              </li>
-            }
-          </ul>
+    <nav class="side-nav" aria-label="工具清單">
+      @for (group of toolGroups; track group.name) {
+        <div class="nav-label">{{ group.name }}</div>
+        @for (tool of group.tools; track tool.label) {
+          @if (tool.available && tool.route) {
+            <a
+              [routerLink]="tool.route"
+              routerLinkActive="is-active"
+              (click)="closeSidebar()"
+            >{{ tool.label }}</a>
+          } @else {
+            <span class="nav-disabled">
+              {{ tool.label }}
+              <small>即將推出</small>
+            </span>
+          }
         }
-      </nav>
-    </aside>
+      }
+    </nav>
+  </aside>
 
-    <main id="main-content" class="main" tabindex="-1">
+  <div class="main-shell">
+    <div class="prompt-bar" role="status" aria-live="polite">
+      <div class="prompt-left">
+        <button
+          #hamburger
+          type="button"
+          class="hamburger-btn"
+          [attr.aria-expanded]="sidebarOpen()"
+          aria-controls="tool-sidebar"
+          aria-label="切換工具選單"
+          (click)="toggleSidebar()"
+        >
+          [≡]
+        </button>
+        <span class="prompt-path">user@daily-tools {{ currentPath() }} $ inspect --theme {{ currentTheme() === 'default' ? 'crt' : 'solarized' }}</span>
+      </div>
+      <div class="prompt-actions">
+        <div class="theme-switcher" role="group" aria-label="語法主題切換">
+          <button
+            id="theme-btn-monokai"
+            class="theme-btn"
+            [class.active]="currentTheme() === 'default'"
+            type="button"
+            [attr.aria-pressed]="currentTheme() === 'default'"
+            (click)="setTheme('default')"
+          >MONOKAI DARK</button>
+          <button
+            id="theme-btn-solarized"
+            class="theme-btn"
+            [class.active]="currentTheme() === 'solarized'"
+            type="button"
+            [attr.aria-pressed]="currentTheme() === 'solarized'"
+            (click)="setTheme('solarized')"
+          >SOLARIZED LIGHT</button>
+        </div>
+        <button
+          id="cmd-k-btn"
+          class="key-button"
+          type="button"
+          aria-label="開啟命令面板"
+          aria-haspopup="dialog"
+        >
+          <span class="key-chip">⌘K</span>
+        </button>
+      </div>
+    </div>
+
+    <main id="main-content" tabindex="-1">
       <router-outlet />
     </main>
+
+    <footer class="footer">
+      <span>daily-tools / alpha</span>
+      <span>theme: DevTool Terminal / scanline 4%</span>
+      <a href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </footer>
   </div>
 </div>

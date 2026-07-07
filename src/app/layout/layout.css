@@ -1,207 +1,364 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #0a1a2f;
+  background: var(--canvas);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 /* --- Skip link (WCAG 2.4.1) --- */
 .skip-link {
-  position: absolute;
+  position: fixed;
   left: 8px;
-  top: -48px;
-  z-index: 50;
-  padding: 8px 16px;
-  background: #3fe0c5;
-  color: #0a1a2f;
-  font: 600 14px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+  top: 8px;
+  z-index: 150;
+  padding: 10px 16px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-mono);
+  font-weight: 600;
   letter-spacing: 1px;
   text-decoration: none;
-  transition: top 0.15s ease;
+  transform: translateY(-160%);
+  transition: transform 0.15s ease;
 }
 
 .skip-link:focus {
-  top: 8px;
+  transform: translateY(0);
 }
 
-.shell {
-  display: flex;
-  flex-direction: column;
+/* --- Shell --- */
+.page-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
 }
 
-/* --- Top prompt bar --- */
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 16px;
-  background: #050e1c;
-  border-bottom: 2px solid #3fe0c5;
+/* --- Sidebar --- */
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  padding: 24px 16px;
+  overflow-y: auto;
+  background: var(--canvas-deep);
+  border-right: 2px solid var(--primary);
 }
 
 .brand {
-  color: #3fe0c5;
-  font: 500 16px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
-  letter-spacing: 0.5px;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-muted);
 }
 
-.brand::before {
-  content: '> ';
-  color: #6bffe0;
+.brand-mark {
+  color: var(--primary);
+  font-family: var(--font-pixel);
+  font-size: 48px;
+  line-height: 1;
 }
 
-.hamburger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: 2px solid #3fe0c5;
-  color: #3fe0c5;
-  cursor: pointer;
-}
-
-.hamburger-bars,
-.hamburger-bars::before,
-.hamburger-bars::after {
-  display: block;
-  width: 16px;
-  height: 2px;
-  background: currentcolor;
-}
-
-.hamburger-bars {
-  position: relative;
-}
-
-.hamburger-bars::before,
-.hamburger-bars::after {
-  content: '';
-  position: absolute;
-  left: 0;
-}
-
-.hamburger-bars::before {
-  top: -5px;
-}
-
-.hamburger-bars::after {
-  top: 5px;
-}
-
-/* --- Body: sidebar + main --- */
-.body {
-  display: flex;
-  flex: 1;
-  position: relative;
-}
-
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  padding: 24px 16px;
-  background: #050e1c;
-  border-right: 2px solid #3fe0c5;
-  overflow-y: auto;
-}
-
-.tool-nav {
-  display: block;
-}
-
-.section-label {
-  margin: 16px 12px 8px;
-  color: #6a7c99;
-  font: 400 18px VT323, ui-monospace, monospace;
-  letter-spacing: 2px;
+.brand-name {
+  color: var(--ink-bright);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
   text-transform: uppercase;
 }
 
-.section-label:first-child {
-  margin-top: 0;
+.brand-meta {
+  color: var(--ink-muted);
+  font-size: 12px;
+  letter-spacing: 0.5px;
 }
 
-.tool-list {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
+.nav-label {
+  margin: 24px 0 8px;
+  color: var(--ink-muted);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  letter-spacing: 2px;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.nav-link,
+.side-nav {
+  display: grid;
+  gap: 2px;
+}
+
+.side-nav a {
+  display: block;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.side-nav a:hover,
+.side-nav a:focus-visible {
+  color: var(--ink-bright);
+  background: var(--canvas-elevated);
+}
+
+.side-nav a.is-active {
+  color: var(--primary);
+  background: var(--canvas-elevated);
+  border-left: 2px solid var(--primary);
+  padding-left: 10px; /* compensate border-left width */
+  font-weight: 600;
+}
+
 .nav-disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  font: 400 14px 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
-}
-
-.nav-link {
-  color: #c9d5e8;
-  text-decoration: none;
-  border-left: 4px solid transparent;
-}
-
-.nav-link:hover {
-  background: #122339;
-  color: #3fe0c5;
-}
-
-.nav-link.active {
-  background: #122339;
-  color: #3fe0c5;
-  font-weight: 600;
-  border-left-color: #3fe0c5;
-}
-
-.nav-disabled {
-  color: #3a4a66;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--ink-disabled);
   cursor: not-allowed;
+  font-family: var(--font-mono);
+  font-size: 14px;
 }
 
 .nav-disabled small {
-  color: #6a7c99;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+/* --- Main Shell --- */
+.main-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 0;
+  background: var(--canvas);
+}
+
+/* --- Prompt Bar --- */
+.prompt-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 32px;
+  background: var(--canvas-deep);
+  border-bottom: 2px solid var(--primary);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.prompt-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.prompt-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.main {
-  flex: 1;
-  min-width: 0;
-  padding: 32px;
-  background: #0a1a2f;
-  color: #c9d5e8;
+.prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
+/* --- Hamburger Button --- */
+.hamburger-btn {
+  background: transparent;
+  color: var(--primary);
+  border: 0;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: none; /* hidden on desktop */
+}
+
+.hamburger-btn:hover {
+  color: var(--primary-bright);
+  background: var(--canvas-elevated);
+}
+
+.hamburger-btn:focus-visible {
+  outline: 1px solid var(--primary-bright);
+  outline-offset: -2px;
+}
+
+/* --- Theme Switcher --- */
+.theme-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border-muted);
+  overflow: hidden;
+}
+
+.theme-btn {
+  background: transparent;
+  color: var(--ink-muted);
+  border: 0;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.theme-btn.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.theme-btn:hover:not(.active) {
+  background: var(--canvas-elevated);
+  color: var(--ink);
+}
+
+.theme-btn:focus-visible {
+  outline: 1px solid var(--primary-bright);
+  outline-offset: -2px;
+}
+
+/* --- Cmd+K Key Button --- */
+.key-button {
+  border: 0;
+  display: inline-grid;
+  min-width: 44px;
+  height: 32px;
+  place-items: center;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  background: var(--canvas-elevated-2);
+  border: 1px solid var(--border-muted);
+  color: var(--ink-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.key-button:hover .key-chip {
+  color: var(--primary-bright);
+  border-color: var(--primary-bright);
+}
+
+/* --- Main Area --- */
+main {
+  flex: 1;
+  padding: 32px;
+}
+
+/* --- Footer --- */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--canvas-deep);
+  border-top: 1px solid var(--border-muted);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.footer a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--primary);
+}
+
+/* --- Ambient scanline --- */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    var(--scanline-tint) 0px,
+    var(--scanline-tint) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+@keyframes crt-flicker {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scanline-overlay {
+    animation: crt-flicker 0.15s infinite;
+  }
+}
+
+/* --- Scrim --- */
 .scrim {
   display: none;
 }
 
-/* --- Focus visibility (WCAG 2.4.7) --- */
-.skip-link:focus-visible,
-.hamburger:focus-visible,
-.nav-link:focus-visible {
-  outline: 2px solid #6bffe0;
-  outline-offset: 2px;
-}
+/* --- Responsive styles --- */
+@media (max-width: 1023px) {
+  .page-shell {
+    grid-template-columns: 1fr;
+  }
 
-.main:focus-visible {
-  outline: none;
-}
-
-/* --- Tablet / mobile: collapse sidebar into an off-canvas drawer --- */
-@media (max-width: 1023.98px) {
   .sidebar {
     position: fixed;
     top: 40px;
     bottom: 0;
     left: 0;
     z-index: 40;
+    height: calc(100vh - 40px);
+    width: 240px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
+    border-right: 2px solid var(--primary);
   }
 
   .sidebar.is-open {
@@ -213,14 +370,23 @@
     position: fixed;
     inset: 40px 0 0 0;
     z-index: 30;
-    background: rgba(5, 14, 28, 0.7);
+    background: rgba(5, 14, 28, 0.75);
+  }
+
+  .hamburger-btn {
+    display: inline-flex;
+  }
+
+  .prompt-bar {
+    padding: 0 16px;
   }
 }
 
-/* --- Desktop: sidebar is always visible, hamburger hidden --- */
-@media (min-width: 1024px) {
-  .hamburger {
-    display: none;
+@media (max-width: 767px) {
+  .prompt-bar,
+  main,
+  .footer {
+    padding-inline: 16px;
   }
 }
 
@@ -229,19 +395,4 @@
   .sidebar {
     transition: none;
   }
-}
-
-/* --- CRT Scanline Ambient Overlay (DESIGN.md) --- */
-.scanline-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(63, 224, 197, 0.04) 0px,
-    rgba(63, 224, 197, 0.04) 1px,
-    transparent 1px,
-    transparent 3px
-  );
 }

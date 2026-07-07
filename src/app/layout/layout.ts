@@ -4,8 +4,10 @@ import {
   HostListener,
   signal,
   viewChild,
+  inject,
 } from "@angular/core";
-import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
+import { RouterLink, RouterLinkActive, RouterOutlet, Router, NavigationEnd } from "@angular/router";
+import { filter } from "rxjs/operators";
 
 interface ToolItem {
   readonly label: string;
@@ -37,6 +39,39 @@ export class Layout {
       tools: [{ label: "字數統計", route: "word-count", available: true }],
     },
   ];
+
+  private readonly router = inject(Router);
+  protected readonly currentPath = signal("~");
+  protected readonly currentTheme = signal<"default" | "solarized">("default");
+
+  constructor() {
+    const initialUrl = this.router.url;
+    this.setPathFromUrl(initialUrl);
+
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe((event) => {
+      this.setPathFromUrl(event.urlAfterRedirects || event.url);
+    });
+  }
+
+  private setPathFromUrl(url: string): void {
+    if (url === "/" || url === "") {
+      this.currentPath.set("~");
+    } else {
+      const cleanUrl = url.split("?")[0];
+      this.currentPath.set(`~${cleanUrl}`);
+    }
+  }
+
+  protected setTheme(theme: "default" | "solarized"): void {
+    this.currentTheme.set(theme);
+    if (theme === "solarized") {
+      document.documentElement.setAttribute("data-theme", "solarized");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  }
 
   protected toggleSidebar(): void {
     this.sidebarOpen() ? this.closeSidebar() : this.openSidebar();

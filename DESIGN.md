@@ -48,15 +48,15 @@ colors:
   syntax-monokai-property: "#66D9EF"
   syntax-monokai-comment: "#75715E"
 
-  # Syntax — Solarized Dark (alt theme)
-  syntax-solarized-bg: "#002B36"
-  syntax-solarized-fg: "#839496"
+  # Syntax — Solarized Light (alt theme)
+  syntax-solarized-bg: "#FDF6E3"
+  syntax-solarized-fg: "#657B83"
   syntax-solarized-keyword: "#859900"
   syntax-solarized-string: "#2AA198"
   syntax-solarized-number: "#D33682"
   syntax-solarized-function: "#268BD2"
   syntax-solarized-property: "#B58900"
-  syntax-solarized-comment: "#586E75"
+  syntax-solarized-comment: "#93A1A1"
 
 typography:
   pixel-display:
@@ -486,15 +486,15 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 - Property / Key: `{colors.syntax-monokai-property}` (#66D9EF)
 - Comment: `{colors.syntax-monokai-comment}` (#75715E)
 
-#### Solarized Dark (alt)
-- Background: `{colors.syntax-solarized-bg}` (#002B36)
-- Foreground: `{colors.syntax-solarized-fg}` (#839496)
+#### Solarized Light (alt)
+- Background: `{colors.syntax-solarized-bg}` (#FDF6E3)
+- Foreground: `{colors.syntax-solarized-fg}` (#657B83)
 - Keyword: `{colors.syntax-solarized-keyword}` (#859900)
 - String: `{colors.syntax-solarized-string}` (#2AA198)
 - Number: `{colors.syntax-solarized-number}` (#D33682)
 - Function: `{colors.syntax-solarized-function}` (#268BD2)
 - Property / Key: `{colors.syntax-solarized-property}` (#B58900)
-- Comment: `{colors.syntax-solarized-comment}` (#586E75)
+- Comment: `{colors.syntax-solarized-comment}` (#93A1A1)
 
 ## Typography
 

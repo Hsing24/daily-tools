@@ -1,12 +1,109 @@
+:root {
+  color-scheme: dark;
+  --primary: #3fe0c5;
+  --primary-bright: #6bffe0;
+  --primary-dim: #2bae96;
+  --gold: #f1b434;
+  --gold-bright: #ffd166;
+  --gold-dim: #b8830a;
+  --warning: #e03c31;
+  --warning-dim: #8a2018;
+  --canvas: #0a1a2f;
+  --canvas-deep: #050e1c;
+  --canvas-elevated: #122339;
+  --canvas-elevated-2: #15263f;
+  --canvas-input: #081424;
+  --surface-overlay: rgba(10, 26, 47, 0.85);
+  --scanline-tint: rgba(63, 224, 197, 0.04);
+  --ink-bright: #e6f1ff;
+  --ink: #c9d5e8;
+  --ink-muted: #6a7c99;
+  --ink-disabled: #3a4a66;
+  --on-primary: #0a1a2f;
+  --on-gold: #0a1a2f;
+  --on-warning: #ffffff;
+  --border-default: #3fe0c5;
+  --border-muted: #1e3050;
+  --border-gold: #f1b434;
+  --border-warning: #e03c31;
+
+  /* Syntax — Monokai */
+  --syntax-monokai-bg: #272822;
+  --syntax-monokai-fg: #f8f8f2;
+  --syntax-monokai-keyword: #f92672;
+  --syntax-monokai-string: #e6db74;
+  --syntax-monokai-number: #ae81ff;
+  --syntax-monokai-function: #a6e22e;
+  --syntax-monokai-property: #66d9ef;
+  --syntax-monokai-comment: #75715e;
+
+  /* Syntax — Solarized Light */
+  --syntax-solarized-bg: #fdf6e3;
+  --syntax-solarized-fg: #657b83;
+  --syntax-solarized-keyword: #859900;
+  --syntax-solarized-string: #2aa198;
+  --syntax-solarized-number: #d33682;
+  --syntax-solarized-function: #268bd2;
+  --syntax-solarized-property: #b58900;
+  --syntax-solarized-comment: #93a1a1;
+
+  --font-pixel: "VT323", "Press Start 2P", ui-monospace, monospace;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-section: 48px;
+
+  --elevation-sm: 2px 2px 0 0 var(--canvas-deep);
+  --elevation-md: 4px 4px 0 0 var(--canvas-deep);
+  --elevation-lg: 8px 8px 0 0 var(--canvas-deep);
+}
+
+[data-theme="solarized"] {
+  color-scheme: light;
+  --primary: #268bd2;
+  --primary-bright: #1a6a9e;
+  --primary-dim: #93a1a1;
+  --gold: #b58900;
+  --gold-bright: #7a5b00;
+  --gold-dim: #cb4b16;
+  --warning: #dc322f;
+  --warning-dim: #921f1d;
+  --canvas: #fdf6e3;
+  --canvas-deep: #eee8d5;
+  --canvas-elevated: #eee8d5;
+  --canvas-elevated-2: #e4ddc6;
+  --canvas-input: #eee8d5;
+  --surface-overlay: rgba(253, 246, 227, 0.85);
+  --scanline-tint: rgba(38, 139, 210, 0.05);
+  --ink-bright: #073642;
+  --ink: #586e75;
+  --ink-muted: #93a1a1;
+  --ink-disabled: #b5c2c2;
+  --on-primary: #fdf6e3;
+  --on-gold: #fdf6e3;
+  --on-warning: #fdf6e3;
+  --border-default: #268bd2;
+  --border-muted: #93a1a1;
+  --border-gold: #b58900;
+  --border-warning: #dc322f;
+}
+
 html,
 body {
   margin: 0;
-  font-family:
-    Inter,
-    "Noto Sans TC",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+* {
+  box-sizing: border-box;
 }

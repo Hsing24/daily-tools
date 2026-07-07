@@ -403,4 +403,34 @@
   }
 }
 
+/* --- Solarized Light Theme Overrides --- */
+:host-context([data-theme="solarized"]) {
+  --primary: #268bd2;
+  --primary-bright: #1a6a9e;
+  --primary-dim: #93a1a1;
+  --gold: #b58900;
+  --gold-bright: #7a5b00;
+  --gold-dim: #cb4b16;
+  --warning: #dc322f;
+  --warning-dim: #921f1d;
+  --canvas: #fdf6e3;
+  --canvas-deep: #eee8d5;
+  --canvas-elevated: #eee8d5;
+  --canvas-elevated-2: #e4ddc6;
+  --canvas-input: #eee8d5;
+  --surface-overlay: rgba(253, 246, 227, 0.85);
+  --scanline-tint: rgba(38, 139, 210, 0.05);
+  --ink-bright: #073642;
+  --ink: #586e75;
+  --ink-muted: #93a1a1;
+  --ink-disabled: #b5c2c2;
+  --on-primary: #fdf6e3;
+  --on-gold: #fdf6e3;
+  --on-warning: #fdf6e3;
+  --border-default: #268bd2;
+  --border-muted: #93a1a1;
+  --border-gold: #b58900;
+  --border-warning: #dc322f;
+}
+
 
