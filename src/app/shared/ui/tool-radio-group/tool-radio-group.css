@@ -1,0 +1,59 @@
+:host {
+  display: inline-block;
+}
+
+.radio-group {
+  display: inline-flex;
+  border: 2px solid var(--primary);
+  background-color: var(--canvas-input);
+  box-sizing: border-box;
+}
+
+.radio-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  background-color: transparent;
+  transition: background-color 0.1s ease, color 0.1s ease;
+  user-select: none;
+}
+
+.radio-option:not(:last-child) {
+  border-right: 2px solid var(--primary);
+}
+
+/* Hover state */
+.radio-option:hover:not(.is-active) {
+  background-color: rgba(63, 224, 197, 0.1);
+  color: var(--primary-bright);
+}
+
+/* Active / Selected state */
+.radio-option.is-active {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* Keyboard Focus indicator */
+.radio-option:focus-within {
+  outline: 2px dashed var(--primary-bright);
+  outline-offset: -4px;
+}

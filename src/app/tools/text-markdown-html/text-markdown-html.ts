@@ -4,6 +4,7 @@ import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
+import { ToolRadioGroup } from "../../shared/ui/tool-radio-group/tool-radio-group";
 import {
   convertTextToMarkdownAndHtml,
   convertHtmlToMarkdown,
@@ -18,6 +19,7 @@ import {
     ToolBreadcrumb,
     ToolHeader,
     ToolPanel,
+    ToolRadioGroup,
   ],
   templateUrl: "./text-markdown-html.html",
   styleUrl: "./text-markdown-html.css",
@@ -55,10 +57,6 @@ export class TextMarkdownHtml {
       this.sourceText.set(markdown);
       this.updateResult(markdown);
     }
-  }
-
-  protected onFormatChange(format: "markdown" | "html"): void {
-    this.outputFormat.set(format);
   }
 
   protected updateResult(value: string): void {

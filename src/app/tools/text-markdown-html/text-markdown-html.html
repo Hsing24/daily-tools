@@ -32,28 +32,14 @@
     <div class="actions-row">
       <!-- Format Radio Selector -->
       <div class="d:flex align-items:center gap:16 mr:24">
-        <label class="d:flex align-items:center gap:6 color:var(--ink-bright) cursor:pointer font-family:var(--font-mono) f:14">
-          <input
-            type="radio"
-            name="output-format"
-            value="markdown"
-            [checked]="outputFormat() === 'markdown'"
-            (change)="onFormatChange('markdown')"
-            class="accent-color:var(--primary)"
-          />
-          Markdown
-        </label>
-        <label class="d:flex align-items:center gap:6 color:var(--ink-bright) cursor:pointer font-family:var(--font-mono) f:14">
-          <input
-            type="radio"
-            name="output-format"
-            value="html"
-            [checked]="outputFormat() === 'html'"
-            (change)="onFormatChange('html')"
-            class="accent-color:var(--primary)"
-          />
-          HTML
-        </label>
+        <app-tool-radio-group
+          [options]="[
+            { value: 'markdown', label: 'Markdown' },
+            { value: 'html', label: 'HTML' }
+          ]"
+          [(value)]="outputFormat"
+          name="output-format"
+        />
       </div>
 
       <!-- Action Buttons -->
