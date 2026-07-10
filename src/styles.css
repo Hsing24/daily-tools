@@ -133,10 +133,6 @@ a:visited {
   transition: background-color 0.05s ease;
 }
 
-.dt-button:visited {
-  color: currentColor;
-}
-
 .dt-button:focus-visible {
   outline: 2px solid var(--primary-bright);
   outline-offset: 4px;
@@ -148,7 +144,8 @@ a:visited {
   cursor: not-allowed;
 }
 
-.dt-button--primary {
+.dt-button--primary,
+.dt-button--primary:visited {
   background-color: var(--primary);
   color: var(--on-primary);
 }
@@ -158,7 +155,8 @@ a:visited {
   background-color: var(--primary-bright);
 }
 
-.dt-button--warning {
+.dt-button--warning,
+.dt-button--warning:visited {
   background-color: var(--warning);
   color: var(--on-warning);
 }
@@ -168,7 +166,8 @@ a:visited {
   background-color: var(--warning-dim);
 }
 
-.dt-button--secondary {
+.dt-button--secondary,
+.dt-button--secondary:visited {
   background-color: var(--gold);
   color: var(--on-gold);
 }
@@ -178,7 +177,8 @@ a:visited {
   background-color: var(--gold-bright);
 }
 
-.dt-button--ghost {
+.dt-button--ghost,
+.dt-button--ghost:visited {
   background-color: transparent;
   color: var(--primary);
 }
