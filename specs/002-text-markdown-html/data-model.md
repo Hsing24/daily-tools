@@ -42,8 +42,8 @@
 | 屬性 | 型別 | 說明 |
 |------|------|------|
 | clipboardAlert | `string` | 「貼上」失敗時顯示的提示文字；空字串代表無提示。 |
-| copyStatus.markdown | `string` | Markdown 輸出區塊「複製」操作的回饋文字（成功／失敗），透過 `aria-live="polite"` 呈現。 |
-| copyStatus.html | `string` | HTML 輸出區塊「複製」操作的回饋文字（成功／失敗），透過 `aria-live="polite"` 呈現。 |
+| copyMarkdownStatus | `string` | Markdown 輸出區塊「複製」操作的回饋文字（成功／失敗），透過 `aria-live="polite"` 呈現。 |
+| copyHtmlStatus | `string` | HTML 輸出區塊「複製」操作的回饋文字（成功／失敗），透過 `aria-live="polite"` 呈現。 |
 
 - **儲存**：各自獨立的 `signal<string>('')`，與 `word-count.ts` 的 `alertMessage` 模式一致。
 
