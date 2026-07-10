@@ -7,6 +7,9 @@ import { ColorSwatch } from "./ui/color-swatch/color-swatch";
 import { SectionHead } from "./ui/section-head/section-head";
 import { TypeRow } from "./ui/type-row/type-row";
 import { ToolRadioGroup, RadioOption } from "../shared/ui/tool-radio-group/tool-radio-group";
+import { ToolPanel } from "../shared/ui/tool-panel/tool-panel";
+import { ToolHeader } from "../shared/ui/tool-header/tool-header";
+import { ToolAlert } from "../shared/ui/tool-alert/tool-alert";
 
 interface SectionLink {
   readonly id: string;
@@ -48,7 +51,18 @@ interface ToolTile {
 
 @Component({
   selector: "app-design",
-  imports: [RouterLink, KeyChip, ToolBreadcrumb, ColorSwatch, SectionHead, TypeRow, ToolRadioGroup],
+  imports: [
+    RouterLink,
+    KeyChip,
+    ToolBreadcrumb,
+    ColorSwatch,
+    SectionHead,
+    TypeRow,
+    ToolRadioGroup,
+    ToolPanel,
+    ToolHeader,
+    ToolAlert
+  ],
   templateUrl: "./design.html",
   styleUrls: ["./design.css", "./design-demos.css"],
 })

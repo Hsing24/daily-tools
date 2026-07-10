@@ -51,7 +51,7 @@ export class Layout {
     },
     {
       name: "系統",
-      tools: [{ label: "Design System", route: "design", available: true }],
+      tools: [{ label: "設計系統", route: "design", available: true }],
     },
   ];
 

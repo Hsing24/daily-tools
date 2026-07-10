@@ -1,20 +1,20 @@
-<app-tool-breadcrumb category="System" current="Design" />
+<app-tool-breadcrumb category="系統" current="設計系統" />
 
 <!-- ── Hero ─────────────────────────────────────────────────── -->
 <section class="hero" aria-labelledby="page-title">
   <div class="hero-grid">
     <div class="hero-copy">
-      <p class="eyebrow">Design System Analysis</p>
+      <p class="eyebrow">DESIGN SYSTEM SPECIFICATION</p>
       <h1 id="page-title">DevTool Terminal</h1>
       <p class="lead">
         這是 daily-tools 的設計系統展示頁。視覺語言完全遵循 DESIGN.md：深藍 CRT
-        畫布、mint 綠互動訊號、chunky 硬邊框、零圓角、零陰影（深度只來自表面階層與邊框厚度），以及鍵盤優先的工具介面。
+        畫布、Mint 綠互動訊號、chunky 硬邊框、零圓角、零陰影（深度只來自表面階層與邊框厚度），以及鍵盤優先的工具介面。
       </p>
       <div class="command-line" aria-label="頁面摘要">
         <span class="prompt-glyph" aria-hidden="true">&gt;</span>
-        <span>single action color</span>
+        <span>單一操作色彩</span>
         <app-key-chip>#3FE0C5</app-key-chip>
-        <span>chunky borders</span>
+        <span>像素硬質邊框</span>
         <app-key-chip>2PX / 4PX</app-key-chip>
       </div>
       <div class="button-row" aria-label="主要操作範例">
@@ -25,7 +25,7 @@
 
     <article class="terminal-card" aria-label="終端機畫面範例">
       <header>
-        <span>design.md preview</span>
+        <span>DESIGN.MD PREVIEW</span>
         <span>alpha</span>
       </header>
       <pre>
@@ -59,25 +59,25 @@ daily-tools::design-system
 <!-- ── 01 Colors ────────────────────────────────────────────── -->
 <section class="section" id="colors" aria-labelledby="colors-title">
   <app-section-head
-    kicker="01 — Color Palette"
-    title="一個 mint action，三個語意訊號。"
-    note="以 Pantone 333c 等價的 mint 綠承擔所有互動狀態。Gold 只做狀態，Red 只做破壞或錯誤，不存在第四個強調色。"
+    kicker="01 — COLOR PALETTE"
+    title="單一 Mint 操作色，三個語意狀態訊號。"
+    note="以 Pantone 333c 等價的 Mint 綠承擔所有互動狀態。Gold 只做狀態，Red 只做破壞或錯誤，不存在第四個強調色。"
     headingId="colors-title"
   />
 
   <div class="surface-stack" aria-label="表面階層">
     <article class="surface-step">
-      <h3>Canvas</h3>
+      <h3>Canvas 主畫布</h3>
       <p><code>#0A1A2F</code></p>
       <p>主畫布。所有工具頁都從這個深藍終端底色開始。</p>
     </article>
     <article class="surface-step">
-      <h3>Elevated</h3>
+      <h3>Elevated 提昇表面</h3>
       <p><code>#122339</code></p>
       <p>工具面板與重點容器。深度由表面階層提供，不靠陰影。</p>
     </article>
     <article class="surface-step">
-      <h3>Nested</h3>
+      <h3>Nested 巢狀容器</h3>
       <p><code>#15263F</code></p>
       <p>面板內的鍵帽、列表選取列、次級資料槽。</p>
     </article>
@@ -129,17 +129,17 @@ daily-tools::design-system
 
     <div class="depth-grid">
       <article class="depth-card depth-hairline">
-        <h4>Hairline</h4>
+        <h4>Hairline 細線</h4>
         <p>面板內分隔線、key chip 外框、預設輸入框。</p>
         <code>1px solid var(--border-muted)</code>
       </article>
       <article class="depth-card depth-chunky">
-        <h4>Chunky</h4>
+        <h4>Chunky 標準線</h4>
         <p>工具面板、聚焦輸入框的標準結構線。</p>
         <code>2px solid var(--border-default)</code>
       </article>
       <article class="depth-card depth-chunky-thick">
-        <h4>Chunky Thick</h4>
+        <h4>Chunky Thick 粗線</h4>
         <p>聚焦面板與 Cmd+K modal 的強調邊框。</p>
         <code>4px solid var(--border-default)</code>
       </article>
@@ -156,8 +156,8 @@ daily-tools::design-system
 <!-- ── 02 Typography ────────────────────────────────────────── -->
 <section class="section" id="typography" aria-labelledby="typography-title">
   <app-section-head
-    kicker="02 — Typography Scale"
-    title="VT323 顯示字，IBM Plex Mono 操作字。"
+    kicker="02 — TYPOGRAPHY SCALE"
+    title="VT323 點陣標題，IBM Plex Mono 操作內文。"
     note="文字本身就是終端機的品牌資產。顯示層保持 pixel flavor，操作層保持單寬可讀性；不使用斜體，字重以 400 / 600 為主。"
     headingId="typography-title"
   />
@@ -177,16 +177,16 @@ daily-tools::design-system
 <!-- ── 03 Components ────────────────────────────────────────── -->
 <section class="section" id="components" aria-labelledby="components-title">
   <app-section-head
-    kicker="03 — Component Variants"
-    title="按鈕是無邊框實心像素塊，面板是硬邊工具槽。"
+    kicker="03 — COMPONENT VARIANTS"
+    title="按鈕為無邊框實心像素塊，面板為硬邊工具槽。"
     note="按鈕為 borderless 純色塊，靠填色顏色（mint / gold / red）區分語意；面板用 2px 邊框、聚焦與 modal 用 4px。"
     headingId="components-title"
   />
 
   <div class="component-grid">
-    <article class="component-panel">
-      <h3>Buttons</h3>
-      <p>操作色只有 mint。Gold 與 red 只能表達語意狀態。active 亮化填色，無陰影、無位移。</p>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">按鈕樣本 (Buttons)</h3>
+      <p class="mb:16 f:12 color:var(--ink-muted)">操作色只有 Mint。Gold 與 Red 只能表達語意狀態。active 亮化填色，無陰影與位移。</p>
       <div class="button-demo-grid">
         <div class="button-demo">
           <span class="demo-caption">Primary (Normal)</span>
@@ -217,35 +217,57 @@ daily-tools::design-system
           <button class="dt-button dt-button--ghost focus-state" type="button">複製輸出</button>
         </div>
       </div>
-    </article>
+    </app-tool-panel>
 
-    <article class="component-panel">
-      <h3>Tool Panel</h3>
-      <p>標準工具容器。背景固定 elevated，chunky border 是主要結構線；聚焦時升級為 4px。</p>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">工具面板 (Tool Panel)</h3>
+      <p class="mb:16 f:12 color:var(--ink-muted)">標準工具容器。背景固定為 Elevated 表面，Chunky 邊框為主要結構線，聚焦時升級為 4px。</p>
       <div class="command-line">
         <span class="prompt-glyph" aria-hidden="true">&gt;</span>
         <span>panel.focus()</span>
         <app-key-chip>TAB</app-key-chip>
       </div>
-    </article>
+    </app-tool-panel>
 
-    <article class="component-panel">
-      <h3>Key Chips</h3>
-      <p>鍵帽是資訊，不是裝飾。可操作的觸發器必須包在 44px button 裡。</p>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">實體按鍵 (Key Chips)</h3>
+      <p class="mb:16 f:12 color:var(--ink-muted)">鍵帽是輔助資訊，而非點擊按鈕。可操作的觸發器必須符合 44px 的點擊熱區。</p>
       <div class="chip-row">
         <app-key-chip>⌘K</app-key-chip>
         <app-key-chip>ESC</app-key-chip>
         <app-key-chip>ENTER</app-key-chip>
       </div>
-    </article>
+    </app-tool-panel>
+
+    <app-tool-panel class="grid-col:span-3@md">
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">共用警告與提示 (Tool Alert)</h3>
+      <p class="mb:16 f:12 color:var(--ink-muted)">全站通用的 app-tool-alert，包含 Success, Warning, Error 三種語意色樣式。</p>
+      <div class="d:flex flex:col gap:8">
+        <app-tool-alert variant="success" message="已成功複製格式化後的內容至剪貼簿。" />
+        <app-tool-alert variant="warning" message="此工具目前為測試版本，請小心使用。" />
+        <app-tool-alert variant="error" message="語法錯誤，請檢查您的輸入。" />
+      </div>
+    </app-tool-panel>
+
+    <app-tool-panel class="grid-col:span-3@md">
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">工具標題樣式 (Tool Header)</h3>
+      <p class="mb:16 f:12 color:var(--ink-muted)">每個工具頂部的標準標題區，使用 app-tool-header 元件渲染。</p>
+      <div style="border: 1px dashed var(--border-muted); padding: 16px;">
+        <app-tool-header
+          eyebrow="EXAMPLE UTILITY v1.0.0"
+          title="工具標題範例 (Example Title)"
+          description="這是工具的說明文字範例，用以描述工具的主要功能與使用方式。"
+        />
+      </div>
+    </app-tool-panel>
   </div>
 </section>
 
 <!-- ── 04 Layout Chassis ────────────────────────────────────── -->
 <section class="section" id="layout-chassis" aria-labelledby="layout-title">
   <app-section-head
-    kicker="04 — Layout Chassis"
-    title="點擊 [≡] 展開的 240px 右側抽屜選單，與全寬的工作畫布。"
+    kicker="04 — LAYOUT CHASSIS"
+    title="隱藏式右側抽屜選單，與全寬的工作畫布。"
     note="daily-tools 採用的工具機殼：隱藏式右側抽屜選單、prompt bar、breadcrumb、dual pane。點擊右上角 [≡] 即可在任何解析度下展開工具選單。"
     headingId="layout-title"
   />
@@ -280,9 +302,9 @@ daily-tools::design-system
 <!-- ── 05 Tiles ─────────────────────────────────────────────── -->
 <section class="section" id="tiles" aria-labelledby="tiles-title">
   <app-section-head
-    kicker="05 — Tool Tiles"
-    title="色塊交替就是分隔線。"
-    note="用 canvas-elevated 階層與 mint 邊線建立工具目錄，保持 edge-to-edge 的緊密排列。"
+    kicker="05 — TOOL TILES"
+    title="色塊交替即為天然分隔線。"
+    note="用 canvas-elevated 階層與 Mint 邊線建立工具目錄，保持 edge-to-edge 的緊密排列。"
     headingId="tiles-title"
   />
 
@@ -301,9 +323,9 @@ daily-tools::design-system
 <!-- ── 06 Command Palette ───────────────────────────────────── -->
 <section class="section" id="command" aria-labelledby="command-title">
   <app-section-head
-    kicker="06 — Command Palette"
-    title="Cmd+K 是主要入口，不是附加捷徑。"
-    note="每個工具兩次按鍵內可抵達。modal 使用 4px mint border，列表選取列使用 primary-dim 與左側 4px 狀態條。"
+    kicker="06 — COMMAND PALETTE"
+    title="Cmd+K 命令面板為主要導覽入口。"
+    note="每個工具兩次按鍵內可抵達。Modal 使用 4px Mint 綠邊框，選取列使用 primary-dim 與左側 4px 狀態邊條。"
     headingId="command-title"
   />
 
@@ -320,9 +342,9 @@ daily-tools::design-system
     </div>
     <p class="helper-text" id="command-help">輸入工具名稱，Enter 開啟選取項目。</p>
     <ul class="cmdk-list">
-      <li><span>JSON Formatter</span><app-key-chip>ENTER</app-key-chip></li>
-      <li><span>JSON Minifier</span><app-key-chip>⌘2</app-key-chip></li>
-      <li><span>JSON to TypeScript</span><app-key-chip>⌘3</app-key-chip></li>
+      <li><span>字數統計 (Word Count)</span><app-key-chip>ENTER</app-key-chip></li>
+      <li><span>文字轉 Markdown/HTML</span><app-key-chip>⌘2</app-key-chip></li>
+      <li><span>設計系統 (Design System)</span><app-key-chip>⌘3</app-key-chip></li>
     </ul>
   </article>
 </section>
@@ -330,15 +352,15 @@ daily-tools::design-system
 <!-- ── 07 Forms ─────────────────────────────────────────────── -->
 <section class="section" id="forms" aria-labelledby="forms-title">
   <app-section-head
-    kicker="07 — Forms"
-    title="輸入欄位像凹槽，焦點就是 mint 邊框。"
-    note="placeholder 只做提示，不取代 label。互動元素保留可見焦點，最小觸控目標維持 44px。"
+    kicker="07 — FORMS"
+    title="輸入欄位呈凹槽狀，聚焦即為 Mint 邊框。"
+    note="Placeholder 只做提示，不取代 Label。互動元素保留可見焦點，最小觸控目標維持 44px。"
     headingId="forms-title"
   />
 
   <div class="component-grid">
-    <article class="component-panel">
-      <h3>Inputs &amp; Selection</h3>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">輸入與選擇 (Inputs &amp; Selection)</h3>
       <div class="sample-stack">
         <div class="form-field">
           <label for="tool-search-normal">搜尋工具 (預設 / Focus)</label>
@@ -388,21 +410,21 @@ daily-tools::design-system
           <span class="helper-text">當前選取值：{{ radioValue() }}</span>
         </div>
       </div>
-    </article>
+    </app-tool-panel>
 
-    <article class="component-panel">
-      <h3>Code Area</h3>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">代碼編輯區 (Code Area)</h3>
       <div class="form-field">
         <label for="code-input">代碼輸入槽 (Monokai)</label>
         <textarea id="code-input" class="textarea-code" spellcheck="false">
 {{ '{' }}"theme":"monokai","rounded":false{{ '}' }}</textarea>
       </div>
-    </article>
+    </app-tool-panel>
 
-    <article class="component-panel">
-      <h3>Semantic Toasts</h3>
+    <app-tool-panel>
+      <h3 class="type-mono-h4 fg-ink-bright mb:12">語意吐司通知 (Semantic Toasts)</h3>
       <p class="helper-text">使用 elevated 背景與 2px 語意邊框；無陰影。</p>
-      <div class="sample-stack">
+      <div class="sample-stack" style="margin-top: 12px;">
         <div class="toast toast-success">
           <h4>{{ '{' }}component.toast-success{{ '}' }}</h4>
           <p>已成功複製格式化後的 JSON 至剪貼簿。</p>
@@ -416,15 +438,15 @@ daily-tools::design-system
           <p>格式化失敗：JSON 語法錯誤 (Line 2)。</p>
         </div>
       </div>
-    </article>
+    </app-tool-panel>
   </div>
 </section>
 
 <!-- ── 08 Responsive ────────────────────────────────────────── -->
 <section class="section" id="responsive" aria-labelledby="responsive-title">
   <app-section-head
-    kicker="08 — Responsive Rules"
-    title="桌面優先，手機優雅降級。"
+    kicker="08 — RESPONSIVE RULES"
+    title="桌面優先，行動裝置優雅降級。"
     note="daily-tools 是寬螢幕工作介面。小尺寸保持功能可讀，但不假裝每個工具都能在 320px 下完整展示。"
     headingId="responsive-title"
   />
@@ -440,22 +462,22 @@ daily-tools::design-system
     </thead>
     <tbody>
       <tr>
-        <th scope="row">Mobile</th>
+        <th scope="row">Mobile 行動裝置</th>
         <td>≤ 639px</td>
-        <td>單欄、breadcrumb 隱藏 category、dual-pane 改垂直堆疊。側欄為右側抽屜。</td>
+        <td>單欄、Breadcrumb 隱藏 category、dual-pane 改垂直堆疊。側欄為右側抽屜。</td>
       </tr>
       <tr>
-        <th scope="row">Tablet</th>
+        <th scope="row">Tablet 平板</th>
         <td>640–1023px</td>
         <td>側欄為右側 off-canvas 抽屜，主要畫布全寬。可透過點擊 [≡] 展開。</td>
       </tr>
       <tr>
-        <th scope="row">Desktop</th>
+        <th scope="row">Desktop 桌上型電腦</th>
         <td>≥ 1024px</td>
         <td>側欄為右側 off-canvas 抽屜，主要畫布全寬。可透過點擊 [≡] 展開。工具面板雙欄。</td>
       </tr>
       <tr>
-        <th scope="row">Wide</th>
+        <th scope="row">Wide 寬螢幕</th>
         <td>≥ 1440px</td>
         <td>維持密集資訊配置，不額外增加 marketing whitespace。與 Desktop 行為一致。</td>
       </tr>

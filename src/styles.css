@@ -133,6 +133,10 @@ a:visited {
   transition: background-color 0.05s ease;
 }
 
+.dt-button:visited {
+  color: currentColor;
+}
+
 .dt-button:focus-visible {
   outline: 2px solid var(--primary-bright);
   outline-offset: 4px;
