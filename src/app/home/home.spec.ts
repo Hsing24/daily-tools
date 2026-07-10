@@ -23,4 +23,16 @@ describe('Home', () => {
 
     expect(compiled.querySelector('h1')?.textContent).toContain('網站開發常用線上工具集合');
   });
+
+  it('should render the links to tools', async () => {
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const links = Array.from(compiled.querySelectorAll('a')).map(
+      (el) => el.getAttribute('routerLink')
+    );
+    expect(links).toContain('/word-count');
+    expect(links).toContain('/design');
+    expect(links).toContain('/text-markdown-html');
+  });
 });

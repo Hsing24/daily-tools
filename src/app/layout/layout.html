@@ -14,11 +14,16 @@
     [class.is-open]="sidebarOpen()"
     aria-label="工具選單"
   >
-    <div class="brand">
+    <a
+      class="brand"
+      routerLink="/"
+      (click)="closeSidebar()"
+      aria-label="回到首頁"
+    >
       <div class="brand-mark" aria-hidden="true">&gt;_</div>
       <div class="brand-name">Daily Tools</div>
       <div class="brand-meta">CRT interface / alpha spec</div>
-    </div>
+    </a>
 
     <nav class="side-nav" aria-label="工具清單">
       @for (group of toolGroups; track group.name) {
