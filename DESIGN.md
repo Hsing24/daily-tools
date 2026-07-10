@@ -180,7 +180,7 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.mono-body}"
     rounded: "{rounded.none}"
-    border-right: "{borders.chunky}"
+    border-left: "{borders.chunky}"
     width: 240px
     padding: 24px 16px
   sidebar-section-label:
@@ -413,7 +413,7 @@ components:
 
 **DevTool Terminal** wears the skin of an 8-bit CRT but carries a modern, keyboard-first information architecture. Every page is a stack of bordered "panels" sitting on a dark navy canvas, framed by chunky 2–4px hard-edged borders in a single mint-green action color (`{colors.primary}` — Pantone 333c equivalent). Typography is exclusively monospace; display headlines use the pixel-bitmap face VT323, body and UI use IBM Plex Mono. Color is reserved: a near-black navy canvas, mint green for action, gold for status, red for destructive — no fourth accent, no decorative gradients, no soft shadows.
 
-Density is unusually high compared to modern marketing-led design systems, and that is intentional. The product is a power-user terminal; cramped grids, dense link columns, and persistent breadcrumbs are features, not bugs. The two-column dashboard pins a text-only sidebar (no icons, per PRD) on the left and devotes the rest of the viewport to a single active tool surface. A persistent Zsh-style chevron breadcrumb sits above each tool, and a Cmd+K command palette is the primary navigation modality — so much so that the UI is comfortable being half-empty until the user invokes it.
+Density is unusually high compared to modern marketing-led design systems, and that is intentional. The product is a power-user terminal; cramped grids, dense link columns, and persistent breadcrumbs are features, not bugs. The dashboard features a text-only, off-canvas sidebar (no icons, per PRD) on the right, toggled by the prompt bar, and devotes the viewport to a single active tool surface. A persistent Zsh-style chevron breadcrumb sits above each tool, and a Cmd+K command palette is the primary navigation modality — so much so that the UI is comfortable being half-empty until the user invokes it.
 
 Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Network Tools — the chassis is identical. Tools differ in content, never in chrome. A single low-opacity scanline overlay (`{colors.scanline-tint}` at ~4% alpha) is rendered above the canvas to evoke CRT phosphor; it is the only ambient texture in the system.
 
@@ -551,7 +551,7 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 
 ### Grid & Container
 
-- **Two-column dashboard**: 240px fixed sidebar (`{component.global-sidebar}`) + fluid main canvas. The sidebar never collapses on desktop; on tablet (≤ 1023px) it becomes an off-canvas drawer toggled from the prompt bar.
+- **Dashboard Layout**: A 240px off-canvas sidebar drawer (`{component.global-sidebar}`) toggled from the prompt bar, which remains hidden on the right until invoked, and a fluid main canvas. This keeps the workspace clean and focused across all viewports.
 - **Max content width**: none. The main canvas absorbs all available width because the product is desktop-first and benefits from wide terminal real-estate. Individual tool panels may cap at 1200px when content (e.g., regex tester input) doesn't need more.
 - **Dual-pane tools** (JSON Formatter, Base64): 50/50 split with a 2px `{component.dual-pane-divider}` between input and output.
 - **Gutters between panels**: `{spacing.lg}` (16px) — tight, consistent with terminal density.
@@ -630,7 +630,7 @@ The Zsh-style breadcrumb segments are the closest the system gets to a non-recta
 
 ### Global Sidebar
 
-**`global-sidebar`** — A 240px-wide fixed-position rail pinned to the left edge of every page. Background `{colors.canvas-deep}`, text `{colors.ink}` in `{typography.mono-body}`, right edge `{borders.chunky}` (2px mint). Contains text-only navigation grouped by tool category. **No icons.** Section labels render in `{typography.pixel-eyebrow}` (VT323 18px, +2px tracking, `{colors.ink-muted}`).
+**`global-sidebar`** — A 240px-wide off-canvas drawer that slides out from the right edge. Background `{colors.canvas-deep}`, text `{colors.ink}` in `{typography.mono-body}`, left edge `{borders.chunky}` (2px mint). Contains text-only navigation grouped by tool category. **No icons.** Section labels render in `{typography.pixel-eyebrow}` (VT323 18px, +2px tracking, `{colors.ink-muted}`).
 
 **`sidebar-nav-item`** — A plain text link, padding 8px × 12px. Default: `{colors.ink}` text. Hover/focus: text brightens to `{colors.ink-bright}`. No background fill on hover — discovery cue is text-color only.
 
@@ -731,10 +731,10 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 
 | Name | Width | Key Changes |
 |---|---|---|
-| Mobile | ≤ 639px | Single-column stack; sidebar becomes an off-canvas drawer toggled from the prompt bar; tool panels span full viewport width minus 16px gutters; Cmd+K modal scales to 90vw with same chunky border |
-| Tablet | 640–1023px | Sidebar still a drawer (toggled via prompt bar key chip); main canvas full-width; dual-pane tools collapse to vertically stacked panes |
-| Small Desktop | 1024–1439px | Sidebar pinned (240px); dual-pane tools side-by-side; default development target |
-| Wide Desktop | ≥ 1440px | Sidebar pinned; tool panels may opt-in to a 1200px max-width centered layout; the rest of the canvas extends to the viewport edges |
+| Mobile | ≤ 639px | Single-column stack; sidebar drawer toggled from the prompt bar; tool panels span full viewport width minus 16px gutters; Cmd+K modal scales to 90vw with same chunky border |
+| Tablet | 640–1023px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; dual-pane tools collapse to vertically stacked panes |
+| Small Desktop | 1024–1439px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; dual-pane tools side-by-side; default development target |
+| Wide Desktop | ≥ 1440px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; tool panels may opt-in to a 1200px max-width centered layout; the rest of the canvas extends to the viewport edges |
 
 Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation, not a parity goal. Some tools (e.g., a wide regex tester with many capture groups) will surface a "Use a wider viewport for full functionality" notice on ≤ 639px.
 
@@ -746,7 +746,7 @@ Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation
 
 ### Collapsing Strategy
 
-- **Sidebar**: visible at ≥ 1024px → off-canvas drawer at ≤ 1023px, toggled via a prompt-bar mini-button labeled `[≡]` (pixel hamburger).
+- **Sidebar**: off-canvas drawer at all breakpoints, toggled via a prompt-bar mini-button labeled `[≡]` (pixel hamburger).
 - **Breadcrumb**: full 3-segment chevron at ≥ 768px → collapses to 2 segments (Home > Current) at ≤ 767px, with the category segment hidden.
 - **Dual-pane tools**: side-by-side at ≥ 768px → vertically stacked at ≤ 767px, with the `{component.dual-pane-divider}` rotating from vertical to horizontal.
 - **Display headings**: `{typography.pixel-display}` (64px) → `{typography.pixel-h1}` (48px) at ≤ 1023px → `{typography.pixel-h2}` (36px) at ≤ 639px.

@@ -245,8 +245,8 @@ daily-tools::design-system
 <section class="section" id="layout-chassis" aria-labelledby="layout-title">
   <app-section-head
     kicker="04 — Layout Chassis"
-    title="240px 側欄，加上一個可工作的工具畫布。"
-    note="daily-tools 真正使用的工具機殼：sidebar、prompt bar、breadcrumb、dual pane。工具之間只換內容，不換 chrome。"
+    title="點擊 [≡] 展開的 240px 右側抽屜選單，與全寬的工作畫布。"
+    note="daily-tools 採用的工具機殼：隱藏式右側抽屜選單、prompt bar、breadcrumb、dual pane。點擊右上角 [≡] 即可在任何解析度下展開工具選單。"
     headingId="layout-title"
   />
 
@@ -379,6 +379,14 @@ daily-tools::design-system
             >SOLARIZED</button>
           </div>
         </div>
+        <div class="form-field">
+          <span class="field-label">Radio Group (單選按鈕群組)</span>
+          <app-tool-radio-group
+            [options]="radioOptions()"
+            [(value)]="radioValue"
+          />
+          <span class="helper-text">當前選取值：{{ radioValue() }}</span>
+        </div>
       </div>
     </article>
 
@@ -434,22 +442,22 @@ daily-tools::design-system
       <tr>
         <th scope="row">Mobile</th>
         <td>≤ 639px</td>
-        <td>單欄、breadcrumb 隱藏 category、dual-pane 改垂直堆疊。</td>
+        <td>單欄、breadcrumb 隱藏 category、dual-pane 改垂直堆疊。側欄為右側抽屜。</td>
       </tr>
       <tr>
         <th scope="row">Tablet</th>
         <td>640–1023px</td>
-        <td>側欄改為 off-canvas 抽屜，主要畫布全寬。</td>
+        <td>側欄為右側 off-canvas 抽屜，主要畫布全寬。可透過點擊 [≡] 展開。</td>
       </tr>
       <tr>
         <th scope="row">Desktop</th>
         <td>≥ 1024px</td>
-        <td>240px 固定側欄，prompt bar sticky，工具面板雙欄。</td>
+        <td>側欄為右側 off-canvas 抽屜，主要畫布全寬。可透過點擊 [≡] 展開。工具面板雙欄。</td>
       </tr>
       <tr>
         <th scope="row">Wide</th>
         <td>≥ 1440px</td>
-        <td>維持密集資訊配置，不額外增加 marketing whitespace。</td>
+        <td>維持密集資訊配置，不額外增加 marketing whitespace。與 Desktop 行為一致。</td>
       </tr>
     </tbody>
   </table>

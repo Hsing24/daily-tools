@@ -6,6 +6,7 @@ import { ToolBreadcrumb } from "../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ColorSwatch } from "./ui/color-swatch/color-swatch";
 import { SectionHead } from "./ui/section-head/section-head";
 import { TypeRow } from "./ui/type-row/type-row";
+import { ToolRadioGroup, RadioOption } from "../shared/ui/tool-radio-group/tool-radio-group";
 
 interface SectionLink {
   readonly id: string;
@@ -47,7 +48,7 @@ interface ToolTile {
 
 @Component({
   selector: "app-design",
-  imports: [RouterLink, KeyChip, ToolBreadcrumb, ColorSwatch, SectionHead, TypeRow],
+  imports: [RouterLink, KeyChip, ToolBreadcrumb, ColorSwatch, SectionHead, TypeRow, ToolRadioGroup],
   templateUrl: "./design.html",
   styleUrls: ["./design.css", "./design-demos.css"],
 })
@@ -175,6 +176,13 @@ export class Design {
 
   /** 表單區的 segmented control 展示狀態（純示範，不影響全站主題）。 */
   protected readonly segmentDemo = signal<"monokai" | "solarized">("monokai");
+
+  protected readonly radioOptions = signal<RadioOption[]>([
+    { value: "ascii", label: "ASCII 碼" },
+    { value: "utf8", label: "UTF-8" },
+    { value: "base64", label: "Base64" },
+  ]);
+  protected readonly radioValue = signal<string>("utf8");
 
   protected setSegmentDemo(value: "monokai" | "solarized"): void {
     this.segmentDemo.set(value);
