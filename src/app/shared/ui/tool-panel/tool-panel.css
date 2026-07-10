@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.tool-panel {
+  background-color: var(--canvas-elevated);
+  border: 2px solid var(--border-default);
+  padding: 24px;
+  box-sizing: border-box;
+}

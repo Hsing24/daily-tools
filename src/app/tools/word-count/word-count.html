@@ -1,36 +1,22 @@
 <div>
-  <!-- Zsh / p10k-style powerline breadcrumbs -->
-  <nav class="breadcrumb-zsh" aria-label="導覽路徑">
-    <a routerLink="/" class="breadcrumb-segment-home">DevTool</a>
-    <span class="breadcrumb-segment-category">文字工具</span>
-    <span class="breadcrumb-segment-current">字數統計</span>
-  </nav>
+  <app-tool-breadcrumb category="文字工具" current="字數統計" />
 
-  <!-- Tool panel: chunky mint border, flat surface, no shadow -->
-  <div class="tool-panel">
-    <!-- Header -->
-    <div class="mb:24">
-      <span class="tool-eyebrow">TEXT UTILITIES v1.0.0</span>
-      <h2 class="tool-title">字數統計 (Word Count)</h2>
-      <p class="tool-description">
-        分析您輸入的文字，依據混合規則提供精準的字元數、字數與行數統計。適合中英混排、含 emoji 的內容統計。
-      </p>
-    </div>
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="TEXT UTILITIES v1.0.0"
+      title="字數統計 (Word Count)"
+      description="分析您輸入的文字，依據混合規則提供精準的字元數、字數與行數統計。適合中英混排、含 emoji 的內容統計。"
+    />
 
     @if (alertMessage()) {
-      <div
-        data-testid="alert-message"
-        role="alert"
-        aria-live="assertive"
-        class="alert-box"
-      >
-        ⚠️ {{ alertMessage() }}
-      </div>
+    <app-tool-alert [message]="alertMessage()" />
     }
 
     <!-- Input -->
     <div class="d:block mb:16">
-      <label for="word-count-input" class="word-count-label">請輸入、貼上欲統計之文字：</label>
+      <label for="word-count-input" class="word-count-label"
+        >請輸入、貼上欲統計之文字：</label
+      >
       <textarea
         id="word-count-input"
         #textarea
@@ -47,7 +33,7 @@
         type="button"
         data-testid="btn-paste"
         (click)="paste()"
-        class="btn-primary"
+        class="dt-button dt-button--primary"
       >
         貼上文字
       </button>
@@ -55,66 +41,43 @@
         type="button"
         data-testid="btn-clear"
         (click)="clear()"
-        class="btn-warning"
+        class="dt-button dt-button--warning"
       >
         清除內容
       </button>
     </div>
 
     <!-- Statistics (Terminal style output) -->
-    <div
-      class="terminal-output"
-      [style.display]="text() ? 'block' : 'none'"
-      role="status"
-      aria-live="polite"
+    <app-terminal-output
+      title="ANALYZE_REPORT.txt"
+      status="[EOF]"
+      command="word-count --file=input.txt --verbose"
+      footer="PROCESS COMPLETE: 100% (STATUS: SUCCESS)"
+      [visible]="!!text()"
     >
-      <div class="terminal-output-header">
-        <span class="terminal-title">ANALYZE_REPORT.txt</span>
-        <span class="terminal-status">[EOF]</span>
+      <div class="stats-table">
+        <app-stat-row
+          label="字元數 (含空白)"
+          [value]="stats().charactersWithSpaces"
+          testId="stat-chars-with-spaces"
+        />
+        <app-stat-row
+          label="字元數 (不含空白)"
+          [value]="stats().charactersNoSpaces"
+          testId="stat-chars-no-spaces"
+        />
+        <app-stat-row
+          label="字數 (混合規則)"
+          [value]="stats().words"
+          testId="stat-words"
+          [highlight]="true"
+        />
+        <app-stat-row
+          label="行數"
+          [value]="stats().lines"
+          testId="stat-lines"
+        />
       </div>
-      <div class="terminal-output-body">
-        <div class="terminal-line">
-          <span class="prompt-symbol">$</span>
-          <span class="command-text">word-count --file=input.txt --verbose</span>
-        </div>
-        <div class="stats-table">
-          <div class="stats-row">
-            <span class="label">字元數 (含空白)</span>
-            <span class="dots" aria-hidden="true"></span>
-            <span data-testid="stat-chars-with-spaces" class="value">
-              {{ stats().charactersWithSpaces }}
-            </span>
-          </div>
-
-          <div class="stats-row">
-            <span class="label">字元數 (不含空白)</span>
-            <span class="dots" aria-hidden="true"></span>
-            <span data-testid="stat-chars-no-spaces" class="value">
-              {{ stats().charactersNoSpaces }}
-            </span>
-          </div>
-
-          <div class="stats-row highlight">
-            <span class="label">字數 (混合規則)</span>
-            <span class="dots" aria-hidden="true"></span>
-            <span data-testid="stat-words" class="value">
-              {{ stats().words }}
-            </span>
-          </div>
-
-          <div class="stats-row">
-            <span class="label">行數</span>
-            <span class="dots" aria-hidden="true"></span>
-            <span data-testid="stat-lines" class="value">
-              {{ stats().lines }}
-            </span>
-          </div>
-        </div>
-        <div class="terminal-divider"></div>
-        <div class="terminal-footer-line">
-          <span>PROCESS COMPLETE: 100% (STATUS: SUCCESS)</span>
-        </div>
-      </div>
-    </div>
-  </div>
+    </app-terminal-output>
+  </app-tool-panel>
 </div>

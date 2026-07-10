@@ -1,0 +1,24 @@
+<div
+  class="terminal-output"
+  [style.display]="visible() ? 'block' : 'none'"
+  role="status"
+  aria-live="polite"
+>
+  <div class="terminal-output-header">
+    <span class="terminal-title">{{ title() }}</span>
+    <span class="terminal-status">{{ status() }}</span>
+  </div>
+  <div class="terminal-output-body">
+    <div class="terminal-line">
+      <span class="prompt-symbol">$</span>
+      <span class="command-text">{{ command() }}</span>
+    </div>
+    <ng-content />
+    @if (footer()) {
+    <div class="terminal-divider"></div>
+    <div class="terminal-footer-line">
+      <span>{{ footer() }}</span>
+    </div>
+    }
+  </div>
+</div>

@@ -1,10 +1,22 @@
 import { Component, signal, computed } from "@angular/core";
-import { RouterLink } from "@angular/router";
 import { computeTextStats } from "./word-count-stats";
+import { StatRow } from "../../shared/ui/stat-row/stat-row";
+import { TerminalOutput } from "../../shared/ui/terminal-output/terminal-output";
+import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
+import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
+import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
+import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 
 @Component({
   selector: "app-word-count",
-  imports: [RouterLink],
+  imports: [
+    StatRow,
+    TerminalOutput,
+    ToolAlert,
+    ToolBreadcrumb,
+    ToolHeader,
+    ToolPanel,
+  ],
   templateUrl: "./word-count.html",
   styleUrl: "./word-count.css",
 })

@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.alert-box {
+  background-color: var(--warning-dim);
+  color: var(--on-warning);
+  border: 2px solid var(--border-warning);
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.alert-box--warning {
+  background-color: var(--gold-dim);
+  color: var(--on-gold);
+  border-color: var(--border-gold);
+}
+
+.alert-box--success {
+  background-color: var(--canvas-elevated-2);
+  color: var(--primary);
+  border-color: var(--border-default);
+}

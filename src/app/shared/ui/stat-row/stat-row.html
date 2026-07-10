@@ -1,0 +1,5 @@
+<div class="stats-row" [class.highlight]="highlight()">
+  <span class="label">{{ label() }}</span>
+  <span class="dots" aria-hidden="true"></span>
+  <span [attr.data-testid]="testId()" class="value"> {{ value() }} </span>
+</div>

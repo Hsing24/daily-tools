@@ -1,0 +1,7 @@
+<nav class="breadcrumb-zsh" aria-label="導覽路徑">
+  <a [routerLink]="homeLink()" class="breadcrumb-segment-home">
+    {{ homeLabel() }}
+  </a>
+  <span class="breadcrumb-segment-category">{{ category() }}</span>
+  <span class="breadcrumb-segment-current">{{ current() }}</span>
+</nav>
