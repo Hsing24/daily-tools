@@ -133,4 +133,16 @@ describe("CommandPalette", () => {
     expect(document.activeElement).toBe(firstButton);
     expect(component["focusedIndex"]()).toBe(0);
   });
+
+  it("should show all available tools when query is 'all' case-insensitively", async () => {
+    component["query"].set("ALL");
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
+    expect(items.length).toBe(3);
+    expect(items[0].nativeElement.textContent).toContain("工具 A");
+    expect(items[1].nativeElement.textContent).toContain("工具 B");
+    expect(items[2].nativeElement.textContent).toContain("Tool D");
+  });
 });

@@ -44,7 +44,7 @@ interface ToolGroup {
             [value]="query()"
             (input)="onInputChange($event)"
             class="cmd-k-input"
-            placeholder="輸入關鍵字搜尋頁面..."
+            placeholder="輸入關鍵字，或輸入 'all' 顯示全部頁面..."
             (keydown.escape)="onEscape($event)"
             (keydown.enter)="onInputEnter($event)"
             (keydown.arrowdown)="onInputArrowDown($event)"
@@ -66,7 +66,6 @@ interface ToolGroup {
                 (keydown.arrowdown)="onResultArrowDown($event, i)"
                 (keydown.arrowup)="onResultArrowUp($event, i)"
                 (keydown.tab)="onResultTab($event, i)"
-                (keydown.enter)="navigateTo(item)"
                 (focus)="focusedIndex.set(i)"
               >
                 <span>{{ item.label }}</span>
@@ -183,14 +182,19 @@ export class CommandPalette implements AfterViewInit {
     if (!q) {
       return [];
     }
+    const showAll = q === "all";
     const results: ToolItem[] = [];
     for (const group of this.toolGroups()) {
       for (const tool of group.tools) {
         if (tool.available && tool.route) {
-          const labelMatch = tool.label.toLowerCase().includes(q);
-          const routeMatch = tool.route.toLowerCase().includes(q);
-          if (labelMatch || routeMatch) {
+          if (showAll) {
             results.push(tool);
+          } else {
+            const labelMatch = tool.label.toLowerCase().includes(q);
+            const routeMatch = tool.route.toLowerCase().includes(q);
+            if (labelMatch || routeMatch) {
+              results.push(tool);
+            }
           }
         }
       }
