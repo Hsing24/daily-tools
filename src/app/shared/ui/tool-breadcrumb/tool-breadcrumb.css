@@ -53,6 +53,7 @@
   background-color: var(--gold);
   color: var(--on-gold);
   padding: 4px 18px;
+  /* 專案裁定：保留平直左緣（不採 DESIGN.md 的 14px 凹口） */
   clip-path: polygon(
     0 0,
     calc(100% - 14px) 0,
@@ -69,6 +70,7 @@
   background-color: var(--warning);
   color: var(--on-warning);
   padding: 4px 18px;
+  /* 專案裁定：保留平直左緣（不採 DESIGN.md 的 14px 凹口） */
   clip-path: polygon(
     0 0,
     calc(100% - 14px) 0,

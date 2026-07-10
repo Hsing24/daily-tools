@@ -15,12 +15,15 @@ describe("Layout", () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it("should render the active tool group in the sidebar", async () => {
+  it("should render the tool groups in the sidebar", async () => {
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelectorAll(".nav-label").length).toBe(1);
+    const labels = Array.from(compiled.querySelectorAll(".nav-label")).map(
+      (el) => el.textContent?.trim(),
+    );
+    expect(labels).toEqual(["文字工具", "系統"]);
   });
 
   it("should keep the sidebar closed by default", async () => {

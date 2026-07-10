@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.swatch {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 178px;
+  height: 100%;
+  padding: 16px;
+  background: var(--canvas-elevated);
+  border: 2px solid var(--primary);
+}
+
+.swatch-token {
+  min-height: 64px;
+  border: 2px solid var(--border-muted);
+}
+
+strong {
+  color: var(--ink-bright);
+}
+
+code {
+  color: var(--primary-bright);
+  font-family: var(--font-mono);
+}
+
+p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+}

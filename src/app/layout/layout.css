@@ -102,17 +102,22 @@
   font-size: 14px;
 }
 
-.side-nav a:hover,
+/* DESIGN.md: hover 只亮文字，不加背景填色 */
+.side-nav a:hover {
+  color: var(--ink-bright);
+}
+
 .side-nav a:focus-visible {
   color: var(--ink-bright);
-  background: var(--canvas-elevated);
+  outline: 2px solid var(--primary-bright);
+  outline-offset: -2px;
 }
 
 .side-nav a.is-active {
   color: var(--primary);
   background: var(--canvas-elevated);
-  border-left: 2px solid var(--primary);
-  padding-left: 10px; /* compensate border-left width */
+  border-left: 4px solid var(--primary);
+  padding-left: 8px; /* compensate border-left width */
   font-weight: 600;
 }
 

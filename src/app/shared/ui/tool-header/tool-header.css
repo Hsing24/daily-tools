@@ -21,7 +21,7 @@
   font-family: var(--font-pixel);
   font-size: 36px;
   font-weight: 400;
-  color: var(--primary);
+  color: var(--ink-bright); /* DESIGN.md: headings 用 ink-bright，mint 保留給互動元素 */
   line-height: 1.1;
   margin-top: 0;
   margin-bottom: 12px;

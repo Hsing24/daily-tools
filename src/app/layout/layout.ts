@@ -38,6 +38,10 @@ export class Layout {
       name: "文字工具",
       tools: [{ label: "字數統計", route: "word-count", available: true }],
     },
+    {
+      name: "系統",
+      tools: [{ label: "Design System", route: "design", available: true }],
+    },
   ];
 
   private readonly router = inject(Router);

@@ -1,0 +1,163 @@
+:host {
+  display: block;
+}
+
+.type-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(220px, 0.35fr);
+  gap: 16px;
+  align-items: center;
+  padding: 18px 24px;
+  background: var(--canvas-elevated);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+:host(:last-of-type) .type-row {
+  border-bottom: 0;
+}
+
+.type-name {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+code {
+  color: var(--primary-bright);
+  font-family: var(--font-mono);
+}
+
+/* --- 14 個字體級距 token（DESIGN.md typography）--- */
+.type-pixel-display {
+  font-family: var(--font-pixel);
+  font-size: 64px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.type-pixel-h1 {
+  font-family: var(--font-pixel);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.type-pixel-h2 {
+  font-family: var(--font-pixel);
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.type-pixel-h3 {
+  font-family: var(--font-pixel);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.type-pixel-eyebrow {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.type-mono-h4 {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.type-mono-body-lg {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.type-mono-body {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.type-mono-body-strong {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.type-mono-prompt {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.type-mono-caption {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+}
+
+.type-mono-key-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.type-mono-button {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.type-mono-code {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* 前景色 utilities（僅供示意文字使用） */
+.fg-ink-bright {
+  color: var(--ink-bright);
+}
+
+.fg-ink {
+  color: var(--ink);
+}
+
+.fg-ink-muted {
+  color: var(--ink-muted);
+}
+
+.fg-primary {
+  color: var(--primary);
+}
+
+.fg-primary-bright {
+  color: var(--primary-bright);
+}
+
+@media (max-width: 767px) {
+  .type-row {
+    grid-template-columns: 1fr;
+  }
+}

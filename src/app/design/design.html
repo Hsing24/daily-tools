@@ -1,0 +1,456 @@
+<app-tool-breadcrumb category="System" current="Design" />
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="page-title">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Design System Analysis</p>
+      <h1 id="page-title">DevTool Terminal</h1>
+      <p class="lead">
+        這是 daily-tools 的設計系統展示頁。視覺語言完全遵循 DESIGN.md：深藍 CRT
+        畫布、mint 綠互動訊號、chunky 硬邊框、零圓角、零陰影（深度只來自表面階層與邊框厚度），以及鍵盤優先的工具介面。
+      </p>
+      <div class="command-line" aria-label="頁面摘要">
+        <span class="prompt-glyph" aria-hidden="true">&gt;</span>
+        <span>single action color</span>
+        <app-key-chip>#3FE0C5</app-key-chip>
+        <span>chunky borders</span>
+        <app-key-chip>2PX / 4PX</app-key-chip>
+      </div>
+      <div class="button-row" aria-label="主要操作範例">
+        <a class="dt-button dt-button--primary" [routerLink]="[]" fragment="components">查看元件</a>
+        <a class="dt-button dt-button--ghost" [routerLink]="[]" fragment="responsive">檢視響應式規則</a>
+      </div>
+    </div>
+
+    <article class="terminal-card" aria-label="終端機畫面範例">
+      <header>
+        <span>design.md preview</span>
+        <span>alpha</span>
+      </header>
+      <pre>
+daily-tools::design-system
+├─ colors
+│  ├─ action: mint only
+│  ├─ status: gold
+│  └─ danger: warning red
+├─ surfaces
+│  ├─ canvas
+│  ├─ elevated
+│  └─ input slot
+├─ components
+│  ├─ prompt bar
+│  ├─ zsh breadcrumb
+│  ├─ tool panel
+│  └─ cmd+k palette
+└─ rule
+   no radius, no shadow, no extra accent</pre>
+    </article>
+  </div>
+
+  <nav class="section-index" aria-label="頁面區塊索引">
+    <span class="index-label" aria-hidden="true">INDEX</span>
+    @for (s of sections; track s.id) {
+      <a [routerLink]="[]" [fragment]="s.id">{{ s.label }}</a>
+    }
+  </nav>
+</section>
+
+<!-- ── 01 Colors ────────────────────────────────────────────── -->
+<section class="section" id="colors" aria-labelledby="colors-title">
+  <app-section-head
+    kicker="01 — Color Palette"
+    title="一個 mint action，三個語意訊號。"
+    note="以 Pantone 333c 等價的 mint 綠承擔所有互動狀態。Gold 只做狀態，Red 只做破壞或錯誤，不存在第四個強調色。"
+    headingId="colors-title"
+  />
+
+  <div class="surface-stack" aria-label="表面階層">
+    <article class="surface-step">
+      <h3>Canvas</h3>
+      <p><code>#0A1A2F</code></p>
+      <p>主畫布。所有工具頁都從這個深藍終端底色開始。</p>
+    </article>
+    <article class="surface-step">
+      <h3>Elevated</h3>
+      <p><code>#122339</code></p>
+      <p>工具面板與重點容器。深度由表面階層提供，不靠陰影。</p>
+    </article>
+    <article class="surface-step">
+      <h3>Nested</h3>
+      <p><code>#15263F</code></p>
+      <p>面板內的鍵帽、列表選取列、次級資料槽。</p>
+    </article>
+  </div>
+
+  <div class="swatch-categories">
+    @for (category of swatchCategories; track category.title) {
+      <div class="swatch-category">
+        <h3 class="swatch-cat-title">{{ category.title }}</h3>
+        <div class="swatch-grid">
+          @for (item of category.items; track item.cssVar) {
+            <app-color-swatch
+              [name]="item.name"
+              [value]="item.value"
+              [description]="item.description"
+              [cssVar]="item.cssVar"
+            />
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- 間距尺規 -->
+  <div class="swatch-category">
+    <h3 class="swatch-cat-title">間距尺規 Spacing Scale</h3>
+    <p class="category-note">以 4px 為基準的緊湊型間距系統，對齊終端機高密度排版特色。</p>
+    <div class="spacing-table">
+      @for (s of spacingTokens; track s.token) {
+        <div class="spacing-row">
+          <span class="spacing-token">{{ s.token }}</span>
+          <span class="spacing-value">{{ s.value }}</span>
+          <div class="spacing-bar-container">
+            <div class="spacing-bar" [style.width.px]="s.px" aria-hidden="true"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- 形狀與深度：無陰影，深度 = 表面階層 + 邊框厚度 -->
+  <div class="swatch-category">
+    <h3 class="swatch-cat-title">形狀與深度 Shapes &amp; Depth</h3>
+    <p class="category-note">
+      全域規則 <code>border-radius: 0px</code>（<code>{{ '{' }}rounded.none{{ '}' }}</code>），所有元件皆為硬角矩形。
+      陰影全系統停用——<code>{{ '{' }}elevation.*{{ '}' }}</code> tokens 一律解析為
+      <code>0 0 0 0 transparent</code>；深度只來自表面階層（canvas → elevated → elevated-2）與邊框厚度（1px / 2px / 4px）。
+    </p>
+
+    <div class="depth-grid">
+      <article class="depth-card depth-hairline">
+        <h4>Hairline</h4>
+        <p>面板內分隔線、key chip 外框、預設輸入框。</p>
+        <code>1px solid var(--border-muted)</code>
+      </article>
+      <article class="depth-card depth-chunky">
+        <h4>Chunky</h4>
+        <p>工具面板、聚焦輸入框的標準結構線。</p>
+        <code>2px solid var(--border-default)</code>
+      </article>
+      <article class="depth-card depth-chunky-thick">
+        <h4>Chunky Thick</h4>
+        <p>聚焦面板與 Cmd+K modal 的強調邊框。</p>
+        <code>4px solid var(--border-default)</code>
+      </article>
+    </div>
+
+    <div class="depth-interactive">
+      <h4 class="depth-interactive-title">互動按壓效果</h4>
+      <p>按鈕的 active 狀態以「亮化填色」表達（mint → mint-bright），不位移、不加陰影：</p>
+      <button class="dt-button dt-button--primary" type="button">PRESS ME</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── 02 Typography ────────────────────────────────────────── -->
+<section class="section" id="typography" aria-labelledby="typography-title">
+  <app-section-head
+    kicker="02 — Typography Scale"
+    title="VT323 顯示字，IBM Plex Mono 操作字。"
+    note="文字本身就是終端機的品牌資產。顯示層保持 pixel flavor，操作層保持單寬可讀性；不使用斜體，字重以 400 / 600 為主。"
+    headingId="typography-title"
+  />
+
+  <div class="type-scale" aria-label="字體級距範例">
+    @for (t of typeTokens; track t.token) {
+      <app-type-row
+        [token]="t.token"
+        [sample]="t.sample"
+        [sampleClass]="t.sampleClass"
+        [spec]="t.spec"
+      />
+    }
+  </div>
+</section>
+
+<!-- ── 03 Components ────────────────────────────────────────── -->
+<section class="section" id="components" aria-labelledby="components-title">
+  <app-section-head
+    kicker="03 — Component Variants"
+    title="按鈕是無邊框實心像素塊，面板是硬邊工具槽。"
+    note="按鈕為 borderless 純色塊，靠填色顏色（mint / gold / red）區分語意；面板用 2px 邊框、聚焦與 modal 用 4px。"
+    headingId="components-title"
+  />
+
+  <div class="component-grid">
+    <article class="component-panel">
+      <h3>Buttons</h3>
+      <p>操作色只有 mint。Gold 與 red 只能表達語意狀態。active 亮化填色，無陰影、無位移。</p>
+      <div class="button-demo-grid">
+        <div class="button-demo">
+          <span class="demo-caption">Primary (Normal)</span>
+          <button class="dt-button dt-button--primary" type="button">格式化</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Primary (Active)</span>
+          <button class="dt-button dt-button--primary active-state" type="button">格式化</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Primary (Disabled)</span>
+          <button class="dt-button dt-button--primary" type="button" disabled>格式化</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Secondary (Gold)</span>
+          <button class="dt-button dt-button--secondary" type="button">確定修改</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Warning (Red)</span>
+          <button class="dt-button dt-button--warning" type="button">清除</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Ghost</span>
+          <button class="dt-button dt-button--ghost" type="button">複製輸出</button>
+        </div>
+        <div class="button-demo">
+          <span class="demo-caption">Ghost (Focus)</span>
+          <button class="dt-button dt-button--ghost focus-state" type="button">複製輸出</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="component-panel">
+      <h3>Tool Panel</h3>
+      <p>標準工具容器。背景固定 elevated，chunky border 是主要結構線；聚焦時升級為 4px。</p>
+      <div class="command-line">
+        <span class="prompt-glyph" aria-hidden="true">&gt;</span>
+        <span>panel.focus()</span>
+        <app-key-chip>TAB</app-key-chip>
+      </div>
+    </article>
+
+    <article class="component-panel">
+      <h3>Key Chips</h3>
+      <p>鍵帽是資訊，不是裝飾。可操作的觸發器必須包在 44px button 裡。</p>
+      <div class="chip-row">
+        <app-key-chip>⌘K</app-key-chip>
+        <app-key-chip>ESC</app-key-chip>
+        <app-key-chip>ENTER</app-key-chip>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ── 04 Layout Chassis ────────────────────────────────────── -->
+<section class="section" id="layout-chassis" aria-labelledby="layout-title">
+  <app-section-head
+    kicker="04 — Layout Chassis"
+    title="240px 側欄，加上一個可工作的工具畫布。"
+    note="daily-tools 真正使用的工具機殼：sidebar、prompt bar、breadcrumb、dual pane。工具之間只換內容，不換 chrome。"
+    headingId="layout-title"
+  />
+
+  <article class="layout-preview" aria-label="工具配置預覽">
+    <div class="preview-sidebar">
+      <div class="preview-brand">TOOLS</div>
+      <ul class="preview-list">
+        <li>文字統計</li>
+        <li>JSON Formatter</li>
+        <li>Base64</li>
+        <li>Regex Tester</li>
+      </ul>
+    </div>
+    <div class="preview-main">
+      <div class="preview-prompt">~/tools/word-count $ analyze</div>
+      <div class="preview-workspace">
+        <div class="preview-panel">
+          <h3>Input</h3>
+          <p>textarea-code 使用 Monokai 類型槽，焦點時維持 2px mint border。</p>
+        </div>
+        <div class="preview-divider" aria-hidden="true"></div>
+        <div class="preview-panel">
+          <h3>Stats</h3>
+          <p>輸出是資料密集面板，數字、標籤與狀態都維持單寬對齊。</p>
+        </div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ── 05 Tiles ─────────────────────────────────────────────── -->
+<section class="section" id="tiles" aria-labelledby="tiles-title">
+  <app-section-head
+    kicker="05 — Tool Tiles"
+    title="色塊交替就是分隔線。"
+    note="用 canvas-elevated 階層與 mint 邊線建立工具目錄，保持 edge-to-edge 的緊密排列。"
+    headingId="tiles-title"
+  />
+
+  <div class="tile-grid" aria-label="工具磁磚範例">
+    @for (tile of toolTiles; track tile.title) {
+      <article class="tool-tile">
+        <span class="status">{{ tile.status }}</span>
+        <h3>{{ tile.title }}</h3>
+        <p>{{ tile.description }}</p>
+        <a [routerLink]="[]" [fragment]="tile.fragment">{{ tile.linkLabel }}</a>
+      </article>
+    }
+  </div>
+</section>
+
+<!-- ── 06 Command Palette ───────────────────────────────────── -->
+<section class="section" id="command" aria-labelledby="command-title">
+  <app-section-head
+    kicker="06 — Command Palette"
+    title="Cmd+K 是主要入口，不是附加捷徑。"
+    note="每個工具兩次按鍵內可抵達。modal 使用 4px mint border，列表選取列使用 primary-dim 與左側 4px 狀態條。"
+    headingId="command-title"
+  />
+
+  <article class="cmdk-demo" aria-label="Cmd+K 命令面板範例">
+    <div class="cmdk-input">
+      <span aria-hidden="true">&gt;</span>
+      <label class="sr-only" for="command-search">搜尋工具</label>
+      <input
+        id="command-search"
+        type="search"
+        value="json"
+        aria-describedby="command-help"
+      />
+    </div>
+    <p class="helper-text" id="command-help">輸入工具名稱，Enter 開啟選取項目。</p>
+    <ul class="cmdk-list">
+      <li><span>JSON Formatter</span><app-key-chip>ENTER</app-key-chip></li>
+      <li><span>JSON Minifier</span><app-key-chip>⌘2</app-key-chip></li>
+      <li><span>JSON to TypeScript</span><app-key-chip>⌘3</app-key-chip></li>
+    </ul>
+  </article>
+</section>
+
+<!-- ── 07 Forms ─────────────────────────────────────────────── -->
+<section class="section" id="forms" aria-labelledby="forms-title">
+  <app-section-head
+    kicker="07 — Forms"
+    title="輸入欄位像凹槽，焦點就是 mint 邊框。"
+    note="placeholder 只做提示，不取代 label。互動元素保留可見焦點，最小觸控目標維持 44px。"
+    headingId="forms-title"
+  />
+
+  <div class="component-grid">
+    <article class="component-panel">
+      <h3>Inputs &amp; Selection</h3>
+      <div class="sample-stack">
+        <div class="form-field">
+          <label for="tool-search-normal">搜尋工具 (預設 / Focus)</label>
+          <input
+            id="tool-search-normal"
+            type="search"
+            placeholder="json / regex / base64"
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-field">
+          <label for="tool-search-error">搜尋工具 (錯誤狀態)</label>
+          <input
+            id="tool-search-error"
+            class="error-state"
+            type="search"
+            value="invalid-regex["
+            autocomplete="off"
+            aria-invalid="true"
+            aria-describedby="tool-search-error-msg"
+          />
+          <span class="error-text" id="tool-search-error-msg">錯誤：Regex 未閉合的字元集合 ([)</span>
+        </div>
+        <div class="form-field">
+          <span class="field-label" id="segment-demo-label">Segmented Control (主題切換)</span>
+          <div class="segmented-control" role="group" aria-labelledby="segment-demo-label">
+            <button
+              type="button"
+              [class.active]="segmentDemo() === 'monokai'"
+              [attr.aria-pressed]="segmentDemo() === 'monokai'"
+              (click)="setSegmentDemo('monokai')"
+            >MONOKAI</button>
+            <button
+              type="button"
+              [class.active]="segmentDemo() === 'solarized'"
+              [attr.aria-pressed]="segmentDemo() === 'solarized'"
+              (click)="setSegmentDemo('solarized')"
+            >SOLARIZED</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="component-panel">
+      <h3>Code Area</h3>
+      <div class="form-field">
+        <label for="code-input">代碼輸入槽 (Monokai)</label>
+        <textarea id="code-input" class="textarea-code" spellcheck="false">
+{{ '{' }}"theme":"monokai","rounded":false{{ '}' }}</textarea>
+      </div>
+    </article>
+
+    <article class="component-panel">
+      <h3>Semantic Toasts</h3>
+      <p class="helper-text">使用 elevated 背景與 2px 語意邊框；無陰影。</p>
+      <div class="sample-stack">
+        <div class="toast toast-success">
+          <h4>{{ '{' }}component.toast-success{{ '}' }}</h4>
+          <p>已成功複製格式化後的 JSON 至剪貼簿。</p>
+        </div>
+        <div class="toast toast-warning">
+          <h4>{{ '{' }}component.toast-warning{{ '}' }}</h4>
+          <p>此工具目前為 BETA 測試版本，請小心使用。</p>
+        </div>
+        <div class="toast toast-error">
+          <h4>{{ '{' }}component.toast-error{{ '}' }}</h4>
+          <p>格式化失敗：JSON 語法錯誤 (Line 2)。</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ── 08 Responsive ────────────────────────────────────────── -->
+<section class="section" id="responsive" aria-labelledby="responsive-title">
+  <app-section-head
+    kicker="08 — Responsive Rules"
+    title="桌面優先，手機優雅降級。"
+    note="daily-tools 是寬螢幕工作介面。小尺寸保持功能可讀，但不假裝每個工具都能在 320px 下完整展示。"
+    headingId="responsive-title"
+  />
+
+  <table class="spec-table">
+    <caption>版面斷點與行為</caption>
+    <thead>
+      <tr>
+        <th scope="col">斷點</th>
+        <th scope="col">寬度</th>
+        <th scope="col">行為</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Mobile</th>
+        <td>≤ 639px</td>
+        <td>單欄、breadcrumb 隱藏 category、dual-pane 改垂直堆疊。</td>
+      </tr>
+      <tr>
+        <th scope="row">Tablet</th>
+        <td>640–1023px</td>
+        <td>側欄改為 off-canvas 抽屜，主要畫布全寬。</td>
+      </tr>
+      <tr>
+        <th scope="row">Desktop</th>
+        <td>≥ 1024px</td>
+        <td>240px 固定側欄，prompt bar sticky，工具面板雙欄。</td>
+      </tr>
+      <tr>
+        <th scope="row">Wide</th>
+        <td>≥ 1440px</td>
+        <td>維持密集資訊配置，不額外增加 marketing whitespace。</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

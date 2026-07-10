@@ -16,6 +16,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import("./tools/word-count/word-count").then((m) => m.WordCount),
       },
+      {
+        path: "design",
+        loadComponent: () => import("./design/design").then((m) => m.Design),
+      },
     ],
   },
 ];

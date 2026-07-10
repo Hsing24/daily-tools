@@ -1,0 +1,21 @@
+:host {
+  display: inline-flex;
+}
+
+/* DESIGN.md {component.key-chip}: canvas-elevated-2 底、hairline 邊框、mono-key-chip 字級 */
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  background: var(--canvas-elevated-2);
+  border: 1px solid var(--border-muted);
+  color: var(--ink-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1;
+  white-space: nowrap;
+}

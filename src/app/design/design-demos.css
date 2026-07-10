@@ -1,0 +1,496 @@
+/* Design 頁的元件示範區樣式（03 Components ~ 08 Responsive）。
+   基礎按鈕樣式共用全域 .dt-button（styles.css）。 */
+
+/* 按鈕示範用的固定狀態類 */
+.dt-button--primary.active-state {
+  background-color: var(--primary-bright);
+}
+
+.dt-button--ghost.focus-state {
+  background-color: var(--canvas-elevated);
+  color: var(--primary-bright);
+}
+
+/* ── 03 Components ────────────────────────────────────────── */
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* DESIGN.md {component.tool-panel}；focus-within 升級為 4px */
+.component-panel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-height: 240px;
+  padding: 24px;
+  background: var(--canvas-elevated);
+  border: 2px solid var(--primary);
+}
+
+.component-panel:focus-within {
+  border-width: 4px;
+  padding: 22px; /* 補償邊框增厚，避免內容位移 */
+}
+
+.button-demo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.button-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.demo-caption {
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── 04 Layout preview ────────────────────────────────────── */
+.layout-preview {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 520px;
+  border: 2px solid var(--primary);
+  background: var(--canvas);
+}
+
+.preview-sidebar {
+  padding: 24px 16px;
+  background: var(--canvas-deep);
+  border-right: 2px solid var(--primary);
+}
+
+.preview-brand {
+  color: var(--ink-bright);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.preview-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 16px 0 0;
+  list-style: none;
+}
+
+.preview-list li {
+  min-height: 36px;
+  padding: 8px 12px;
+  color: var(--ink);
+}
+
+/* DESIGN.md sidebar-nav-item-active：4px mint 左邊框 */
+.preview-list li:first-child {
+  background: var(--canvas-elevated);
+  border-left: 4px solid var(--primary);
+  padding-left: 8px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.preview-main {
+  display: grid;
+  grid-template-rows: 40px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.preview-prompt {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--canvas-deep);
+  border-bottom: 2px solid var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.preview-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1fr);
+  padding: 24px;
+}
+
+.preview-panel {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  padding: 24px;
+  background: var(--canvas-elevated);
+  border: 2px solid var(--primary);
+}
+
+.preview-divider {
+  background: var(--primary);
+}
+
+/* ── 05 Tiles ─────────────────────────────────────────────── */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 2px solid var(--primary);
+}
+
+.tool-tile {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 220px;
+  padding: 24px;
+  background: var(--canvas-elevated);
+  border-right: 2px solid var(--primary);
+}
+
+.tool-tile:nth-child(2n) {
+  background: var(--canvas-elevated-2);
+}
+
+.tool-tile:last-child {
+  border-right: 0;
+}
+
+.tool-tile .status {
+  color: var(--gold);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.tool-tile p {
+  color: var(--ink);
+}
+
+/* ── 06 Cmd+K demo ────────────────────────────────────────── */
+.cmdk-demo {
+  max-width: 720px;
+  padding: 24px;
+  background: var(--canvas-elevated);
+  border: 4px solid var(--primary);
+}
+
+.cmdk-input {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.cmdk-input span {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.cmdk-input input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--ink-bright);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  caret-color: var(--primary-bright);
+}
+
+.cmdk-input input:focus {
+  outline: none;
+}
+
+.cmdk-list {
+  display: grid;
+  gap: 4px;
+  padding: 16px 0 0;
+  margin: 0;
+  list-style: none;
+}
+
+.cmdk-list li {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+}
+
+/* DESIGN.md {component.cmd-k-list-item-selected} */
+.cmdk-list li:first-child {
+  background: var(--primary-dim);
+  border-left: 4px solid var(--primary);
+  padding-left: 8px;
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+/* ── 07 Forms ─────────────────────────────────────────────── */
+.sample-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+label,
+.field-label {
+  color: var(--ink-bright);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+input[type="search"],
+textarea {
+  width: 100%;
+  background: var(--canvas-input);
+  color: var(--ink-bright);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  border: 2px solid var(--border-muted);
+}
+
+input[type="search"] {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 132px;
+  padding: 16px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+input[type="search"]::placeholder,
+textarea::placeholder {
+  color: var(--ink-disabled);
+}
+
+/* DESIGN.md text-input-focus：邊框即焦點指示，不另加 outline */
+input[type="search"]:focus,
+textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+input.error-state,
+textarea.error-state {
+  border-color: var(--warning);
+}
+
+input.error-state:focus,
+textarea.error-state:focus {
+  border-color: var(--warning);
+}
+
+.error-text {
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.helper-text {
+  color: var(--ink-muted);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+/* Segmented control */
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  border: 2px solid var(--primary);
+}
+
+.segmented-control button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 0;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.05s ease, color 0.05s ease;
+}
+
+.segmented-control button:not(:last-child) {
+  border-right: 2px solid var(--primary);
+}
+
+.segmented-control button.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.segmented-control button:hover:not(.active) {
+  background: var(--canvas-elevated-2);
+  color: var(--primary-bright);
+}
+
+/* DESIGN.md {component.textarea-code}：Monokai 槽 + 2px mint 邊框 */
+.textarea-code {
+  background: var(--syntax-monokai-bg);
+  color: var(--syntax-monokai-fg);
+  border: 2px solid var(--primary);
+  font-variant-ligatures: none;
+}
+
+.textarea-code:focus {
+  border-color: var(--primary-bright);
+}
+
+/* Toasts：elevated 背景 + 2px 語意邊框，無陰影 */
+.toast {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--canvas-elevated);
+  text-align: left;
+}
+
+.toast h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.toast p {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.toast-success {
+  border: 2px solid var(--border-default);
+}
+
+.toast-success h4 {
+  color: var(--primary);
+}
+
+.toast-warning {
+  border: 2px solid var(--border-gold);
+}
+
+.toast-warning h4 {
+  color: var(--gold);
+}
+
+.toast-error {
+  border: 2px solid var(--border-warning);
+}
+
+.toast-error h4 {
+  color: var(--warning);
+}
+
+/* ── 08 Responsive table ──────────────────────────────────── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--canvas-elevated);
+  border: 2px solid var(--primary);
+}
+
+.spec-table caption {
+  padding: 0 0 12px;
+  color: var(--ink-bright);
+  font-weight: 600;
+  text-align: left;
+}
+
+.spec-table th,
+.spec-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-muted);
+  text-align: left;
+  vertical-align: top;
+}
+
+.spec-table th {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.spec-table tr:last-child th,
+.spec-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ── Responsive（demo 區塊）──────────────────────────────── */
+@media (max-width: 1180px) {
+  .component-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tool-tile:nth-child(2) {
+    border-right: 0;
+  }
+
+  .tool-tile:nth-child(3),
+  .tool-tile:nth-child(4) {
+    border-top: 2px solid var(--primary);
+  }
+}
+
+@media (max-width: 1023px) {
+  .layout-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-sidebar {
+    border-right: 0;
+    border-bottom: 2px solid var(--primary);
+  }
+}
+
+@media (max-width: 767px) {
+  .tile-grid,
+  .preview-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-tile {
+    border-right: 0;
+    border-bottom: 2px solid var(--primary);
+  }
+
+  .tool-tile:last-child {
+    border-bottom: 0;
+  }
+
+  .preview-divider {
+    width: 100%;
+    height: 2px;
+  }
+}
