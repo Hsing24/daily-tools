@@ -36,7 +36,14 @@ export class Layout {
   protected readonly toolGroups: readonly ToolGroup[] = [
     {
       name: "文字工具",
-      tools: [{ label: "字數統計", route: "word-count", available: true }],
+      tools: [
+        { label: "字數統計", route: "word-count", available: true },
+        {
+          label: "文字轉 Markdown/HTML",
+          route: "text-markdown-html",
+          available: true,
+        },
+      ],
     },
     {
       name: "系統",

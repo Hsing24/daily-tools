@@ -1,0 +1,165 @@
+<div>
+  <app-tool-breadcrumb category="文字工具" current="文字轉 Markdown/HTML" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="TEXT UTILITIES v1.1.0"
+      title="文字轉 Markdown/HTML (Text to Markdown/HTML)"
+      description="將純文字或富文本轉換為 Markdown 與 HTML 格式。支援直接貼上網頁富文本，並保留連結、粗體等標籤。"
+    />
+
+    @if (clipboardAlert()) {
+      <app-tool-alert [message]="clipboardAlert()" />
+    }
+
+    <!-- Input -->
+    <div class="d:block mb:16">
+      <label for="text-converter-input" class="text-converter-label"
+        >請輸入或貼上欲轉換之純文字或富文本：</label
+      >
+      <textarea
+        id="text-converter-input"
+        #textarea
+        [value]="sourceText()"
+        (input)="onInput(textarea.value)"
+        (paste)="onPaste($event)"
+        placeholder="請在此輸入或貼上文字/富文本，系統將即時進行轉換..."
+        class="text-converter-textarea"
+      ></textarea>
+    </div>
+
+    <!-- Actions with Radio buttons -->
+    <div class="actions-row">
+      <!-- Format Radio Selector -->
+      <div class="d:flex align-items:center gap:16 mr:24">
+        <label class="d:flex align-items:center gap:6 color:var(--ink-bright) cursor:pointer font-family:var(--font-mono) f:14">
+          <input
+            type="radio"
+            name="output-format"
+            value="markdown"
+            [checked]="outputFormat() === 'markdown'"
+            (change)="onFormatChange('markdown')"
+            class="accent-color:var(--primary)"
+          />
+          Markdown
+        </label>
+        <label class="d:flex align-items:center gap:6 color:var(--ink-bright) cursor:pointer font-family:var(--font-mono) f:14">
+          <input
+            type="radio"
+            name="output-format"
+            value="html"
+            [checked]="outputFormat() === 'html'"
+            (change)="onFormatChange('html')"
+            class="accent-color:var(--primary)"
+          />
+          HTML
+        </label>
+      </div>
+
+      <!-- Action Buttons -->
+      <button
+        type="button"
+        data-testid="btn-paste"
+        (click)="paste()"
+        class="dt-button dt-button--primary"
+      >
+        貼上文字
+      </button>
+      <button
+        type="button"
+        data-testid="btn-clear"
+        (click)="clear()"
+        class="dt-button dt-button--warning"
+      >
+        清除內容
+      </button>
+    </div>
+
+    <!-- Outputs (Dual Pane but visually toggled by Radio) -->
+    @if (sourceText()) {
+      <div class="d:grid grid-cols:1 gap:16" style="margin-top: 24px">
+        <!-- Markdown Output -->
+        <app-terminal-output
+          title="OUTPUT.md"
+          command="cat output.md"
+          data-testid="markdown-output"
+          [style.display]="outputFormat() === 'markdown' ? 'block' : 'none'"
+        >
+          <div class="d:flex flex:col gap:12 p:16">
+            <div class="d:flex align-items:center gap:12">
+              <button
+                type="button"
+                data-testid="btn-copy-markdown"
+                (click)="copyMarkdown()"
+                class="dt-button dt-button--secondary py:6 px:12 f:12"
+              >
+                複製 Markdown
+              </button>
+              @if (copyMarkdownStatus()) {
+                <span
+                  class="color:var(--primary) f:12"
+                  role="status"
+                  aria-live="polite"
+                  data-testid="copy-markdown-status"
+                >
+                  {{ copyMarkdownStatus() }}
+                </span>
+              }
+            </div>
+
+            <div class="border-top:1px|solid|var(--border-muted) pt:12">
+              @if (isProcessing()) {
+                <div class="color:var(--ink-muted) py:8" aria-live="polite">處理中...</div>
+              } @else {
+                <pre
+                  class="whitespace:pre-wrap word-break:break-all color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
+                >{{ conversionResult().markdown }}</pre>
+              }
+            </div>
+          </div>
+        </app-terminal-output>
+
+        <!-- HTML Output -->
+        <app-terminal-output
+          title="OUTPUT.html"
+          command="cat output.html"
+          data-testid="html-output"
+          [style.display]="outputFormat() === 'html' ? 'block' : 'none'"
+        >
+          <div class="d:flex flex:col gap:12 p:16">
+            <div class="d:flex align-items:center gap:12">
+              <button
+                type="button"
+                data-testid="btn-copy-html"
+                (click)="copyHtml()"
+                class="dt-button dt-button--secondary py:6 px:12 f:12"
+              >
+                複製 HTML
+              </button>
+              @if (copyHtmlStatus()) {
+                <span
+                  class="color:var(--primary) f:12"
+                  role="status"
+                  aria-live="polite"
+                  data-testid="copy-html-status"
+                >
+                  {{ copyHtmlStatus() }}
+                </span>
+              }
+            </div>
+
+            <div class="border-top:1px|solid|var(--border-muted) pt:12">
+              @if (isProcessing()) {
+                <div class="color:var(--ink-muted) py:8" aria-live="polite">處理中...</div>
+              } @else {
+                <pre
+                  class="whitespace:pre-wrap word-break:break-all color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
+                >{{ conversionResult().html }}</pre>
+              }
+            </div>
+          </div>
+        </app-terminal-output>
+      </div>
+    }
+  </app-tool-panel>
+</div>
