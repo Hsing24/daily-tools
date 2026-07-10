@@ -65,4 +65,15 @@ describe("Layout", () => {
     expect(sidebar.classList.contains("is-open")).toBe(false);
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
+
+  it("should have a brand link pointing to the root path", async () => {
+    const fixture = TestBed.createComponent(Layout);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const brandLink = compiled.querySelector(".brand") as HTMLAnchorElement;
+
+    expect(brandLink).toBeTruthy();
+    expect(brandLink.tagName.toLowerCase()).toBe("a");
+    expect(brandLink.getAttribute("routerLink")).toBe("/");
+  });
 });

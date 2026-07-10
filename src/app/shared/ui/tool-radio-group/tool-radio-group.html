@@ -1,0 +1,18 @@
+<div class="radio-group" role="radiogroup">
+  @for (option of options(); track option.value) {
+    <label
+      class="radio-option"
+      [class.is-active]="value() === option.value"
+    >
+      <input
+        type="radio"
+        [name]="name()"
+        [value]="option.value"
+        [checked]="value() === option.value"
+        (change)="select(option.value)"
+        class="radio-input"
+      />
+      <span class="radio-label-text">{{ option.label }}</span>
+    </label>
+  }
+</div>

@@ -17,6 +17,13 @@ export const routes: Routes = [
           import("./tools/word-count/word-count").then((m) => m.WordCount),
       },
       {
+        path: "text-markdown-html",
+        loadComponent: () =>
+          import("./tools/text-markdown-html/text-markdown-html").then(
+            (m) => m.TextMarkdownHtml
+          ),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },
