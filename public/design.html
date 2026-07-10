@@ -195,11 +195,11 @@
         text-decoration: none;
       }
 
-      a:visited {
+      a:not(.button):visited {
         color: var(--primary);
       }
 
-      a:hover {
+      a:not(.button):hover {
         color: var(--primary-bright);
       }
 
@@ -456,7 +456,7 @@
           calc(100% - 14px) 0,
           100% 50%,
           calc(100% - 14px) 100%,
-          14px 100%,
+          0 100%,
           0 50%
         );
       }
@@ -471,7 +471,7 @@
           calc(100% - 14px) 0,
           100% 50%,
           calc(100% - 14px) 100%,
-          14px 100%,
+          0 100%,
           0 50%
         );
       }
