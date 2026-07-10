@@ -17,16 +17,16 @@
   border: 0;
 }
 
-a {
+a:not(.dt-button) {
   color: var(--primary);
   text-decoration: none;
 }
 
-a:visited {
+a:not(.dt-button):visited {
   color: var(--primary);
 }
 
-a:hover {
+a:not(.dt-button):hover {
   color: var(--primary-bright);
 }
 
