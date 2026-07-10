@@ -49,18 +49,11 @@
   <div class="main-shell">
     <div class="prompt-bar" role="status" aria-live="polite">
       <div class="prompt-left">
-        <button
-          #hamburger
-          type="button"
-          class="hamburger-btn"
-          [attr.aria-expanded]="sidebarOpen()"
-          aria-controls="tool-sidebar"
-          aria-label="切換工具選單"
-          (click)="toggleSidebar()"
-        >
-          [≡]
-        </button>
         <span class="prompt-path">user@daily-tools {{ currentPath() }} $ inspect --theme {{ currentTheme() === 'default' ? 'crt' : 'solarized' }}</span>
+        <a class="prompt-brand" routerLink="/" aria-label="回到首頁">
+          <span class="brand-mark-small">&gt;_</span>
+          <span class="brand-name-small">Daily Tools</span>
+        </a>
       </div>
       <div class="prompt-actions">
         <div class="theme-switcher" role="group" aria-label="語法主題切換">
@@ -71,7 +64,7 @@
             type="button"
             [attr.aria-pressed]="currentTheme() === 'default'"
             (click)="setTheme('default')"
-          >MONOKAI DARK</button>
+          >DARK</button>
           <button
             id="theme-btn-solarized"
             class="theme-btn"
@@ -79,16 +72,30 @@
             type="button"
             [attr.aria-pressed]="currentTheme() === 'solarized'"
             (click)="setTheme('solarized')"
-          >SOLARIZED LIGHT</button>
+          >LIGHT</button>
         </div>
         <button
+          #cmdKBtn
           id="cmd-k-btn"
           class="key-button"
           type="button"
           aria-label="開啟命令面板"
           aria-haspopup="dialog"
+          (click)="openPalette()"
         >
-          <span class="key-chip">⌘K</span>
+          <span class="key-chip">/</span>
+          <span class="key-text">搜尋頁面</span>
+        </button>
+        <button
+          #hamburger
+          type="button"
+          class="hamburger-btn"
+          [attr.aria-expanded]="sidebarOpen()"
+          aria-controls="tool-sidebar"
+          aria-label="切換工具選單"
+          (click)="toggleSidebar()"
+        >
+          [≡]
         </button>
       </div>
     </div>
@@ -104,3 +111,7 @@
     </footer>
   </div>
 </div>
+
+@if (isPaletteOpen()) {
+  <app-command-palette [toolGroups]="toolGroups" (close)="closePalette()" />
+}

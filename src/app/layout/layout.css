@@ -32,20 +32,29 @@
 /* --- Shell --- */
 .page-shell {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   min-height: 100vh;
 }
 
 /* --- Sidebar --- */
 .sidebar {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100vh;
+  position: fixed;
+  top: 40px;
+  bottom: 0;
+  right: 0;
+  z-index: 40;
+  height: calc(100vh - 40px);
+  width: 240px;
   padding: 24px 16px;
   overflow-y: auto;
   background: var(--canvas-deep);
-  border-right: 2px solid var(--primary);
+  border-left: 2px solid var(--primary);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+
+.sidebar.is-open {
+  transform: translateX(0);
 }
 
 .brand {
@@ -187,10 +196,38 @@ a.brand:focus-visible {
   white-space: nowrap;
 }
 
+.prompt-brand {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.prompt-brand:focus-visible {
+  outline: 1px solid var(--primary-bright);
+  outline-offset: 2px;
+}
+
+.brand-mark-small {
+  color: var(--primary);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+}
+
+.brand-name-small {
+  color: var(--ink-bright);
+  letter-spacing: 0.5px;
+}
+
 .prompt-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 /* --- Hamburger Button --- */
@@ -203,7 +240,7 @@ a.brand:focus-visible {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  display: none; /* hidden on desktop */
+  display: inline-flex;
 }
 
 .hamburger-btn:hover {
@@ -254,10 +291,10 @@ a.brand:focus-visible {
 /* --- Cmd+K Key Button --- */
 .key-button {
   border: 0;
-  display: inline-grid;
+  display: inline-flex;
+  align-items: center;
   min-width: 44px;
   height: 32px;
-  place-items: center;
   padding: 0 10px;
   background: transparent;
   color: var(--primary);
@@ -280,15 +317,30 @@ a.brand:focus-visible {
   line-height: 1;
 }
 
+.key-text {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  transition: color 0.10s ease;
+}
+
 .key-button:hover .key-chip {
   color: var(--primary-bright);
   border-color: var(--primary-bright);
 }
 
+.key-button:hover .key-text {
+  color: var(--ink-bright);
+}
+
 /* --- Main Area --- */
 main {
   flex: 1;
-  padding: 32px;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 32px 40px;
 }
 
 /* --- Footer --- */
@@ -350,53 +402,34 @@ main {
 
 /* --- Scrim --- */
 .scrim {
-  display: none;
+  display: block;
+  position: fixed;
+  inset: 40px 0 0 0;
+  z-index: 30;
+  background: rgba(5, 14, 28, 0.75);
 }
 
 /* --- Responsive styles --- */
 @media (max-width: 1023px) {
-  .page-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 40px;
-    bottom: 0;
-    left: 0;
-    z-index: 40;
-    height: calc(100vh - 40px);
-    width: 240px;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-    border-right: 2px solid var(--primary);
-  }
-
-  .sidebar.is-open {
-    transform: translateX(0);
-  }
-
-  .scrim {
-    display: block;
-    position: fixed;
-    inset: 40px 0 0 0;
-    z-index: 30;
-    background: rgba(5, 14, 28, 0.75);
-  }
-
-  .hamburger-btn {
-    display: inline-flex;
-  }
-
   .prompt-bar {
     padding: 0 16px;
+  }
+
+  .prompt-path {
+    display: none;
+  }
+
+  .prompt-brand {
+    display: inline-flex;
   }
 }
 
 @media (max-width: 767px) {
   .prompt-bar,
-  main,
   .footer {
+    padding-inline: 16px;
+  }
+  main {
     padding-inline: 16px;
   }
 }

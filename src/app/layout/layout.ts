@@ -8,6 +8,7 @@ import {
 } from "@angular/core";
 import { RouterLink, RouterLinkActive, RouterOutlet, Router, NavigationEnd } from "@angular/router";
 import { filter } from "rxjs/operators";
+import { CommandPalette } from "./command-palette";
 
 interface ToolItem {
   readonly label: string;
@@ -22,16 +23,19 @@ interface ToolGroup {
 
 @Component({
   selector: "app-layout",
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommandPalette],
   templateUrl: "./layout.html",
   styleUrl: "./layout.css",
 })
 export class Layout {
   protected readonly sidebarOpen = signal(false);
+  protected readonly isPaletteOpen = signal(false);
 
   private readonly hamburger =
     viewChild<ElementRef<HTMLButtonElement>>("hamburger");
   private readonly sidebar = viewChild<ElementRef<HTMLElement>>("sidebar");
+  private readonly cmdKBtn =
+    viewChild<ElementRef<HTMLButtonElement>>("cmdKBtn");
 
   protected readonly toolGroups: readonly ToolGroup[] = [
     {
@@ -84,6 +88,35 @@ export class Layout {
     }
   }
 
+  protected openPalette(): void {
+    this.isPaletteOpen.set(true);
+  }
+
+  protected closePalette(): void {
+    this.isPaletteOpen.set(false);
+    // 將焦點還給啟動按鈕
+    this.cmdKBtn()?.nativeElement.focus();
+  }
+
+  @HostListener("document:keydown", ["$event"])
+  protected onDocumentKeyDown(event: KeyboardEvent): void {
+    // 檢查目前焦點是否在輸入元件上，避免干擾正常打字
+    const activeEl = document.activeElement;
+    if (
+      activeEl &&
+      (activeEl.tagName === "INPUT" ||
+        activeEl.tagName === "TEXTAREA" ||
+        activeEl.hasAttribute("contenteditable"))
+    ) {
+      return;
+    }
+
+    if (event.key === "/") {
+      event.preventDefault();
+      this.isPaletteOpen() ? this.closePalette() : this.openPalette();
+    }
+  }
+
   protected toggleSidebar(): void {
     this.sidebarOpen() ? this.closeSidebar() : this.openSidebar();
   }
@@ -111,6 +144,10 @@ export class Layout {
 
   @HostListener("document:keydown.escape")
   protected onEscape(): void {
-    this.closeSidebar();
+    if (this.isPaletteOpen()) {
+      this.closePalette();
+    } else {
+      this.closeSidebar();
+    }
   }
 }
