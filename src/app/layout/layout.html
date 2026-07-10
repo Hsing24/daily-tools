@@ -82,13 +82,16 @@
           >SOLARIZED LIGHT</button>
         </div>
         <button
+          #cmdKBtn
           id="cmd-k-btn"
           class="key-button"
           type="button"
           aria-label="開啟命令面板"
           aria-haspopup="dialog"
+          (click)="openPalette()"
         >
-          <span class="key-chip">⌘K</span>
+          <span class="key-chip">/</span>
+          <span class="key-text">搜尋頁面</span>
         </button>
       </div>
     </div>
@@ -104,3 +107,7 @@
     </footer>
   </div>
 </div>
+
+@if (isPaletteOpen()) {
+  <app-command-palette [toolGroups]="toolGroups" (close)="closePalette()" />
+}
