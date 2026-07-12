@@ -23,7 +23,7 @@ describe("Layout", () => {
     const labels = Array.from(compiled.querySelectorAll(".nav-label")).map(
       (el) => el.textContent?.trim(),
     );
-    expect(labels).toEqual(["文字工具", "系統"]);
+    expect(labels).toEqual(["文字工具", "格式化 / 轉換", "系統"]);
   });
 
   it("should keep the sidebar closed by default", async () => {

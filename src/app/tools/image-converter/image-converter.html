@@ -1,0 +1,235 @@
+<div>
+  <app-tool-breadcrumb category="格式化 / 轉換" current="圖片轉檔" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="IMAGE UTILITIES v1.0.0"
+      title="圖片轉檔 (Image Converter)"
+      description="支援 PNG、JPEG、WebP、AVIF 格式互轉。拖放或選擇多張圖片，可獨立設定每張的輸出格式與品質，並一鍵打包 ZIP 下載。"
+    />
+
+    @if (alertMessage()) {
+      <app-tool-alert
+        [message]="alertMessage()"
+        [variant]="alertVariant()"
+        testId="alert-message"
+      />
+    }
+
+    <!-- ═══ Drop Zone ═══ -->
+    <div
+      class="drop-zone"
+      [class.drop-zone--active]="isDragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave()"
+      (drop)="onDrop($event)"
+      role="button"
+      tabindex="0"
+      aria-label="拖放圖片上傳區"
+      (keydown.enter)="fileInput.click()"
+      (keydown.space)="fileInput.click(); $event.preventDefault()"
+    >
+      <div class="drop-zone__content">
+        <span class="drop-zone__icon">⬆</span>
+        <span class="drop-zone__text">
+          拖放圖片至此處，或
+          <button
+            type="button"
+            class="drop-zone__browse"
+            (click)="fileInput.click()"
+          >
+            瀏覽檔案
+          </button>
+        </span>
+        <span class="drop-zone__hint">支援 PNG、JPEG、WebP、AVIF</span>
+      </div>
+      <input
+        #fileInput
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/*"
+        multiple
+        class="drop-zone__input"
+        (change)="onFileSelect($event)"
+        aria-hidden="true"
+        tabindex="-1"
+      />
+    </div>
+
+    <!-- ═══ Batch Actions (上方) ═══ -->
+    @if (totalItems() > 0) {
+      <div class="batch-bar">
+        <span class="batch-bar__status">
+          共 {{ totalItems() }} 張圖片
+          @if (completedItems() > 0) {
+            ・已完成 {{ completedItems() }} 張
+          }
+        </span>
+        <div class="batch-bar__actions">
+          <button
+            type="button"
+            class="dt-button dt-button--primary"
+            data-testid="btn-convert-all"
+            [disabled]="isConverting()"
+            (click)="convertAll()"
+          >
+            全部轉換
+          </button>
+          @if (completedItems() > 0) {
+            <button
+              type="button"
+              class="dt-button dt-button--secondary"
+              data-testid="btn-download-all"
+              (click)="downloadAllZip()"
+            >
+              打包 ZIP 下載
+            </button>
+          }
+          <button
+            type="button"
+            class="dt-button dt-button--warning"
+            data-testid="btn-clear-all"
+            (click)="clearAll()"
+          >
+            清除全部
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ═══ Image Cards ═══ -->
+    @for (item of items(); track item.id) {
+      <div class="image-card" [attr.data-testid]="'card-' + item.id">
+        <!-- 左側：原圖預覽 -->
+        <div class="image-card__preview">
+          <div class="image-card__thumb-wrap">
+            <img
+              [src]="item.previewUrl"
+              [alt]="item.file.name"
+              class="image-card__thumb"
+            />
+            <span class="image-card__badge">原圖</span>
+          </div>
+          <div class="image-card__meta">
+            <span class="image-card__filename" [title]="item.file.name">
+              {{ item.file.name }}
+            </span>
+            <span class="image-card__size">
+              {{ formatFileSize(item.file.size) }} ・ {{ item.width }}×{{ item.height }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 中間：控制區 -->
+        <div class="image-card__controls">
+          <div class="image-card__format-row">
+            <label class="image-card__label">輸出格式</label>
+            <app-tool-radio-group
+              [options]="formatOptions"
+              [value]="item.outputFormat"
+              (valueChange)="updateFormat(item.id, $event)"
+              name="format-{{ item.id }}"
+            />
+          </div>
+
+          @if (isLossyFormat(item.outputFormat)) {
+            <div class="image-card__quality-row">
+              <label [for]="'quality-' + item.id" class="image-card__label">
+                品質：{{ item.quality }}%
+                <span class="image-card__ratio-hint">
+                  {{ estimatedRatio(item.outputFormat, item.quality) }}
+                </span>
+              </label>
+              <input
+                [id]="'quality-' + item.id"
+                type="range"
+                min="5"
+                max="100"
+                [value]="item.quality"
+                (input)="updateQuality(item.id, +$any($event.target).value)"
+                class="quality-slider"
+                [attr.aria-label]="'品質滑桿 ' + item.file.name"
+              />
+              <div class="quality-ticks">
+                <span>5</span>
+                <span>25</span>
+                <span>50</span>
+                <span>75</span>
+                <span>100</span>
+              </div>
+            </div>
+          }
+
+          <div class="image-card__action-row">
+            <button
+              type="button"
+              class="dt-button dt-button--primary"
+              [disabled]="item.status === 'converting'"
+              (click)="convertSingle(item.id)"
+              [attr.aria-label]="'轉換 ' + item.file.name"
+            >
+              @if (item.status === 'converting') { 轉換中… } @else { 轉換 }
+            </button>
+            @if (item.status === 'done') {
+              <button
+                type="button"
+                class="dt-button dt-button--secondary"
+                (click)="downloadSingle(item)"
+                [attr.aria-label]="'下載 ' + item.file.name"
+              >
+                下載
+              </button>
+            }
+            <button
+              type="button"
+              class="dt-button dt-button--ghost"
+              (click)="removeItem(item.id)"
+              [attr.aria-label]="'移除 ' + item.file.name"
+            >
+              移除
+            </button>
+          </div>
+        </div>
+
+        <!-- 右側：轉換結果預覽 -->
+        <div class="image-card__result">
+          @if (item.status === 'done' && item.resultBlob) {
+            <div class="image-card__thumb-wrap">
+              <img
+                [src]="item.resultUrl"
+                [alt]="'轉換結果：' + item.file.name"
+                class="image-card__thumb"
+              />
+              <span class="image-card__badge image-card__badge--result">
+                {{ labels[item.outputFormat] }}
+              </span>
+            </div>
+            <div class="image-card__meta">
+              <app-stat-row
+                label="輸出大小"
+                [value]="formatFileSize(item.resultBlob.size)"
+              />
+              <app-stat-row
+                label="壓縮比"
+                [value]="compressionRatio(item.file.size, item.resultBlob.size)"
+                [highlight]="true"
+              />
+            </div>
+          } @else if (item.status === 'converting') {
+            <div class="image-card__loading">
+              <span class="image-card__spinner">⟳</span>
+              <span>轉換中…</span>
+            </div>
+          } @else if (item.status === 'error') {
+            <div class="image-card__error">
+              <span>✗ {{ item.errorMessage }}</span>
+            </div>
+          } @else {
+            <div class="image-card__empty">
+              <span class="image-card__empty-text">尚未轉換</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </app-tool-panel>
+</div>

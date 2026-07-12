@@ -24,6 +24,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "image-converter",
+        loadComponent: () =>
+          import("./tools/image-converter/image-converter").then(
+            (m) => m.ImageConverter
+          ),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

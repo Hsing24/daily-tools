@@ -50,6 +50,12 @@ export class Layout {
       ],
     },
     {
+      name: "格式化 / 轉換",
+      tools: [
+        { label: "圖片轉檔", route: "image-converter", available: true },
+      ],
+    },
+    {
       name: "系統",
       tools: [{ label: "設計系統", route: "design", available: true }],
     },
