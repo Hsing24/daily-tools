@@ -1,0 +1,25 @@
+<div class="slider-container">
+  <input
+    type="range"
+    [min]="min()"
+    [max]="max()"
+    [value]="value()"
+    (input)="updateValue(+$any($event.target).value)"
+    class="slider-input"
+    [style.background]="'linear-gradient(to right, var(--primary) 0%, var(--primary) ' + percentage() + '%, var(--border-muted) ' + percentage() + '%, var(--border-muted) 100%)'"
+    [attr.aria-label]="ariaLabel() || label()"
+  />
+  @if (ticks().length > 0) {
+    <div class="slider-ticks">
+      @for (tick of ticks(); track tick) {
+        <span
+          class="slider-tick"
+          [class.is-active]="value() >= tick"
+          (click)="updateValue(tick)"
+        >
+          {{ tick }}
+        </span>
+      }
+    </div>
+  }
+</div>

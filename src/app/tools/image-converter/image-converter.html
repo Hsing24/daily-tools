@@ -133,29 +133,20 @@
 
           @if (isLossyFormat(item.outputFormat)) {
             <div class="image-card__quality-row">
-              <label [for]="'quality-' + item.id" class="image-card__label">
+              <label class="image-card__label">
                 品質：{{ item.quality }}%
                 <span class="image-card__ratio-hint">
                   {{ estimatedRatio(item.outputFormat, item.quality) }}
                 </span>
               </label>
-              <input
-                [id]="'quality-' + item.id"
-                type="range"
-                min="5"
-                max="100"
+              <app-tool-slider
+                [min]="5"
+                [max]="100"
                 [value]="item.quality"
-                (input)="updateQuality(item.id, +$any($event.target).value)"
-                class="quality-slider"
-                [attr.aria-label]="'品質滑桿 ' + item.file.name"
+                (valueChange)="updateQuality(item.id, $event)"
+                [ticks]="[5, 25, 50, 75, 100]"
+                [ariaLabel]="'品質滑桿 ' + item.file.name"
               />
-              <div class="quality-ticks">
-                <span>5</span>
-                <span>25</span>
-                <span>50</span>
-                <span>75</span>
-                <span>100</span>
-              </div>
             </div>
           }
 

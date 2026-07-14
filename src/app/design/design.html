@@ -409,6 +409,17 @@ daily-tools::design-system
           />
           <span class="helper-text">當前選取值：{{ radioValue() }}</span>
         </div>
+        <div class="form-field">
+          <span class="field-label">Slider (數值滑桿)</span>
+          <app-tool-slider
+            [min]="5"
+            [max]="100"
+            [(value)]="sliderValue"
+            [ticks]="[5, 25, 50, 75, 100]"
+            label="品質選擇"
+          />
+          <span class="helper-text">當前選取值：{{ sliderValue() }}%</span>
+        </div>
       </div>
     </app-tool-panel>
 

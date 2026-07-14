@@ -10,6 +10,7 @@ import { ToolRadioGroup, RadioOption } from "../shared/ui/tool-radio-group/tool-
 import { ToolPanel } from "../shared/ui/tool-panel/tool-panel";
 import { ToolHeader } from "../shared/ui/tool-header/tool-header";
 import { ToolAlert } from "../shared/ui/tool-alert/tool-alert";
+import { ToolSlider } from "../shared/ui/tool-slider/tool-slider";
 
 interface SectionLink {
   readonly id: string;
@@ -61,12 +62,15 @@ interface ToolTile {
     ToolRadioGroup,
     ToolPanel,
     ToolHeader,
-    ToolAlert
+    ToolAlert,
+    ToolSlider,
   ],
   templateUrl: "./design.html",
   styleUrls: ["./design.css", "./design-demos.css"],
 })
 export class Design {
+  protected readonly sliderValue = signal(78);
+
   protected readonly sections: readonly SectionLink[] = [
     { id: "colors", label: "01 色彩、間距與深度" },
     { id: "typography", label: "02 字體級距" },

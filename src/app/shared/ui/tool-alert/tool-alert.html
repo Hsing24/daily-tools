@@ -2,9 +2,7 @@
   [attr.data-testid]="testId()"
   role="alert"
   aria-live="assertive"
-  class="alert-box"
-  [class.alert-box--warning]="variant() === 'warning'"
-  [class.alert-box--success]="variant() === 'success'"
+  [class]="alertClasses()"
 >
   {{ variant() === "success" ? "✓" : "⚠️" }} {{ message() }}
 </div>

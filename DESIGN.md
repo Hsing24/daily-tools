@@ -341,6 +341,13 @@ components:
     rounded: "{rounded.none}"
     border: "{borders.chunky}"
     padding: 16px
+  tool-slider:
+    trackColor: "{colors.border-muted}"
+    progressColor: "{colors.primary}"
+    thumbColor: "{colors.primary}"
+    thumbBorder: "2px solid {colors.primary-bright}"
+    tickColor: "{colors.ink-disabled}"
+    tickColorActive: "{colors.primary}"
   cmd-k-overlay:
     backgroundColor: "{colors.surface-overlay}"
     pointer-events: auto
@@ -673,6 +680,8 @@ All buttons are sharp, **borderless**, flat solid-color rectangles — no border
 - **`text-input-focus`** — Border upgrades to 2px `{colors.primary}` on focus. No outer outline — the border IS the focus indicator.
 - **`text-input-error`** — Border upgrades to 2px `{colors.warning}`. Helper text below renders in `{colors.warning}` `{typography.mono-caption}`.
 - **`textarea-code`** — The JSON/Base64/regex editor surface. Background switches to the active syntax theme (`{colors.syntax-monokai-bg}` by default). Text uses syntax-highlighted colors per token type. 2px mint border, padding 16px, monospace required.
+- **`tool-slider`** — A pixel-art range slider. Background track is 4px height in `{colors.border-muted}`. Drag handle is a square block in `{colors.primary}` with 2px `{colors.primary-bright}` border. Active progress is filled dynamic linear-gradient in `{colors.primary}`. Standard ticks below the slider toggle state and highlight active color if value is equal or greater than the tick value.
+
 
 ### Cmd+K Command Palette
 

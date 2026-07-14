@@ -6,6 +6,7 @@ import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { StatRow } from "../../shared/ui/stat-row/stat-row";
 import { ToolRadioGroup, RadioOption } from "../../shared/ui/tool-radio-group/tool-radio-group";
+import { ToolSlider } from "../../shared/ui/tool-slider/tool-slider";
 import {
   type ImageItem,
   type OutputFormat,
@@ -34,6 +35,7 @@ import {
     ToolAlert,
     StatRow,
     ToolRadioGroup,
+    ToolSlider,
   ],
   templateUrl: "./image-converter.html",
   styleUrl: "./image-converter.css",
