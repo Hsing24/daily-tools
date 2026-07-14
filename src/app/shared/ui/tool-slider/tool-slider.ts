@@ -5,6 +5,9 @@ import { Component, input, model, computed } from "@angular/core";
   imports: [],
   templateUrl: "./tool-slider.html",
   styleUrl: "./tool-slider.css",
+  host: {
+    class: "d:block w:100%",
+  },
 })
 export class ToolSlider {
   readonly min = input<number>(0);

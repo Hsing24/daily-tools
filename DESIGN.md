@@ -788,3 +788,12 @@ Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation
 - **Focus management** when navigating between tool panels via keyboard is described conceptually (`{component.tool-panel-focused}`) but the focus-trap mechanics (Tab order, Escape behavior, return-focus targets) are not yet enumerated.
 - **Print styles** are undefined. The product is a runtime terminal; printed output (e.g., a JSON Formatter result) currently inherits the dark canvas and would burn ink. A monochrome print stylesheet is needed but out of scope for v1.
 - **Icon library scope.** The PRD bans sidebar icons but allows pixel-art icons inside tool content (e.g., copy/paste glyphs). The exact pixel icon set is not yet defined; current usage is ad-hoc per tool.
+
+## Styling & Enforcement Rules
+
+To maintain the strict pixel-art terminal style and clean architecture, the project implements an automated styling linter:
+- **Zero Scoped Layout CSS**: Any component-level `.css` file must not contain layout, color, typography, border, or spacing properties. It must remain empty or have under 15 lines (e.g. for pure keyframe animations).
+- **Master CSS in Templates**: All styling must be written in HTML templates using Master CSS classes. Refer to the tokens above for colors, typography, spacing, and shapes.
+- **No Inline Styles**: Standard inline `style="..."` is banned. Use property bindings `[class.d:none]="..."` or dynamic CSS variables in `[style.prop]="..."` only for dynamic values like percentages.
+- **Strict Verification**: Pre-commit and CI workflows run `pnpm run audit-styles` to verify compliance.
+

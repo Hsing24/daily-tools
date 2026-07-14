@@ -19,6 +19,9 @@ import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
   ],
   templateUrl: "./word-count.html",
   styleUrl: "./word-count.css",
+  host: {
+    class: "d:block font-family:var(--font-mono) color:var(--ink)",
+  },
 })
 export class WordCount {
   protected readonly text = signal("");

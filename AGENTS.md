@@ -41,6 +41,7 @@
 - These are **not** Tailwind utilities — `p-32` will silently do nothing.
 - Known-good shorthands include `bg:`, `color:`, `p:`/`px:`/`py:`, `f:14`, `f:bold`, `w:`/`h:`, `border:2px|solid|#hex`, `d:flex`, `d:grid`, `grid-cols:4`, and responsive suffixes like `grid-cols:4@md`.
 - Component `*.css` files are mostly empty by design; prefer Master CSS classes in the template, fall back to scoped CSS only for selectors Master CSS can't express.
+- **Automated Style Audit**: All layout, spacing, typography, borders, and colors MUST be handled by Master CSS in templates. The project runs `pnpm run audit-styles` (integrated into `pnpm run lint` / `pnpm run test` workflows) to enforce this. Scoped `*.css` files must not contain layout, color, typography, border, or spacing properties and must be empty or less than 15 lines. Inline `style="..."` in HTML templates is strictly prohibited.
 - When implementing the design system, derive class values from the tokens in [DESIGN.md](DESIGN.md) (colors, spacing, typography). No rounded corners, no soft shadows, no gradients. The only accepted project exception so far is the retained light theme (`data-theme="solarized"`).
 
 ## TypeScript strictness

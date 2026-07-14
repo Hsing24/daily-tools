@@ -4,6 +4,9 @@ import { Component, input } from "@angular/core";
   selector: "app-tool-header",
   templateUrl: "./tool-header.html",
   styleUrl: "./tool-header.css",
+  host: {
+    class: "d:block",
+  },
 })
 export class ToolHeader {
   readonly eyebrow = input.required<string>();

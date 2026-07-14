@@ -4,6 +4,9 @@ import { Component, input } from "@angular/core";
   selector: "app-terminal-output",
   templateUrl: "./terminal-output.html",
   styleUrl: "./terminal-output.css",
+  host: {
+    class: "d:block",
+  },
 })
 export class TerminalOutput {
   readonly title = input.required<string>();

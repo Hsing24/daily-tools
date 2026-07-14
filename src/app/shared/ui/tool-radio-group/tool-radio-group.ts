@@ -10,6 +10,9 @@ export interface RadioOption {
   imports: [],
   templateUrl: "./tool-radio-group.html",
   styleUrl: "./tool-radio-group.css",
+  host: {
+    class: "d:inline-block",
+  },
 })
 export class ToolRadioGroup {
   readonly options = input.required<RadioOption[]>();

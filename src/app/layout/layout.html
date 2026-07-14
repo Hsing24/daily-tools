@@ -1,44 +1,45 @@
-<a class="skip-link" href="#main-content">跳至主要內容</a>
+<a class="skip-link pos:fixed left:8 top:8 z:150 p:10|16 bg:primary color:on-primary font-family:var(--font-mono) f:bold ls:1 text-decoration:none transform:translateY(-160%) transition:transform|0.15s|ease transform:translateY(0):focus outline:2px|solid|primary-bright:focus-visible outline-offset:4:focus-visible" href="#main-content">跳至主要內容</a>
 
 <div class="scanline-overlay" aria-hidden="true"></div>
 
-<div class="page-shell">
+<div class="page-shell d:grid grid-cols:1 min-h:100vh">
   @if (sidebarOpen()) {
-    <div class="scrim" (click)="closeSidebar()" aria-hidden="true"></div>
+    <div class="scrim d:block pos:fixed inset:40|0|0|0 z:30 bg:rgba(5,14,28,0.75)" (click)="closeSidebar()" aria-hidden="true"></div>
   }
 
   <aside
     #sidebar
     id="tool-sidebar"
-    class="sidebar"
+    class="sidebar pos:fixed top:40 bottom:0 right:0 z:40 h:calc(100vh-40px) w:240 p:24|16 overflow-y:auto bg:canvas-deep bl:2px|solid|primary transform:translateX(100%) transition:transform|0.2s|ease transform:translateX(0).is-open"
     [class.is-open]="sidebarOpen()"
     aria-label="工具選單"
   >
     <a
-      class="brand"
+      class="brand d:grid gap:8 pb:24 mb:16 bb:1px|solid|border-muted text-decoration:none outline:2px|solid|primary-bright:focus-visible outline-offset:4:focus-visible"
       routerLink="/"
       (click)="closeSidebar()"
       aria-label="回到首頁"
     >
-      <div class="brand-mark" aria-hidden="true">&gt;_</div>
-      <div class="brand-name">Daily Tools</div>
-      <div class="brand-meta">CRT interface / alpha spec</div>
+      <div class="brand-mark color:primary font-family:var(--font-pixel) f:48 lh:1" aria-hidden="true">&gt;_</div>
+      <div class="brand-name color:ink-bright f:14 f:bold ls:1 text-transform:uppercase">Daily Tools</div>
+      <div class="brand-meta color:ink-muted f:12 ls:0.5">CRT interface / alpha spec</div>
     </a>
 
-    <nav class="side-nav" aria-label="工具清單">
+    <nav class="side-nav d:grid gap:2" aria-label="工具清單">
       @for (group of toolGroups; track group.name) {
-        <div class="nav-label">{{ group.name }}</div>
+        <div class="nav-label m:24|0|8 color:ink-muted font-family:var(--font-pixel) f:18 ls:2 lh:1 text-transform:uppercase">{{ group.name }}</div>
         @for (tool of group.tools; track tool.label) {
           @if (tool.available && tool.route) {
             <a
               [routerLink]="tool.route"
               routerLinkActive="is-active"
+              class="d:block min-h:44 p:10|12 color:ink text-decoration:none font-family:var(--font-mono) f:14 color:ink-bright:hover color:ink-bright:focus-visible outline:2px|solid|primary-bright:focus-visible outline-offset:-2:focus-visible color:primary.is-active bg:canvas-elevated.is-active bl:4px|solid|primary.is-active pl:8.is-active f:bold.is-active"
               (click)="closeSidebar()"
             >{{ tool.label }}</a>
           } @else {
-            <span class="nav-disabled">
+            <span class="nav-disabled d:flex ai:center jc:space-between min-h:44 p:10|12 color:ink-disabled cursor:not-allowed font-family:var(--font-mono) f:14">
               {{ tool.label }}
-              <small>即將推出</small>
+              <small class="color:ink-muted f:11">即將推出</small>
             </span>
           }
         }
@@ -46,29 +47,29 @@
     </nav>
   </aside>
 
-  <div class="main-shell">
-    <div class="prompt-bar" role="status" aria-live="polite">
-      <div class="prompt-left">
-        <span class="prompt-path">user@daily-tools {{ currentPath() }} $ inspect --theme {{ currentTheme() === 'default' ? 'crt' : 'solarized' }}</span>
-        <a class="prompt-brand" routerLink="/" aria-label="回到首頁">
-          <span class="brand-mark-small">&gt;_</span>
-          <span class="brand-name-small">Daily Tools</span>
+  <div class="main-shell d:flex flex:col min-h:100vh min-w:0 bg:canvas">
+    <div class="prompt-bar pos:sticky top:0 z:10 d:flex min-h:40 ai:center jc:space-between gap:16 px:32 px:16@<1024 bg:canvas-deep bb:2px|solid|primary color:primary font-family:var(--font-mono) f:16 f:medium lh:1" role="status" aria-live="polite">
+      <div class="prompt-left d:flex ai:center gap:12 min-w:0">
+        <span class="prompt-path min-w:0 overflow:hidden text-overflow:ellipsis white-space:nowrap d:none@<1024">user@daily-tools {{ currentPath() }} $ inspect --theme {{ currentTheme() === 'default' ? 'crt' : 'solarized' }}</span>
+        <a class="prompt-brand d:none d:inline-flex@<1024 ai:center gap:6 text-decoration:none font-family:var(--font-mono) f:14 f:bold lh:1 outline:1px|solid|primary-bright:focus-visible outline-offset:2:focus-visible" routerLink="/" aria-label="回到首頁">
+          <span class="brand-mark-small color:primary font-family:var(--font-pixel) f:18">&gt;_</span>
+          <span class="brand-name-small color:ink-bright ls:0.5">Daily Tools</span>
         </a>
       </div>
-      <div class="prompt-actions">
-        <div class="theme-switcher" role="group" aria-label="語法主題切換">
+      <div class="prompt-actions d:flex ai:center gap:8 flex-shrink:0">
+        <div class="theme-switcher d:inline-flex border:1px|solid|border-muted overflow:hidden" role="group" aria-label="語法主題切換">
           <button
             id="theme-btn-monokai"
-            class="theme-btn"
-            [class.active]="currentTheme() === 'default'"
+            class="theme-btn p:4|10 font-family:var(--font-mono) f:11 f:bold ls:0.5 cursor:pointer transition:background|0.1s|ease,color|0.1s|ease outline:1px|solid|primary-bright:focus-visible outline-offset:-2:focus-visible"
+            [class]="currentTheme() === 'default' ? 'active bg:primary color:on-primary' : 'bg:transparent color:ink-muted bg:canvas-elevated:hover color:ink:hover'"
             type="button"
             [attr.aria-pressed]="currentTheme() === 'default'"
             (click)="setTheme('default')"
           >DARK</button>
           <button
             id="theme-btn-solarized"
-            class="theme-btn"
-            [class.active]="currentTheme() === 'solarized'"
+            class="theme-btn p:4|10 font-family:var(--font-mono) f:11 f:bold ls:0.5 cursor:pointer transition:background|0.1s|ease,color|0.1s|ease outline:1px|solid|primary-bright:focus-visible outline-offset:-2:focus-visible"
+            [class]="currentTheme() === 'solarized' ? 'active bg:primary color:on-primary' : 'bg:transparent color:ink-muted bg:canvas-elevated:hover color:ink:hover'"
             type="button"
             [attr.aria-pressed]="currentTheme() === 'solarized'"
             (click)="setTheme('solarized')"
@@ -77,19 +78,19 @@
         <button
           #cmdKBtn
           id="cmd-k-btn"
-          class="key-button"
+          class="key-button group border:0 d:inline-flex ai:center min-w:44 h:32 px:10 bg:transparent color:primary cursor:pointer"
           type="button"
           aria-label="開啟命令面板"
           aria-haspopup="dialog"
           (click)="openPalette()"
         >
-          <span class="key-chip">/</span>
-          <span class="key-text">搜尋頁面</span>
+          <span class="key-chip d:inline-flex ai:center jc:center min-h:24 p:4|8 bg:canvas-elevated-2 border:1px|solid|border-muted color:ink-bright font-family:var(--font-mono) f:11 f:bold ls:1 lh:1 color:primary-bright:group-hover border-color:primary-bright:group-hover">/</span>
+          <span class="key-text ml:8 f:12 color:ink-muted font-family:var(--font-mono) transition:color|0.1s|ease color:ink-bright:group-hover">搜尋頁面</span>
         </button>
         <button
           #hamburger
           type="button"
-          class="hamburger-btn"
+          class="hamburger-btn bg:transparent color:primary border:0 p:4|8 font-family:var(--font-mono) f:14 f:bold cursor:pointer d:inline-flex color:primary-bright:hover bg:canvas-elevated:hover outline:1px|solid|primary-bright:focus-visible outline-offset:-2:focus-visible"
           [attr.aria-expanded]="sidebarOpen()"
           aria-controls="tool-sidebar"
           aria-label="切換工具選單"
@@ -100,14 +101,14 @@
       </div>
     </div>
 
-    <main id="main-content" tabindex="-1">
+    <main id="main-content" class="flex:1 w:100% max-w:1200 mx:auto p:32|40 px:16@<768 outline:none" tabindex="-1">
       <router-outlet />
     </main>
 
-    <footer class="footer">
+    <footer class="footer d:flex flex:wrap gap:12|24 jc:space-between p:16|32 px:16@<768 bg:canvas-deep bt:1px|solid|border-muted color:ink-muted font-family:var(--font-mono) f:12 ls:0.5">
       <span>daily-tools / alpha</span>
       <span>theme: DevTool Terminal / scanline 4%</span>
-      <a href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a class="color:ink-muted text-decoration:none color:primary:hover" href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
     </footer>
   </div>
 </div>

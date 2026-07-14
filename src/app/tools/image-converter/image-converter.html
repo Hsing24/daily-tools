@@ -19,7 +19,11 @@
     <!-- ═══ Drop Zone ═══ -->
     <div
       class="drop-zone"
-      [class.drop-zone--active]="isDragging()"
+      [ngClass]="{
+        'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 cursor:pointer t:border-color|.1s,background-color|.1s border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible': true,
+        'border:2px|dashed|var(--border-muted) bg:var(--canvas-input)': !isDragging(),
+        'border:2px|dashed|var(--primary-bright) bg:rgba(63,224,197,0.05)': isDragging()
+      }"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave()"
       (drop)="onDrop($event)"
@@ -29,26 +33,26 @@
       (keydown.enter)="fileInput.click()"
       (keydown.space)="fileInput.click(); $event.preventDefault()"
     >
-      <div class="drop-zone__content">
-        <span class="drop-zone__icon">⬆</span>
-        <span class="drop-zone__text">
+      <div class="d:flex flex-direction:column ai:center gap:8">
+        <span class="f:32 color:var(--primary)">⬆</span>
+        <span class="f:14 color:var(--ink)">
           拖放圖片至此處，或
           <button
             type="button"
-            class="drop-zone__browse"
+            class="bg:none border:none color:var(--primary) font-family:var(--font-mono) f:14 font-weight:600 cursor:pointer text-decoration:underline p:0 color:var(--primary-bright):hover"
             (click)="fileInput.click()"
           >
             瀏覽檔案
           </button>
         </span>
-        <span class="drop-zone__hint">支援 PNG、JPEG、WebP、AVIF</span>
+        <span class="f:12 color:var(--ink-muted)">支援 PNG、JPEG、WebP、AVIF</span>
       </div>
       <input
         #fileInput
         type="file"
         accept="image/png,image/jpeg,image/webp,image/avif,image/*"
         multiple
-        class="drop-zone__input"
+        class="abs w:1 h:1 overflow:hidden clip:rect(0,0,0,0)"
         (change)="onFileSelect($event)"
         aria-hidden="true"
         tabindex="-1"
@@ -57,14 +61,14 @@
 
     <!-- ═══ Batch Actions (上方) ═══ -->
     @if (totalItems() > 0) {
-      <div class="batch-bar">
-        <span class="batch-bar__status">
+      <div class="d:flex ai:center jc:space-between flex:wrap gap:16 p:12|16 mb:24 bg:var(--canvas-deep) border:2px|solid|var(--border-muted) flex-direction:column@<768 ai:flex-start@<768">
+        <span class="f:14 font-weight:600 color:var(--ink-bright)">
           共 {{ totalItems() }} 張圖片
           @if (completedItems() > 0) {
             ・已完成 {{ completedItems() }} 張
           }
         </span>
-        <div class="batch-bar__actions">
+        <div class="d:flex gap:12 flex:wrap">
           <button
             type="button"
             class="dt-button dt-button--primary"
@@ -98,31 +102,31 @@
 
     <!-- ═══ Image Cards ═══ -->
     @for (item of items(); track item.id) {
-      <div class="image-card" [attr.data-testid]="'card-' + item.id">
+      <div class="d:grid grid-cols:200px|1fr|200px gap:24 p:24 mb:16 bg:var(--canvas) border:2px|solid|var(--border-muted) transition:border-color|.1s|ease border-color:var(--primary-dim):hover grid-cols:1fr@<768 gap:16@<768" [attr.data-testid]="'card-' + item.id">
         <!-- 左側：原圖預覽 -->
-        <div class="image-card__preview">
-          <div class="image-card__thumb-wrap">
+        <div class="d:flex flex-direction:column gap:12">
+          <div class="rel d:flex ai:center jc:center w:100% h:150 bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden h:120@<768">
             <img
               [src]="item.previewUrl"
               [alt]="item.file.name"
-              class="image-card__thumb"
+              class="max-w:100% max-h:100% object-fit:contain image-rendering:auto"
             />
-            <span class="image-card__badge">原圖</span>
+            <span class="abs top:4 left:4 p:2|8 f:11 font-weight:600 ls:1 color:var(--on-primary) bg:var(--primary-dim)">原圖</span>
           </div>
-          <div class="image-card__meta">
-            <span class="image-card__filename" [title]="item.file.name">
+          <div class="d:flex flex-direction:column gap:4">
+            <span class="f:12 font-weight:600 color:var(--ink-bright) overflow:hidden text-overflow:ellipsis white-space:nowrap" [title]="item.file.name">
               {{ item.file.name }}
             </span>
-            <span class="image-card__size">
+            <span class="f:12 color:var(--ink-muted)">
               {{ formatFileSize(item.file.size) }} ・ {{ item.width }}×{{ item.height }}
             </span>
           </div>
         </div>
 
         <!-- 中間：控制區 -->
-        <div class="image-card__controls">
-          <div class="image-card__format-row">
-            <label class="image-card__label">輸出格式</label>
+        <div class="d:flex flex-direction:column gap:16 jc:center">
+          <div>
+            <label class="d:block mb:8 f:12 font-weight:600 color:var(--ink-bright) ls:0.5">輸出格式</label>
             <app-tool-radio-group
               [options]="formatOptions"
               [value]="item.outputFormat"
@@ -132,10 +136,10 @@
           </div>
 
           @if (isLossyFormat(item.outputFormat)) {
-            <div class="image-card__quality-row">
-              <label class="image-card__label">
+            <div>
+              <label class="d:block mb:8 f:12 font-weight:600 color:var(--ink-bright) ls:0.5">
                 品質：{{ item.quality }}%
-                <span class="image-card__ratio-hint">
+                <span class="ml:8 color:var(--ink-muted) font-weight:400">
                   {{ estimatedRatio(item.outputFormat, item.quality) }}
                 </span>
               </label>
@@ -150,7 +154,7 @@
             </div>
           }
 
-          <div class="image-card__action-row">
+          <div class="d:flex gap:12 flex:wrap">
             <button
               type="button"
               class="dt-button dt-button--primary"
@@ -182,19 +186,19 @@
         </div>
 
         <!-- 右側：轉換結果預覽 -->
-        <div class="image-card__result">
+        <div class="d:flex flex-direction:column gap:12">
           @if (item.status === 'done' && item.resultBlob) {
-            <div class="image-card__thumb-wrap">
+            <div class="rel d:flex ai:center jc:center w:100% h:150 bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden h:120@<768">
               <img
                 [src]="item.resultUrl"
                 [alt]="'轉換結果：' + item.file.name"
-                class="image-card__thumb"
+                class="max-w:100% max-h:100% object-fit:contain image-rendering:auto"
               />
-              <span class="image-card__badge image-card__badge--result">
+              <span class="abs top:4 left:4 p:2|8 f:11 font-weight:600 ls:1 color:var(--on-gold) bg:var(--gold)">
                 {{ labels[item.outputFormat] }}
               </span>
             </div>
-            <div class="image-card__meta">
+            <div class="d:flex flex-direction:column gap:4">
               <app-stat-row
                 label="輸出大小"
                 [value]="formatFileSize(item.resultBlob.size)"
@@ -206,17 +210,17 @@
               />
             </div>
           } @else if (item.status === 'converting') {
-            <div class="image-card__loading">
-              <span class="image-card__spinner">⟳</span>
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--primary)">
+              <span class="f:24 mb:8 animation:spin|1s|linear|infinite animation:none@prefers-reduced-motion">⟳</span>
               <span>轉換中…</span>
             </div>
           } @else if (item.status === 'error') {
-            <div class="image-card__error">
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:12 p:8 text-align:center color:var(--warning)">
               <span>✗ {{ item.errorMessage }}</span>
             </div>
           } @else {
-            <div class="image-card__empty">
-              <span class="image-card__empty-text">尚未轉換</span>
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--ink-disabled)">
+              <span class="f:12">尚未轉換</span>
             </div>
           }
         </div>

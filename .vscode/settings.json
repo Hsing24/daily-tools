@@ -9,6 +9,12 @@
     "chat.tools.terminal.autoApprove": {
         ".specify/scripts/bash/": true,
         ".specify/scripts/powershell/": true
+    },
+    "recommendations": [
+        "master-co.master-css"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.master-css": "always"
     }
 }
 

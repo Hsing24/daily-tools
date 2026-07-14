@@ -39,6 +39,9 @@ import {
   ],
   templateUrl: "./image-converter.html",
   styleUrl: "./image-converter.css",
+  host: {
+    class: "d:block font-family:var(--font-mono) color:var(--ink)",
+  },
 })
 export class ImageConverter implements OnDestroy {
   // --- Template mapping helpers ---

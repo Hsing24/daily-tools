@@ -1,22 +1,22 @@
 <div
-  class="terminal-output"
-  [style.display]="visible() ? 'block' : 'none'"
+  class="bg:canvas-deep border:2px|solid|border-default box:border-box font-family:var(--font-mono) mt:24"
+  [class.d:none]="!visible()"
   role="status"
   aria-live="polite"
 >
-  <div class="terminal-output-header">
-    <span class="terminal-title">{{ title() }}</span>
-    <span class="terminal-status">{{ status() }}</span>
+  <div class="bg:canvas-elevated-2 bb:2px|solid|border-default d:flex ai:center jc:space-between p:8|16">
+    <span class="color:primary f:12 f:bold ls:0.5">{{ title() }}</span>
+    <span class="color:ink-muted f:11">{{ status() }}</span>
   </div>
-  <div class="terminal-output-body">
-    <div class="terminal-line">
-      <span class="prompt-symbol">$</span>
-      <span class="command-text">{{ command() }}</span>
+  <div class="p:16 color:ink lh:1.6">
+    <div class="color:ink-muted mb:16 f:14">
+      <span class="color:primary mr:8">$</span>
+      <span class="color:ink-bright">{{ command() }}</span>
     </div>
     <ng-content />
     @if (footer()) {
-    <div class="terminal-divider"></div>
-    <div class="terminal-footer-line">
+    <div class="bt:2px|dashed|border-muted my:16|8"></div>
+    <div class="color:primary-dim f:12 ls:0.5">
       <span>{{ footer() }}</span>
     </div>
     }

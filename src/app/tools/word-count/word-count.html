@@ -14,7 +14,7 @@
 
     <!-- Input -->
     <div class="d:block mb:16">
-      <label for="word-count-input" class="word-count-label"
+      <label for="word-count-input" class="d:block mb:8 color:var(--ink-bright) f:14 f:600"
         >請輸入、貼上欲統計之文字：</label
       >
       <textarea
@@ -23,12 +23,12 @@
         [value]="text()"
         (input)="onInput(textarea.value)"
         placeholder="請在此輸入或貼上文字，系統將即時進行字數計算..."
-        class="word-count-textarea"
+        class="w:100% h:240 p:16 bg:var(--canvas-input) color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:2px|solid|var(--border-muted) box:border-box resize:vertical transition:border-color|0.1s|ease caret-color:var(--primary) caret-shape:block border-color:var(--primary):focus outline:none:focus color:var(--ink-disabled)::placeholder"
       ></textarea>
     </div>
 
     <!-- Actions -->
-    <div class="actions-row">
+    <div class="d:flex gap:16 mb:24 flex:wrap">
       <button
         type="button"
         data-testid="btn-paste"
@@ -55,7 +55,7 @@
       footer="PROCESS COMPLETE: 100% (STATUS: SUCCESS)"
       [visible]="!!text()"
     >
-      <div class="stats-table">
+      <div class="d:flex flex:col gap:12">
         <app-stat-row
           label="字元數 (含空白)"
           [value]="stats().charactersWithSpaces"

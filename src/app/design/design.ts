@@ -67,6 +67,9 @@ interface ToolTile {
   ],
   templateUrl: "./design.html",
   styleUrls: ["./design.css", "./design-demos.css"],
+  host: {
+    class: "d:grid gap:48 font-family:var(--font-mono) color:var(--ink)"
+  }
 })
 export class Design {
   protected readonly sliderValue = signal(78);

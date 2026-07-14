@@ -23,6 +23,9 @@ import {
   ],
   templateUrl: "./text-markdown-html.html",
   styleUrl: "./text-markdown-html.css",
+  host: {
+    class: "d:block font-family:var(--font-mono) color:var(--ink)"
+  }
 })
 export class TextMarkdownHtml {
   protected readonly sourceText = signal("");

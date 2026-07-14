@@ -1,19 +1,19 @@
-<div class="slider-container">
+<div class="d:flex flex:col w:100%">
   <input
     type="range"
     [min]="min()"
     [max]="max()"
     [value]="value()"
     (input)="updateValue(+$any($event.target).value)"
-    class="slider-input"
+    class="dt-slider"
     [style.background]="'linear-gradient(to right, var(--primary) 0%, var(--primary) ' + percentage() + '%, var(--border-muted) ' + percentage() + '%, var(--border-muted) 100%)'"
     [attr.aria-label]="ariaLabel() || label()"
   />
   @if (ticks().length > 0) {
-    <div class="slider-ticks">
+    <div class="d:flex jc:space-between f:11 color:ink-disabled mt:4 user-select:none">
       @for (tick of ticks(); track tick) {
         <span
-          class="slider-tick"
+          class="slider-tick cursor:pointer transition:color|0.1s|ease color:primary.is-active f:bold.is-active"
           [class.is-active]="value() >= tick"
           (click)="updateValue(tick)"
         >

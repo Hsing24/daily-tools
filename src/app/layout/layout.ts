@@ -26,6 +26,9 @@ interface ToolGroup {
   imports: [RouterOutlet, RouterLink, RouterLinkActive, CommandPalette],
   templateUrl: "./layout.html",
   styleUrl: "./layout.css",
+  host: {
+    class: "d:block min-h:100vh bg:canvas",
+  },
 })
 export class Layout {
   protected readonly sidebarOpen = signal(false);

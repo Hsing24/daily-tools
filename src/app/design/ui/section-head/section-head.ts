@@ -4,6 +4,9 @@ import { Component, input } from "@angular/core";
   selector: "app-section-head",
   templateUrl: "./section-head.html",
   styleUrl: "./section-head.css",
+  host: {
+    class: "d:block"
+  }
 })
 export class SectionHead {
   readonly kicker = input.required<string>();

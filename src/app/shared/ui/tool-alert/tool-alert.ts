@@ -6,6 +6,9 @@ type ToolAlertVariant = "error" | "warning" | "success";
   selector: "app-tool-alert",
   templateUrl: "./tool-alert.html",
   styleUrl: "./tool-alert.css",
+  host: {
+    class: "d:block",
+  },
 })
 export class ToolAlert {
   readonly message = input.required<string>();

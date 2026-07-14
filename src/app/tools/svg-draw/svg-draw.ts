@@ -28,6 +28,23 @@ import {
   ],
   templateUrl: "./svg-draw.html",
   styleUrl: "./svg-draw.css",
+  host: {
+    class: "d:block font-family:var(--font-mono) color:var(--ink)",
+  },
+  styles: `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spinner-spin {
+      animation: spin 1s linear infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner-spin {
+        animation: none;
+      }
+    }
+  `,
 })
 export class SvgDraw implements OnDestroy {
   // --- Helpers for Template ---

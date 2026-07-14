@@ -6,6 +6,9 @@ import { RouterLink } from "@angular/router";
   imports: [RouterLink],
   templateUrl: "./tool-breadcrumb.html",
   styleUrl: "./tool-breadcrumb.css",
+  host: {
+    class: "d:block",
+  },
 })
 export class ToolBreadcrumb {
   readonly homeLabel = input("DevTool");

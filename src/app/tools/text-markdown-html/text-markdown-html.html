@@ -14,7 +14,7 @@
 
     <!-- Input -->
     <div class="d:block mb:16">
-      <label for="text-converter-input" class="text-converter-label"
+      <label for="text-converter-input" class="d:block mb:8 color:var(--ink-bright) f:14 f:600"
         >請輸入或貼上欲轉換之純文字或富文本：</label
       >
       <textarea
@@ -24,12 +24,12 @@
         (input)="onInput(textarea.value)"
         (paste)="onPaste($event)"
         placeholder="請在此輸入或貼上文字/富文本，系統將即時進行轉換..."
-        class="text-converter-textarea"
+        class="w:100% h:240 p:16 bg:var(--canvas-input) color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:2px|solid|var(--border-muted) box:border-box resize:vertical transition:border-color|0.1s|ease caret-color:var(--primary) [caret-shape:block] border-color:var(--primary):focus outline:none:focus placeholder:color:var(--ink-disabled)"
       ></textarea>
     </div>
 
     <!-- Actions with Radio buttons -->
-    <div class="actions-row">
+    <div class="d:flex gap:16 mb:24 flex:wrap">
       <!-- Format Radio Selector -->
       <div class="d:flex align-items:center gap:16 mr:24">
         <app-tool-radio-group
@@ -63,7 +63,7 @@
 
     <!-- Outputs (Dual Pane but visually toggled by Radio) -->
     @if (sourceText()) {
-      <div class="d:grid grid-cols:1 gap:16" style="margin-top: 24px">
+      <div class="d:grid grid-cols:1 gap:16 mt:24">
         <!-- Markdown Output -->
         <app-terminal-output
           title="OUTPUT.md"

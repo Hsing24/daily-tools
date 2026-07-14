@@ -5,6 +5,9 @@ import { Component, input } from "@angular/core";
   selector: "app-color-swatch",
   templateUrl: "./color-swatch.html",
   styleUrl: "./color-swatch.css",
+  host: {
+    class: "d:block"
+  }
 })
 export class ColorSwatch {
   readonly name = input.required<string>();

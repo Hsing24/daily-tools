@@ -1,10 +1,10 @@
-<article class="swatch">
+<article class="swatch d:grid gap:12 align-content:start min-h:178 h:100% p:16 bg:var(--canvas-elevated) border:2px|solid|var(--primary)">
   <div
-    class="swatch-token"
+    class="swatch-token min-h:64 border:2px|solid|var(--border-muted)"
     [style.background]="'var(' + cssVar() + ')'"
     aria-hidden="true"
   ></div>
-  <strong>{{ name() }}</strong>
-  <code>{{ value() }}</code>
-  <p>{{ description() }}</p>
+  <strong class="color:var(--ink-bright)">{{ name() }}</strong>
+  <code class="color:var(--primary-bright) font-family:var(--font-mono)">{{ value() }}</code>
+  <p class="m:0 color:var(--ink) f:12 lh:1.4">{{ description() }}</p>
 </article>

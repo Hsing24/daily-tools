@@ -1,7 +1,11 @@
-<nav class="breadcrumb-zsh" aria-label="導覽路徑">
-  <a [routerLink]="homeLink()" class="breadcrumb-segment-home">
+<nav class="d:flex ai:center h:28 mb:24" aria-label="導覽路徑">
+  <a [routerLink]="homeLink()" class="d:inline-flex ai:center h:28 font-family:var(--font-mono) f:14 f:bold text-decoration:none box:border-box pos:relative lh:1.2 white-space:nowrap bg:primary color:on-primary p:4|18|4|12 clip-path:polygon(0|0,calc(100%|-|14px)|0,100%|50%,calc(100%|-|14px)|100%,0|100%) mr:-14 z:3 bg:primary-bright:hover outline:2px|solid|primary-bright:focus-visible outline-offset:4:focus-visible">
     {{ homeLabel() }}
   </a>
-  <span class="breadcrumb-segment-category">{{ category() }}</span>
-  <span class="breadcrumb-segment-current">{{ current() }}</span>
+  <span class="d:inline-flex@>=768 d:none@<768 ai:center h:28 font-family:var(--font-mono) f:14 f:bold text-decoration:none box:border-box pos:relative lh:1.2 white-space:nowrap bg:gold color:on-gold p:4|18 clip-path:polygon(0|0,calc(100%|-|14px)|0,100%|50%,calc(100%|-|14px)|100%,0|100%,0|50%) mr:-14 z:2">
+    {{ category() }}
+  </span>
+  <span class="d:inline-flex ai:center h:28 font-family:var(--font-mono) f:14 f:bold text-decoration:none box:border-box pos:relative lh:1.2 white-space:nowrap bg:warning color:on-warning p:4|18 clip-path:polygon(0|0,calc(100%|-|14px)|0,100%|50%,calc(100%|-|14px)|100%,0|100%,0|50%) z:1">
+    {{ current() }}
+  </span>
 </nav>

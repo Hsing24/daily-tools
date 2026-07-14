@@ -1,8 +1,7 @@
-<div class="radio-group" role="radiogroup">
+<div class="d:inline-flex border:2px|solid|primary bg:canvas-input box:border-box" role="radiogroup">
   @for (option of options(); track option.value) {
     <label
-      class="radio-option"
-      [class.is-active]="value() === option.value"
+      [class]="'radio-option d:inline-flex ai:center jc:center p:8|16 cursor:pointer font-family:var(--font-mono) f:14 f:bold bg:transparent transition:background-color|0.1s|ease,color|0.1s|ease user-select:none outline:2px|dashed|primary-bright:focus-within outline-offset:-4:focus-within br:2px|solid|primary:not(:last-child) ' + (value() === option.value ? 'is-active bg:primary color:on-primary' : 'color:primary bg:rgba(63,224,197,0.1):hover color:primary-bright:hover')"
     >
       <input
         type="radio"
@@ -10,7 +9,7 @@
         [value]="option.value"
         [checked]="value() === option.value"
         (change)="select(option.value)"
-        class="radio-input"
+        class="radio-input pos:absolute w:1 h:1 p:0 m:-1 overflow:hidden clip:rect(0,0,0,0) white-space:nowrap border:0"
       />
       <span class="radio-label-text">{{ option.label }}</span>
     </label>
