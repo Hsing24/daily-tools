@@ -31,6 +31,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "svg-draw",
+        loadComponent: () =>
+          import("./tools/svg-draw/svg-draw").then((m) => m.SvgDraw),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

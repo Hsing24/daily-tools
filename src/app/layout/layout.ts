@@ -53,6 +53,7 @@ export class Layout {
       name: "格式化 / 轉換",
       tools: [
         { label: "圖片轉檔", route: "image-converter", available: true },
+        { label: "SVG 描圖", route: "svg-draw", available: true },
       ],
     },
     {

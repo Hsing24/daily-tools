@@ -1,0 +1,176 @@
+<div>
+  <app-tool-breadcrumb category="格式化 / 轉換" current="SVG 描圖" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="IMAGE → SVG v1.0.0"
+      title="SVG 描圖 (SVG Draw)"
+      description="上傳點陣圖，自動追蹤為 SVG 向量圖形。追求一比一還原品質，支援多種精度選擇。"
+    />
+
+    @if (alertMessage()) {
+      <app-tool-alert [message]="alertMessage()" [variant]="alertVariant()" testId="svg-draw-alert" />
+    }
+
+    <!-- ═══ Drop Zone ═══ -->
+    @if (status() === 'idle') {
+      <div
+        class="drop-zone"
+        [class.drop-zone--active]="isDragging()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+        role="button"
+        tabindex="0"
+        aria-label="拖放圖片上傳區"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="fileInput.click(); $event.preventDefault()"
+      >
+        <div class="drop-zone__content">
+          <span class="drop-zone__icon">⬆</span>
+          <span class="drop-zone__text">
+            拖放圖片至此處，或
+            <button
+              type="button"
+              class="drop-zone__browse"
+              (click)="fileInput.click()"
+            >
+              瀏覽檔案
+            </button>
+          </span>
+          <span class="drop-zone__hint">支援 PNG、JPEG、WebP 等常見圖片格式（一次一張）</span>
+        </div>
+        <input
+          #fileInput
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/*"
+          class="drop-zone__input"
+          (change)="onFileSelect($event)"
+          aria-hidden="true"
+          tabindex="-1"
+        />
+      </div>
+    }
+
+    <!-- ═══ Main Content Panels ═══ -->
+    @if (status() !== 'idle') {
+      <div class="svg-draw__panels">
+        <!-- 左面板：原圖資訊與控制項 -->
+        <div class="svg-draw__source">
+          <div class="svg-draw__preview-wrap">
+            <img [src]="sourcePreviewUrl()" [alt]="sourceFile()?.name ?? '原圖'" class="svg-draw__preview-img" />
+            <span class="svg-draw__badge">原圖</span>
+          </div>
+
+          <div class="svg-draw__meta">
+            <app-stat-row label="檔名" [value]="sourceFile()?.name ?? '-'" />
+            <app-stat-row label="尺寸" [value]="sourceWidth() + '×' + sourceHeight() + ' px'" />
+            <app-stat-row label="檔案大小" [value]="formatFileSize(sourceFile()?.size ?? 0)" />
+          </div>
+
+          <div class="svg-draw__control-section">
+            <label class="svg-draw__label">描圖精度</label>
+            <app-tool-radio-group
+              [options]="presetOptions"
+              [value]="tracePreset()"
+              (valueChange)="onPresetChange($event)"
+              name="trace-preset"
+            />
+          </div>
+
+          <div class="svg-draw__estimate" [class.svg-draw__estimate--warning]="isTimeWarning()">
+            <span class="svg-draw__estimate-label">預估時間：</span>
+            <span class="svg-draw__estimate-value">{{ estimatedTimeText() }}</span>
+            @if (isTimeWarning()) {
+              <div class="svg-draw__estimate-warning mt:8">
+                <span>⚠ 圖片較複雜，轉換需要較長時間</span>
+              </div>
+            }
+          </div>
+
+          <div class="svg-draw__actions">
+            @if (status() === 'tracing') {
+              <button
+                type="button"
+                class="dt-button dt-button--warning"
+                (click)="cancelTrace()"
+                aria-label="取消描圖"
+              >
+                取消
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="dt-button dt-button--primary"
+                (click)="startTrace()"
+                [disabled]="status() === 'tracing'"
+                aria-label="開始描圖"
+                data-testid="btn-start-trace"
+              >
+                開始描圖
+              </button>
+            }
+            <button
+              type="button"
+              class="dt-button dt-button--ghost"
+              (click)="reset()"
+              [disabled]="status() === 'tracing'"
+              aria-label="重新選擇圖片"
+            >
+              重新選擇
+            </button>
+          </div>
+        </div>
+
+        <!-- 右面板：描圖結果與輸出 -->
+        <div class="svg-draw__result">
+          @if (status() === 'ready') {
+            <div class="svg-draw__empty">
+              <span class="svg-draw__empty-text">點擊「開始描圖」以轉換</span>
+            </div>
+          } @else if (status() === 'tracing') {
+            <div class="svg-draw__loading">
+              <span class="svg-draw__spinner">⟳</span>
+              <span class="svg-draw__loading-text">描圖進行中…</span>
+              <span class="svg-draw__timer">{{ elapsedTimeText() }}</span>
+            </div>
+          } @else if (status() === 'done') {
+            <div class="svg-draw__preview-wrap">
+              <img [src]="svgPreviewUrl()" alt="SVG 描圖結果" class="svg-draw__preview-img" />
+              <span class="svg-draw__badge svg-draw__badge--result">SVG</span>
+            </div>
+
+            <div class="svg-draw__meta">
+              <app-stat-row label="SVG 大小" [value]="formatFileSize(svgBlobSize())" />
+              <app-stat-row label="實際耗時" [value]="elapsedTimeText()" [highlight]="true" />
+            </div>
+
+            <div class="svg-draw__output-actions">
+              <button
+                type="button"
+                class="dt-button dt-button--primary"
+                (click)="downloadSvg()"
+                aria-label="下載 SVG"
+                data-testid="btn-download-svg"
+              >
+                下載 SVG
+              </button>
+              <button
+                type="button"
+                class="dt-button dt-button--secondary"
+                (click)="copySvgCode()"
+                aria-label="複製 SVG 原始碼"
+              >
+                複製原始碼
+              </button>
+            </div>
+          } @else if (status() === 'error') {
+            <div class="svg-draw__error">
+              <span>✗ {{ errorMessage() }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </app-tool-panel>
+</div>
