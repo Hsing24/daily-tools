@@ -1,22 +1,22 @@
 <div
-  class="bg:canvas-deep border:2px|solid|border-default box:border-box font-family:var(--font-mono) mt:24"
+  class="bg:var(--canvas-deep) border:2px|solid|var(--border-default) box:border-box font-family:var(--font-mono) mt:24"
   [class.d:none]="!visible()"
   role="status"
   aria-live="polite"
 >
-  <div class="bg:canvas-elevated-2 bb:2px|solid|border-default d:flex ai:center jc:space-between p:8|16">
-    <span class="color:primary f:12 font-weight:600 ls:0.5">{{ title() }}</span>
-    <span class="color:ink-muted f:11">{{ status() }}</span>
+  <div class="bg:var(--canvas-elevated-2) bb:2px|solid|var(--border-default) d:flex ai:center jc:space-between p:8|16">
+    <span class="color:var(--primary) f:12 font-weight:600 ls:0.5">{{ title() }}</span>
+    <span class="color:var(--ink-muted) f:11">{{ status() }}</span>
   </div>
-  <div class="p:16 color:ink lh:1.6">
-    <div class="color:ink-muted mb:16 f:14">
-      <span class="color:primary mr:8">$</span>
-      <span class="color:ink-bright">{{ command() }}</span>
+  <div class="p:16 color:var(--ink) lh:1.6">
+    <div class="color:var(--ink-muted) mb:16 f:14">
+      <span class="color:var(--primary) mr:8">$</span>
+      <span class="color:var(--ink-bright)">{{ command() }}</span>
     </div>
     <ng-content />
     @if (footer()) {
-    <div class="bt:2px|dashed|border-muted my:16|8"></div>
-    <div class="color:primary-dim f:12 ls:0.5">
+    <div class="bt:2px|dashed|var(--border-muted) my:16|8"></div>
+    <div class="color:var(--primary-dim) f:12 ls:0.5">
       <span>{{ footer() }}</span>
     </div>
     }
