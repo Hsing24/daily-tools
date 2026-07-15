@@ -43,7 +43,7 @@ describe("ImageConverter 元件", () => {
   });
 
   it("初始狀態應顯示拖放上傳區", () => {
-    const dropZone = element.querySelector(".drop-zone");
+    const dropZone = element.querySelector('[data-testid="drop-zone"]');
     expect(dropZone).toBeTruthy();
     expect(element.textContent).toContain("拖放圖片至此處");
   });

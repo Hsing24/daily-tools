@@ -275,5 +275,23 @@ input[type="range"].dt-slider:focus-visible {
   outline-offset: 4px;
 }
 
+/* --- Shared processing spinner (used by any "converting/tracing" state) --- */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
+.spinner-spin {
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-spin {
+    animation: none;
+  }
+}
 

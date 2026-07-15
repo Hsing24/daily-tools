@@ -18,7 +18,6 @@
 
     <!-- ═══ Drop Zone ═══ -->
     <div
-      class="drop-zone"
       [ngClass]="{
         'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 cursor:pointer t:border-color|.1s,background-color|.1s border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible': true,
         'border:2px|dashed|var(--border-muted) bg:var(--canvas-input)': !isDragging(),
@@ -30,6 +29,7 @@
       role="button"
       tabindex="0"
       aria-label="拖放圖片上傳區"
+      data-testid="drop-zone"
       (keydown.enter)="fileInput.click()"
       (keydown.space)="fileInput.click(); $event.preventDefault()"
     >
@@ -210,16 +210,16 @@
               />
             </div>
           } @else if (item.status === 'converting') {
-            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--primary)">
-              <span class="f:24 mb:8 animation:spin|1s|linear|infinite animation:none@prefers-reduced-motion">⟳</span>
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:2px|solid|var(--border-default) bg:var(--canvas-input) f:14 color:var(--primary)">
+              <span class="f:24 mb:8 spinner-spin">⟳</span>
               <span>轉換中…</span>
             </div>
           } @else if (item.status === 'error') {
-            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:12 p:8 text-align:center color:var(--warning)">
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:2px|solid|var(--border-warning) bg:var(--canvas-input) f:12 p:8 text-align:center color:var(--warning)">
               <span>✗ {{ item.errorMessage }}</span>
             </div>
           } @else {
-            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--ink-disabled)">
+            <div class="d:flex flex-direction:column ai:center jc:center h:150 border:2px|dashed|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--ink-disabled)">
               <span class="f:12">尚未轉換</span>
             </div>
           }

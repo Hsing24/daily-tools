@@ -33,8 +33,8 @@ describe("SvgDraw Component", () => {
   it("初始狀態為 idle，並且應該渲染上傳區而非主面板", () => {
     expect(component["status"]()).toBe("idle");
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector(".drop-zone")).toBeTruthy();
-    expect(compiled.querySelector(".svg-draw__panels")).toBeFalsy();
+    expect(compiled.querySelector('[data-testid="drop-zone"]')).toBeTruthy();
+    expect(compiled.querySelector('[data-testid="svg-draw-panels"]')).toBeFalsy();
   });
 
   it("當 status 不為 idle 時，應該渲染面板並顯示預估時間", async () => {
@@ -50,10 +50,10 @@ describe("SvgDraw Component", () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector(".drop-zone")).toBeFalsy();
-    expect(compiled.querySelector(".svg-draw__panels")).toBeTruthy();
+    expect(compiled.querySelector('[data-testid="drop-zone"]')).toBeFalsy();
+    expect(compiled.querySelector('[data-testid="svg-draw-panels"]')).toBeTruthy();
 
-    const estimateVal = compiled.querySelector(".svg-draw__estimate-value");
+    const estimateVal = compiled.querySelector('[data-testid="estimate-value"]');
     expect(estimateVal?.textContent).toContain("約 1 秒");
   });
 
@@ -70,10 +70,10 @@ describe("SvgDraw Component", () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const estimateBox = compiled.querySelector(".svg-draw__estimate");
-    expect(estimateBox?.classList.contains("svg-draw__estimate--warning")).toBe(true);
+    const estimateBox = compiled.querySelector('[data-testid="estimate-box"]');
+    expect(estimateBox?.getAttribute("data-warning")).toBe("true");
 
-    const warningText = compiled.querySelector(".svg-draw__estimate-warning");
+    const warningText = compiled.querySelector('[data-testid="estimate-warning-text"]');
     expect(warningText).toBeTruthy();
     expect(warningText?.textContent).toContain("圖片較複雜");
   });

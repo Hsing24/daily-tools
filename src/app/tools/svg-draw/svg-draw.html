@@ -16,19 +16,19 @@
     @if (status() === 'idle') {
       <div
         [class]="isDragging()
-          ? 'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 border:2px|dashed|var(--border-muted) cursor:pointer transition:border-color|.1s|ease,background-color|.1s|ease border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible border-color:var(--primary-bright) bg:rgba(63,224,197,0.05) drop-zone'
-          : 'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 border:2px|dashed|var(--border-muted) bg:var(--canvas-input) cursor:pointer transition:border-color|.1s|ease,background-color|.1s|ease border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible drop-zone'"
-        [class.drop-zone--active]="isDragging()"
+          ? 'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 border:2px|dashed|var(--border-muted) cursor:pointer transition:border-color|.1s|ease,background-color|.1s|ease border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible border-color:var(--primary-bright) bg:rgba(63,224,197,0.05)'
+          : 'rel d:flex ai:center jc:center min-h:160 mb:24 p:32 border:2px|dashed|var(--border-muted) bg:var(--canvas-input) cursor:pointer transition:border-color|.1s|ease,background-color|.1s|ease border-color:var(--primary):hover border-color:var(--primary):focus-visible outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible'"
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave()"
         (drop)="onDrop($event)"
         role="button"
         tabindex="0"
         aria-label="拖放圖片上傳區"
+        data-testid="drop-zone"
         (keydown.enter)="fileInput.click()"
         (keydown.space)="fileInput.click(); $event.preventDefault()"
       >
-        <div class="d:flex f:column ai:center gap:8">
+        <div class="d:flex flex:col ai:center gap:8">
           <span class="f:32 color:var(--primary)">⬆</span>
           <span class="f:14 color:var(--ink)">
             拖放圖片至此處，或
@@ -56,21 +56,21 @@
 
     <!-- ═══ Main Content Panels ═══ -->
     @if (status() !== 'idle') {
-      <div class="d:grid grid-cols:1 grid-cols:2@sm gap:24 mt:24 svg-draw__panels">
+      <div class="d:grid grid-cols:1 grid-cols:2@sm gap:24 mt:24" data-testid="svg-draw-panels">
         <!-- 左面板：原圖資訊與控制項 -->
-        <div class="d:flex f:column gap:20 p:24 border:2px|solid|var(--border-muted) bg:var(--canvas-elevated)">
+        <div class="d:flex flex:col gap:20 p:24 border:2px|solid|var(--border-muted) bg:var(--canvas-elevated)">
           <div class="rel d:flex ai:center jc:center w:100% h:200 h:300@sm bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden">
             <img [src]="sourcePreviewUrl()" [alt]="sourceFile()?.name ?? '原圖'" class="max-w:100% max-h:100% object-fit:contain image-rendering:pixelated" />
-            <span class="abs top:8 left:8 p:2|8 f:11 font-weight:600 letter-spacing:1 color:var(--ink) bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) text-transform:uppercase">原圖</span>
+            <span class="abs top:8 left:8 p:2|8 f:11 font-weight:600 ls:1 color:var(--on-primary) bg:var(--primary-dim)">原圖</span>
           </div>
 
-          <div class="d:flex f:column gap:4">
+          <div class="d:flex flex:col gap:4">
             <app-stat-row label="檔名" [value]="sourceFile()?.name ?? '-'" />
             <app-stat-row label="尺寸" [value]="sourceWidth() + '×' + sourceHeight() + ' px'" />
             <app-stat-row label="檔案大小" [value]="formatFileSize(sourceFile()?.size ?? 0)" />
           </div>
 
-          <div class="d:flex f:column gap:8">
+          <div class="d:flex flex:col gap:8">
             <label class="f:12 font-weight:600 color:var(--ink-muted) letter-spacing:0.5 text-transform:uppercase">描圖精度</label>
             <app-tool-radio-group
               [options]="presetOptions"
@@ -81,20 +81,23 @@
           </div>
 
           <div
-            class="d:flex f:column gap:4 p:12|16 border:1px|solid|var(--border-muted) bg:var(--canvas-input) f:14 color:var(--ink) svg-draw__estimate"
-            [class.border-color:var(--warning)]="isTimeWarning()"
-            [class.svg-draw__estimate--warning]="isTimeWarning()"
+            class="d:flex flex:col gap:4 p:12|16 bg:var(--canvas-input) f:14 color:var(--ink)"
+            [class.border:1px|solid|var(--border-muted)]="!isTimeWarning()"
+            [class.border:2px|solid|var(--border-warning)]="isTimeWarning()"
+            data-testid="estimate-box"
+            [attr.data-warning]="isTimeWarning()"
           >
             <span class="color:var(--ink-muted) f:12">預估時間：</span>
             <span
-              class="f:16 font-weight:600 svg-draw__estimate-value"
+              class="f:16 font-weight:600"
               [class.color:var(--primary)]="!isTimeWarning()"
               [class.color:var(--warning)]="isTimeWarning()"
+              data-testid="estimate-value"
             >
               {{ estimatedTimeText() }}
             </span>
             @if (isTimeWarning()) {
-              <div class="color:var(--warning) f:12 font-weight:600 mt:8 svg-draw__estimate-warning">
+              <div class="color:var(--warning) f:12 font-weight:600 mt:8" data-testid="estimate-warning-text">
                 <span>⚠ 圖片較複雜，轉換需要較長時間</span>
               </div>
             }
@@ -135,13 +138,13 @@
         </div>
 
         <!-- 右面板：描圖結果與輸出 -->
-        <div class="d:flex f:column gap:20 p:24 border:2px|solid|var(--border-muted) bg:var(--canvas-elevated)">
+        <div class="d:flex flex:col gap:20 p:24 border:2px|solid|var(--border-muted) bg:var(--canvas-elevated)">
           @if (status() === 'ready') {
-            <div class="d:flex f:column ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|dashed|var(--border-muted) color:var(--ink-disabled)">
+            <div class="d:flex flex:col ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|dashed|var(--border-muted) color:var(--ink-disabled)">
               <span class="f:14">點擊「開始描圖」以轉換</span>
             </div>
           } @else if (status() === 'tracing') {
-            <div class="d:flex f:column ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|solid|var(--border-default) color:var(--primary) gap:16">
+            <div class="d:flex flex:col ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|solid|var(--border-default) color:var(--primary) gap:16">
               <span class="f:32 spinner-spin">⟳</span>
               <span class="f:14 color:var(--ink)">描圖進行中…</span>
               <span class="font-family:var(--font-pixel) f:36 color:var(--primary)">{{ elapsedTimeText() }}</span>
@@ -152,7 +155,7 @@
               <span class="abs top:8 left:8 p:2|8 f:11 font-weight:600 letter-spacing:1 color:var(--on-primary) bg:var(--primary) border:1px|solid|var(--primary) text-transform:uppercase">SVG</span>
             </div>
 
-            <div class="d:flex f:column gap:4">
+            <div class="d:flex flex:col gap:4">
               <app-stat-row label="SVG 大小" [value]="formatFileSize(svgBlobSize())" />
               <app-stat-row label="實際耗時" [value]="elapsedTimeText()" [highlight]="true" />
             </div>
@@ -177,7 +180,7 @@
               </button>
             </div>
           } @else if (status() === 'error') {
-            <div class="d:flex f:column ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|solid|var(--border-warning) color:var(--warning) f:14 p:16 t:center">
+            <div class="d:flex flex:col ai:center jc:center h:200 h:300@sm bg:var(--canvas-input) border:2px|solid|var(--border-warning) color:var(--warning) f:14 p:16 t:center">
               <span>✗ {{ errorMessage() }}</span>
             </div>
           }
