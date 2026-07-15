@@ -62,20 +62,23 @@ describe("CommandPalette", () => {
     expect(items[1].nativeElement.textContent).toContain("工具 B");
   });
 
-  it("should not show items when query is empty", async () => {
+  it("should show all available tools when query is empty", async () => {
     component["query"].set("");
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const list = fixture.debugElement.query(By.css(".cmd-k-list"));
-    expect(list).toBeNull();
+    const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
+    expect(items.length).toBe(3);
+    expect(items[0].nativeElement.textContent).toContain("工具 A");
+    expect(items[1].nativeElement.textContent).toContain("工具 B");
+    expect(items[2].nativeElement.textContent).toContain("Tool D");
   });
 
   it("should navigate and close when clicking an item", async () => {
     const navigateSpy = vi.spyOn(router, "navigate");
     const closeSpy = vi.spyOn(component.close, "emit");
 
-    component["query"].set("tool-d");
+    component["query"].set("Tool D");
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -134,15 +137,24 @@ describe("CommandPalette", () => {
     expect(component["focusedIndex"]()).toBe(0);
   });
 
-  it("should show all available tools when query is 'all' case-insensitively", async () => {
-    component["query"].set("ALL");
+  it("should match tools by category name even when the label does not match", async () => {
+    component["query"].set("Group B");
     fixture.detectChanges();
     await fixture.whenStable();
 
     const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
-    expect(items.length).toBe(3);
+    expect(items.length).toBe(1);
+    expect(items[0].nativeElement.textContent).toContain("Tool D");
+  });
+
+  it("should not match unavailable tools even by category name", async () => {
+    component["query"].set("Group A");
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
+    expect(items.length).toBe(2);
     expect(items[0].nativeElement.textContent).toContain("工具 A");
     expect(items[1].nativeElement.textContent).toContain("工具 B");
-    expect(items[2].nativeElement.textContent).toContain("Tool D");
   });
 });

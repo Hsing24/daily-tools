@@ -6,7 +6,7 @@ import {
   viewChild,
   inject,
 } from "@angular/core";
-import { RouterLink, RouterLinkActive, RouterOutlet, Router, NavigationEnd } from "@angular/router";
+import { RouterLink, RouterOutlet, Router, NavigationEnd } from "@angular/router";
 import { filter } from "rxjs/operators";
 import { CommandPalette } from "./command-palette";
 
@@ -23,7 +23,7 @@ interface ToolGroup {
 
 @Component({
   selector: "app-layout",
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommandPalette],
+  imports: [RouterOutlet, RouterLink, CommandPalette],
   templateUrl: "./layout.html",
   styleUrl: "./layout.css",
   host: {
@@ -31,12 +31,8 @@ interface ToolGroup {
   },
 })
 export class Layout {
-  protected readonly sidebarOpen = signal(false);
   protected readonly isPaletteOpen = signal(false);
 
-  private readonly hamburger =
-    viewChild<ElementRef<HTMLButtonElement>>("hamburger");
-  private readonly sidebar = viewChild<ElementRef<HTMLElement>>("sidebar");
   private readonly cmdKBtn =
     viewChild<ElementRef<HTMLButtonElement>>("cmdKBtn");
 
@@ -127,37 +123,10 @@ export class Layout {
     }
   }
 
-  protected toggleSidebar(): void {
-    this.sidebarOpen() ? this.closeSidebar() : this.openSidebar();
-  }
-
-  protected openSidebar(): void {
-    this.sidebarOpen.set(true);
-    // Move focus into the drawer for keyboard / screen-reader users.
-    queueMicrotask(() => {
-      const firstLink =
-        this.sidebar()?.nativeElement.querySelector<HTMLElement>(
-          'a, [tabindex="0"]',
-        );
-      firstLink?.focus();
-    });
-  }
-
-  protected closeSidebar(): void {
-    if (!this.sidebarOpen()) {
-      return;
-    }
-    this.sidebarOpen.set(false);
-    // Return focus to the trigger when closing the off-canvas drawer.
-    this.hamburger()?.nativeElement.focus();
-  }
-
   @HostListener("document:keydown.escape")
   protected onEscape(): void {
     if (this.isPaletteOpen()) {
       this.closePalette();
-    } else {
-      this.closeSidebar();
     }
   }
 }

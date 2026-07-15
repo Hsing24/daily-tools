@@ -96,7 +96,10 @@
   --border-warning: #dc322f;
 }
 
-html,
+html {
+  margin: 0;
+}
+
 body {
   margin: 0;
   background: var(--canvas);
@@ -106,7 +109,7 @@ body {
   line-height: 1.55;
 }
 
-a:visited {
+:where(a:visited) {
   color: inherit;
 }
 

@@ -34,7 +34,7 @@
             拖放圖片至此處，或
             <button
               type="button"
-              class="bg:none border:none color:var(--primary) font-family:var(--font-mono) f:14 f:600 cursor:pointer text-decoration:underline p:0 color:var(--primary-bright):hover"
+              class="bg:none border:none color:var(--primary) font-family:var(--font-mono) f:14 font-weight:600 cursor:pointer text-decoration:underline p:0 color:var(--primary-bright):hover"
               (click)="fileInput.click()"
             >
               瀏覽檔案
@@ -61,7 +61,7 @@
         <div class="d:flex f:column gap:20 p:24 border:2px|solid|var(--border-muted) bg:var(--canvas-elevated)">
           <div class="rel d:flex ai:center jc:center w:100% h:200 h:300@sm bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden">
             <img [src]="sourcePreviewUrl()" [alt]="sourceFile()?.name ?? '原圖'" class="max-w:100% max-h:100% object-fit:contain image-rendering:pixelated" />
-            <span class="abs top:8 left:8 p:2|8 f:11 f:600 letter-spacing:1 color:var(--ink) bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) text-transform:uppercase">原圖</span>
+            <span class="abs top:8 left:8 p:2|8 f:11 font-weight:600 letter-spacing:1 color:var(--ink) bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) text-transform:uppercase">原圖</span>
           </div>
 
           <div class="d:flex f:column gap:4">
@@ -71,7 +71,7 @@
           </div>
 
           <div class="d:flex f:column gap:8">
-            <label class="f:12 f:600 color:var(--ink-muted) letter-spacing:0.5 text-transform:uppercase">描圖精度</label>
+            <label class="f:12 font-weight:600 color:var(--ink-muted) letter-spacing:0.5 text-transform:uppercase">描圖精度</label>
             <app-tool-radio-group
               [options]="presetOptions"
               [value]="tracePreset()"
@@ -87,14 +87,14 @@
           >
             <span class="color:var(--ink-muted) f:12">預估時間：</span>
             <span
-              class="f:16 f:600 svg-draw__estimate-value"
+              class="f:16 font-weight:600 svg-draw__estimate-value"
               [class.color:var(--primary)]="!isTimeWarning()"
               [class.color:var(--warning)]="isTimeWarning()"
             >
               {{ estimatedTimeText() }}
             </span>
             @if (isTimeWarning()) {
-              <div class="color:var(--warning) f:12 f:600 mt:8 svg-draw__estimate-warning">
+              <div class="color:var(--warning) f:12 font-weight:600 mt:8 svg-draw__estimate-warning">
                 <span>⚠ 圖片較複雜，轉換需要較長時間</span>
               </div>
             }
@@ -149,7 +149,7 @@
           } @else if (status() === 'done') {
             <div class="rel d:flex ai:center jc:center w:100% h:200 h:300@sm bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden">
               <img [src]="svgPreviewUrl()" alt="SVG 描圖結果" class="max-w:100% max-h:100% object-fit:contain image-rendering:pixelated" />
-              <span class="abs top:8 left:8 p:2|8 f:11 f:600 letter-spacing:1 color:var(--on-primary) bg:var(--primary) border:1px|solid|var(--primary) text-transform:uppercase">SVG</span>
+              <span class="abs top:8 left:8 p:2|8 f:11 font-weight:600 letter-spacing:1 color:var(--on-primary) bg:var(--primary) border:1px|solid|var(--primary) text-transform:uppercase">SVG</span>
             </div>
 
             <div class="d:flex f:column gap:4">

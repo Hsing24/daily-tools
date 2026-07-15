@@ -13,7 +13,7 @@
     <div class="d:flex jc:space-between f:11 color:ink-disabled mt:4 user-select:none">
       @for (tick of ticks(); track tick) {
         <span
-          class="slider-tick cursor:pointer transition:color|0.1s|ease color:primary.is-active f:bold.is-active"
+          class="slider-tick cursor:pointer transition:color|0.1s|ease color:primary.is-active font-weight:600.is-active"
           [class.is-active]="value() >= tick"
           (click)="updateValue(tick)"
         >

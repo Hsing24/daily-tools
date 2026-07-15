@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: DevTool-Terminal-design-system
-description: A pixel-art terminal interface for a web-developer utility suite. Dark navy CRT canvases overlaid with low-opacity scanlines, chunky 2–4px hard-edged borders, and a single mint-green action color carry every interactive surface. Zsh-style chevron breadcrumbs segment navigation; a Cmd+K command palette is the primary input modality. Zero rounded corners, zero soft shadows, zero gradients — only monospace type, hard pixel-offset elevation, and the unmistakable text-first density of a power-user terminal.
+description: A pixel-art terminal interface for a web-developer utility suite. Dark navy CRT canvases overlaid with low-opacity scanlines, chunky 2–4px hard-edged borders, and a single mint-green action color carry every interactive surface. A fixed terminal header stays pinned to the viewport top; a powerline-style chevron breadcrumb (Primary mint → Secondary gold → plain text) segments navigation; a search palette (triggered with `/`) is the sole navigation modality, replacing off-canvas menus entirely. Zero rounded corners, zero soft shadows, zero gradients — only monospace type, hard pixel-offset elevation, and the unmistakable text-first density of a power-user terminal.
 
 colors:
   # Brand & accent
@@ -16,7 +16,7 @@ colors:
 
   # Surfaces
   canvas: "#0A1A2F"           # Pantone 5395c — primary dark-navy canvas
-  canvas-deep: "#050E1C"      # deepest layer — sidebar, modal scrim base
+  canvas-deep: "#050E1C"      # deepest layer — fixed header, footer, modal scrim base
   canvas-elevated: "#122339"  # raised panel surface
   canvas-elevated-2: "#15263F" # nested container surface
   canvas-input: "#081424"     # input / textarea fill
@@ -175,33 +175,6 @@ elevation:
   pixel-lg: "0 0 0 0 transparent"
 
 components:
-  global-sidebar:
-    backgroundColor: "{colors.canvas-deep}"
-    textColor: "{colors.ink}"
-    typography: "{typography.mono-body}"
-    rounded: "{rounded.none}"
-    border-left: "{borders.chunky}"
-    width: 240px
-    padding: 24px 16px
-  sidebar-section-label:
-    backgroundColor: transparent
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.pixel-eyebrow}"
-    rounded: "{rounded.none}"
-    padding: 16px 12px 8px 12px
-  sidebar-nav-item:
-    backgroundColor: transparent
-    textColor: "{colors.ink}"
-    typography: "{typography.mono-body}"
-    rounded: "{rounded.none}"
-    padding: 8px 12px
-  sidebar-nav-item-active:
-    backgroundColor: "{colors.canvas-elevated}"
-    textColor: "{colors.primary}"
-    typography: "{typography.mono-body-strong}"
-    rounded: "{rounded.none}"
-    padding: 8px 12px
-    border-left: "4px solid {colors.primary}"
   main-canvas:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
@@ -219,33 +192,38 @@ components:
     height: 40px
     padding: 0 16px
     border-bottom: "{borders.chunky}"
-  breadcrumb-zsh:
+    position: fixed # pinned to the viewport top on every breakpoint; main canvas reserves matching top spacing
+  breadcrumb-nav:
     backgroundColor: transparent
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
     height: 28px
-    gap: -14px # adjacent segments overlap by 14px so the chevron sits over the next segment
   breadcrumb-segment-home:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.on-primary}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
     padding: 4px 18px 4px 12px
+    border: none
     clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)"
+    # Same fill/text pairing as {component.button-primary}, shaped as a p10k-style powerline chevron. Negative-margined -14px into the category segment so its tip nests in that segment's left notch.
   breadcrumb-segment-category:
     backgroundColor: "{colors.gold}"
     textColor: "{colors.on-gold}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
-    padding: 4px 18px 4px 18px
-    clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)"
+    padding: 4px 18px
+    border: none
+    clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 0 50%)"
+    # Same fill/text pairing as {component.button-secondary}. Left notch receives the home segment's tip; right tip tapers freely into the canvas before the current-tool text. Hidden below 768px.
   breadcrumb-segment-current:
-    backgroundColor: "{colors.warning}"
-    textColor: "{colors.on-warning}"
+    backgroundColor: transparent
+    textColor: "{colors.primary}"
     typography: "{typography.mono-body-strong}"
     rounded: "{rounded.none}"
-    padding: 4px 18px 4px 18px
-    clip-path: "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)"
+    padding: 0
+    border: none
+    # Plain Primary Mint text — not a chevron, not a button. Marks "you are here"; carries aria-current="page".
   tool-panel:
     backgroundColor: "{colors.canvas-elevated}"
     textColor: "{colors.ink}"
@@ -307,6 +285,23 @@ components:
   button-ghost-focus:
     backgroundColor: "{colors.canvas-elevated}"
     textColor: "{colors.primary-bright}"
+    rounded: "{rounded.none}"
+    border: none
+  theme-switcher:
+    backgroundColor: transparent
+    rounded: "{rounded.none}"
+    border: "{borders.chunky}"
+    # Segmented control wrapper. Option divider is a 2px mint border-right on all but the last child.
+  theme-switcher-option:
+    backgroundColor: transparent
+    textColor: "{colors.primary}"
+    typography: "{typography.mono-button}"
+    rounded: "{rounded.none}"
+    border: none
+    padding: 4px 10px
+  theme-switcher-option-active:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
     rounded: "{rounded.none}"
     border: none
   key-chip:
@@ -414,13 +409,15 @@ components:
     rounded: "{rounded.none}"
     border-top: "{borders.hairline}"
     padding: 16px 32px
+    prompt-glyph: "$" # leading mint "$" glyph on the version string, matching the prompt-bar's terminal voice
+    prompt-glyph-color: "{colors.primary}"
 ---
 
 ## Overview
 
 **DevTool Terminal** wears the skin of an 8-bit CRT but carries a modern, keyboard-first information architecture. Every page is a stack of bordered "panels" sitting on a dark navy canvas, framed by chunky 2–4px hard-edged borders in a single mint-green action color (`{colors.primary}` — Pantone 333c equivalent). Typography is exclusively monospace; display headlines use the pixel-bitmap face VT323, body and UI use IBM Plex Mono. Color is reserved: a near-black navy canvas, mint green for action, gold for status, red for destructive — no fourth accent, no decorative gradients, no soft shadows.
 
-Density is unusually high compared to modern marketing-led design systems, and that is intentional. The product is a power-user terminal; cramped grids, dense link columns, and persistent breadcrumbs are features, not bugs. The dashboard features a text-only, off-canvas sidebar (no icons, per PRD) on the right, toggled by the prompt bar, and devotes the viewport to a single active tool surface. A persistent Zsh-style chevron breadcrumb sits above each tool, and a Cmd+K command palette is the primary navigation modality — so much so that the UI is comfortable being half-empty until the user invokes it.
+Density is unusually high compared to modern marketing-led design systems, and that is intentional. The product is a power-user terminal; cramped grids, dense link columns, and persistent breadcrumbs are features, not bugs. There is no sidebar: the prompt bar is `position: fixed` to the viewport top on every page and devotes the rest of the viewport to a single active tool surface. A persistent powerline-style chevron breadcrumb (Home as a Primary-mint chevron → category as a Secondary-gold chevron, its tip tapering freely → the current tool as plain Primary Mint text) sits above each tool, and a search palette — triggered with `/` or the header's search key — is the sole navigation modality. It opens already showing every tool; typing narrows the list by tool name or category name. This search-first model fully replaces off-canvas menus, so much so that the UI is comfortable being half-empty until the user invokes it.
 
 Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Network Tools — the chassis is identical. Tools differ in content, never in chrome. A single low-opacity scanline overlay (`{colors.scanline-tint}` at ~4% alpha) is rendered above the canvas to evoke CRT phosphor; it is the only ambient texture in the system.
 
@@ -431,9 +428,9 @@ Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Netw
 - Chunky pixel borders at 2px (default) and 4px (focused / modal); zero rounded corners anywhere.
 - No shadows anywhere — depth comes only from flat surface-color stepping and chunky borders; buttons are flat, borderless solid-color blocks.
 - One ambient effect: the CRT scanline overlay (~4% alpha repeating gradient).
-- Zsh-style chevron breadcrumb segments — a powerline "arrow trail" (cf. powerlevel10k / p10k prompt) built with `clip-path`, not SVG, so they scale crisply. Segment fills run mint → gold → red (action → status → destructive).
-- Cmd+K command palette as the primary input modality; every tool reachable in ≤ 2 keystrokes.
-- Text-only sidebar nav — no icons (PRD §2 requirement).
+- Powerline-style chevron breadcrumb segments — Home (mint) and Category (gold) are `clip-path` polygon chevrons in the tradition of a Zsh / powerlevel10k (p10k) prompt, overlapping by 14px so the trail reads as one continuous arrow. The current tool drops the chevron entirely and renders as plain Primary Mint text (no fill, no border) — "you are here" is text, not a chip.
+- A fixed (`position: fixed`) terminal header pinned to the viewport top on every breakpoint; the main canvas reserves matching top spacing so content never sits underneath it.
+- Search palette as the sole navigation modality; every tool reachable in ≤ 2 keystrokes (`/` then Enter). Opens with the full tool list showing — no sidebar, no off-canvas drawer.
 - Desktop-first layout optimized for wide-screen terminal simulations; mobile is a graceful degradation, not a primary target.
 
 ## Colors
@@ -444,14 +441,14 @@ Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Netw
 
 - **Mint Green** (`{colors.primary}` — #3FE0C5, Pantone 333c equivalent): The single action color. Every link, every primary CTA, every focus ring, the prompt glyph (`>`), the breadcrumb "current location" segment. This is the one "click me" signal in the system.
 - **Mint Bright** (`{colors.primary-bright}` — #6BFFE0): Active/pressed state on primary buttons; the blinking caret color in the Cmd+K input.
-- **Mint Dim** (`{colors.primary-dim}` — #2BAE96): Upstream breadcrumb segments (Home > Category before the current tool), Cmd+K list-item-selected fill, disabled primary states that still need to read as branded.
+- **Mint Dim** (`{colors.primary-dim}` — #2BAE96): The `›` chevron separators between breadcrumb segments, Cmd+K list-item-selected fill, disabled primary states that still need to read as branded.
 - **Gold** (`{colors.gold}` — #F1B434, Pantone 142c equivalent): Secondary accent for non-destructive status — pending operations, warning toasts that don't block, the "BETA" label on a tool. Never used as a primary CTA.
 - **Warning Red** (`{colors.warning}` — #E03C31, Pantone 179c equivalent): Destructive actions, validation errors, error toasts. The only red in the system.
 
 ### Surfaces
 
 - **Canvas** (`{colors.canvas}` — #0A1A2F, Pantone 5395c equivalent): The primary dark-navy canvas. The body, main content area, default tool background.
-- **Canvas Deep** (`{colors.canvas-deep}` — #050E1C): The deepest layer. Sidebar background, modal scrim base, footer.
+- **Canvas Deep** (`{colors.canvas-deep}` — #050E1C): The deepest layer. Fixed prompt bar background, modal scrim base, footer.
 - **Canvas Elevated** (`{colors.canvas-elevated}` — #122339): Raised panel surface — tool panels, Cmd+K modal box.
 - **Canvas Elevated 2** (`{colors.canvas-elevated-2}` — #15263F): A second tier for nested containers (e.g., a panel inside a panel), and the home breadcrumb segment fill.
 - **Canvas Input** (`{colors.canvas-input}` — #081424): The internal fill of text inputs and textareas — deliberately darker than the canvas so the input reads as a recessed slot.
@@ -462,7 +459,7 @@ Across all surfaces — JSON Formatter, Base64, CSS Minifier, Regex Tester, Netw
 
 - **Ink Bright** (`{colors.ink-bright}` — #E6F1FF): Headings, strong inline emphasis, key-chip text. The brightest text tone in the system.
 - **Ink** (`{colors.ink}` — #C9D5E8): Default body text on all dark surfaces.
-- **Ink Muted** (`{colors.ink-muted}` — #6A7C99): Captions, footer copy, separators, inactive sidebar labels.
+- **Ink Muted** (`{colors.ink-muted}` — #6A7C99): Captions, footer copy, separators, search-result category labels.
 - **Ink Disabled** (`{colors.ink-disabled}` — #3A4A66): Placeholder text in inputs, disabled labels.
 - **On-Primary** (`{colors.on-primary}` — #0A1A2F): Text rendered on mint-green or gold surfaces; uses the canvas color for maximum contrast (~9.5:1 against `{colors.primary}`).
 - **On-Warning** (`{colors.on-warning}` — #FFFFFF): Text on the red warning button — pure white for legibility.
@@ -507,7 +504,7 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 
 ### Font Family
 
-- **Pixel display**: `VT323, 'Press Start 2P', ui-monospace, monospace` — VT323 is a bitmap-style monospace based on a 1970s CRT terminal face. Used for every display headline and the eyebrow label above sidebar sections. `Press Start 2P` is the substitution path for tiny pixel headers (≤ 24px) where VT323's free-stroke design loses fidelity.
+- **Pixel display**: `VT323, 'Press Start 2P', ui-monospace, monospace` — VT323 is a bitmap-style monospace based on a 1970s CRT terminal face. Used for every display headline and the eyebrow label above content sections. `Press Start 2P` is the substitution path for tiny pixel headers (≤ 24px) where VT323's free-stroke design loses fidelity.
 - **UI / body**: `'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace` — IBM Plex Mono carries every interactive surface, every paragraph, every button label, and every code editor. The whole product is monospaced.
 - **OpenType features**: Body text uses default settings. Code editors enable `font-variant-ligatures: none` to keep `==`, `=>`, `!=` visually unfused — developers reviewing JSON or regex output need each character to render literally.
 
@@ -519,7 +516,7 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 | `{typography.pixel-h1}` | 48px | 400 | 1.05 | 0 | Tool page title |
 | `{typography.pixel-h2}` | 36px | 400 | 1.1 | 0 | Section heading inside a tool |
 | `{typography.pixel-h3}` | 28px | 400 | 1.15 | 0 | Sub-section / Cmd+K modal title |
-| `{typography.pixel-eyebrow}` | 18px | 400 | 1.0 | 2px | Sidebar section labels, status eyebrows |
+| `{typography.pixel-eyebrow}` | 18px | 400 | 1.0 | 2px | Section eyebrow labels, status eyebrows |
 | `{typography.mono-h4}` | 20px | 600 | 1.3 | 0 | In-panel heading; tool-panel title |
 | `{typography.mono-body-lg}` | 16px | 400 | 1.5 | 0 | Lead paragraph, prompt input |
 | `{typography.mono-body}` | 14px | 400 | 1.55 | 0 | Default paragraph, all UI labels |
@@ -537,7 +534,7 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 - **No italics.** Monospace fonts render emphasis poorly in italic. Use weight 600 or surface color for emphasis instead.
 - **Letter-spacing widens at tiny sizes.** `{typography.mono-caption}` (12px) gets +0.5px tracking; `{typography.mono-button}` and `{typography.mono-key-chip}` get +1px; `{typography.pixel-eyebrow}` gets +2px. This keeps small labels readable on dark backgrounds without bumping size.
 - **Line-height is context-specific.** Display sizes use 1.0–1.15 (tight, pixel-bitmap stacking). UI body uses 1.55 for breathing room inside dense panels. Code editors use 1.6 — the extra leading matters when reading JSON.
-- **No `:visited` link styling.** Browser-default visited link styles override our action color. Reset `a:visited { color: inherit; }` globally and let surface context define link tone.
+- **No `:visited` link styling.** Browser-default visited link styles override our action color. Reset `:where(a:visited) { color: inherit; }` globally — wrapped in `:where()` so the reset carries zero specificity and never outranks a component's own color class (e.g. the breadcrumb home chevron, button variants) — and let surface context define link tone.
 
 ### Font Substitutes
 
@@ -552,13 +549,13 @@ The JSON Formatter and other code-display surfaces ship two themes. **Monokai** 
 - **Base unit:** 4px. The grid is tighter than typical modern SaaS because terminal density is a deliberate brand cue.
 - **Tokens:** `{spacing.xxs}` 2px · `{spacing.xs}` 4px · `{spacing.sm}` 8px · `{spacing.md}` 12px · `{spacing.lg}` 16px · `{spacing.xl}` 24px · `{spacing.xxl}` 32px · `{spacing.section}` 48px.
 - **Tool panel padding:** `{spacing.xl}` (24px) — generous internal padding so chunky 2px borders don't crowd content.
-- **Main canvas padding:** `{spacing.xxl}` (32px) — the gutter between sidebar/borders and the tool panel inside.
+- **Main canvas padding:** `{spacing.xxl}` (32px) — the gutter between the canvas edge and the tool panel inside.
 - **Button padding:** 10px × 20px — exact pixel values, not token-derived, because button hit areas need to be deterministic for keyboard navigation.
 - **Section vertical rhythm:** `{spacing.section}` (48px) between distinct content blocks inside a tool surface.
 
 ### Grid & Container
 
-- **Dashboard Layout**: A 240px off-canvas sidebar drawer (`{component.global-sidebar}`) toggled from the prompt bar, which remains hidden on the right until invoked, and a fluid main canvas. This keeps the workspace clean and focused across all viewports.
+- **Dashboard Layout**: No sidebar. A `{component.prompt-bar}` fixed to the viewport top and a fluid main canvas that absorbs the rest of the height. Navigation happens exclusively through the search palette, so the chassis stays a single-column stack at every breakpoint.
 - **Max content width**: none. The main canvas absorbs all available width because the product is desktop-first and benefits from wide terminal real-estate. Individual tool panels may cap at 1200px when content (e.g., regex tester input) doesn't need more.
 - **Dual-pane tools** (JSON Formatter, Base64): 50/50 split with a 2px `{component.dual-pane-divider}` between input and output.
 - **Gutters between panels**: `{spacing.lg}` (16px) — tight, consistent with terminal density.
@@ -571,7 +568,7 @@ DevTool Terminal does not aspire to modern marketing-page whitespace. The produc
 
 | Level | Treatment | Use |
 |---|---|---|
-| Flat | No border, no shadow | Sidebar nav items, breadcrumb segments, buttons, body copy |
+| Flat | No border, no shadow | Breadcrumb segments, buttons, body copy |
 | Hairline | `{borders.hairline}` (1px `{colors.border-muted}`) | In-panel dividers, key-chip outlines, default text-input |
 | Chunky | `{borders.chunky}` (2px `{colors.border-default}`) | Tool panels, focused inputs |
 | Chunky Thick | `{borders.chunky-thick}` (4px `{colors.border-default}`) | Focused/modal panel, Cmd+K modal box |
@@ -609,51 +606,47 @@ Optional CRT flicker animation (1.5% opacity oscillation at 60fps) MUST be gated
 |---|---|---|
 | `{rounded.none}` | 0px | Everything |
 
-That is the entire shape system. There is no `sm`, no `lg`, no `pill`. Pixel terminals do not round corners. Every panel, every button, every input, every modal is a hard rectangle. If a future component is tempted to round its corners, the answer is no — change the elevation or the border thickness instead.
+That is the entire shape system. There is no `sm`, no `lg`, no `pill`. Pixel terminals do not round corners. Every panel, every button, every input, and every modal is a hard rectangle. The one deliberate exception is the breadcrumb's chevron trail (below) — if a future component outside that trail is tempted to round its corners, the answer is no — change the elevation or the border thickness instead.
 
 ### Chevron Breadcrumb Geometry
 
-The Zsh-style breadcrumb segments are the closest the system gets to a non-rectangular shape, and they are built with `clip-path` polygons, not SVG, so they scale with content:
+The Home and Category breadcrumb segments are the only non-rectangular shapes in the system, built with `clip-path` polygons (not SVG) so they scale with content, in the tradition of a Zsh / powerlevel10k (p10k) prompt:
 
 - **Home segment** (leftmost): polygon with a flat left edge and a 14px-wide right-pointing chevron.
   ```css
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
   ```
-- **Middle/current segments**: polygon with a 14px-wide chevron notch on the left edge (to receive the previous segment's tip) and a 14px-wide right-pointing chevron on the right edge.
+- **Category segment**: polygon with a 14px-wide chevron notch on the left edge (to receive the home segment's tip) and its own 14px-wide right-pointing chevron on the right edge.
   ```css
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 0 50%);
   ```
-- **Overlap**: adjacent segments are negatively margined by `-14px` so the right chevron of segment N sits over segment N+1. The chevron reads as "pointing to the next segment."
-- **Color progression**: home → `{colors.primary}` (mint / action) → category → `{colors.gold}` (status) → current → `{colors.warning}` (red / destructive). The trail walks through all three semantic accents, mirroring a powerlevel10k (p10k) shell prompt.
+- **Overlap**: the home segment is negatively margined by `-14px` (at ≥768px only) so its right chevron tip sits under the category segment's left notch. The category segment is not negatively margined — its own right-hand tip tapers freely against the plain canvas before the current-tool text begins.
+- **Color progression**: home → `{colors.primary}` (mint / action) → category → `{colors.gold}` (status). The trail stops there — the current-tool segment is plain text, not a third chevron — mirroring a powerlevel10k (p10k) shell prompt that ends in plain terminal output.
 
 ### Image & Icon Policy
 
 - **No raster imagery in the UI chrome.** No product renders, no hero photography, no decorative illustration.
 - **Icons in tool content** (e.g., a copy-to-clipboard glyph inside a code editor) use pixel-art SVG at 16x16 or 24x24 with `image-rendering: pixelated` and `shape-rendering: crispEdges` to preserve the 8-bit feel.
-- **Sidebar nav has no icons** (PRD §2 requirement). Navigation is pure text.
+- **Navigation is icon-free.** The header, breadcrumb, and search palette are pure text — no icons anywhere in navigation chrome.
 - **Favicon and Apple Touch icon** use the pixelated prompt symbol `>` in mint green on canvas-deep — PRD §3 requirement.
 
 ## Components
 
-### Global Sidebar
-
-**`global-sidebar`** — A 240px-wide off-canvas drawer that slides out from the right edge. Background `{colors.canvas-deep}`, text `{colors.ink}` in `{typography.mono-body}`, left edge `{borders.chunky}` (2px mint). Contains text-only navigation grouped by tool category. **No icons.** Section labels render in `{typography.pixel-eyebrow}` (VT323 18px, +2px tracking, `{colors.ink-muted}`).
-
-**`sidebar-nav-item`** — A plain text link, padding 8px × 12px. Default: `{colors.ink}` text. Hover/focus: text brightens to `{colors.ink-bright}`. No background fill on hover — discovery cue is text-color only.
-
-**`sidebar-nav-item-active`** — Background `{colors.canvas-elevated}`, text `{colors.primary}` at weight 600, 4px-solid mint left border. Active state is the only sidebar item that gets a fill.
-
 ### Prompt Bar
 
-**`prompt-bar`** — A 40px-tall horizontal strip pinned below the top of the main canvas (above the breadcrumb). Background `{colors.canvas-deep}`, 2px mint bottom border. Left: a live prompt-style status line in `{typography.mono-prompt}` rendering `user@devtool-terminal ~/path/to/tool $ `. Right: theme switcher (Monokai/Solarized) as a `{component.button-ghost}` mini-button, plus a Cmd+K trigger key chip.
+**`prompt-bar`** — A 40px-tall horizontal strip, `position: fixed` to the top of the viewport on every breakpoint (not sticky, not scoped to the main canvas). Background `{colors.canvas-deep}`, 2px mint bottom border. The main canvas reserves matching top spacing (`margin-top: 40px`) so content never renders underneath it. Left: brand mark plus a live prompt-style status line in `{typography.mono-prompt}` rendering `user@daily-tools ~/path $ inspect --theme crt`. Right: the `{component.theme-switcher}` segmented control (Dark/Light), plus the search trigger — a `/` key chip labeled "搜尋工具" that opens the search palette.
 
-### Breadcrumb (Zsh Chevron)
+### Theme Switcher
 
-**`breadcrumb-zsh`** — A horizontal sequence of three colored chevron segments rendered above each tool's title: Home > Category > Current Tool. Height 28px, segments overlap by 14px to create the continuous powerline "arrow trail" pattern of a Zsh / powerlevel10k (p10k) prompt. Each segment is a single `<a>` (or `<span>` on the current item) with `clip-path` shaping. The fills run through the three semantic accents in order — action → status → destructive.
+**`theme-switcher`** — A segmented control, not a `{component.button-ghost}`. Wrapper: `d:inline-flex`, `{borders.chunky}` (2px mint border), no rounding. Each option button is borderless with a 2px mint `border-right` divider between segments (`:not(:last-child)`). Active segment: `{colors.primary}` fill, `{colors.on-primary}` text — identical fill/text pairing to `{component.button-primary}`. Inactive segment: transparent background, `{colors.primary}` text; hover fills `{colors.canvas-elevated-2}` and brightens text to `{colors.primary-bright}`. Used for the Dark/Light (Monokai/Solarized) toggle in the prompt bar and demonstrated standalone in the design-system page's Forms section.
 
-- `{component.breadcrumb-segment-home}` — `{colors.primary}` (mint) fill, `{colors.on-primary}` text. Always reads "DevTool".
-- `{component.breadcrumb-segment-category}` — `{colors.gold}` fill, `{colors.on-gold}` text. The tool category (e.g., "Encoders", "Formatters").
-- `{component.breadcrumb-segment-current}` — `{colors.warning}` (red) fill, `{colors.on-warning}` text. The current tool name.
+### Breadcrumb
+
+A horizontal sequence rendered above each tool's title: Home → Category → Current Tool, in the tradition of a Zsh / powerlevel10k (p10k) shell prompt. Home and Category are colored chevrons built with `clip-path` (see **Chevron Breadcrumb Geometry** above); Current is plain text with no chevron at all:
+
+- `{component.breadcrumb-segment-home}` — `{colors.primary}` (mint) fill, `{colors.on-primary}` text — the same fill/text pairing as `{component.button-primary}`, shaped as a p10k chevron. Always reads "DevTool" and links to `/`.
+- `{component.breadcrumb-segment-category}` — `{colors.gold}` fill, `{colors.on-gold}` text — the same fill/text pairing as `{component.button-secondary}`, shaped as a p10k chevron with a notch that receives the home segment's tip. The tool category (e.g., "文字工具", "格式化 / 轉換"). Hidden below 768px, along with the home segment's overlap margin.
+- `{component.breadcrumb-segment-current}` — Plain text, no fill, no border, no `clip-path`: `{colors.primary}` (Primary Mint) in `{typography.mono-body-strong}`. The current tool name; carries `aria-current="page"`.
 
 ### Tool Panel
 
@@ -683,15 +676,17 @@ All buttons are sharp, **borderless**, flat solid-color rectangles — no border
 - **`tool-slider`** — A pixel-art range slider. Background track is 4px height in `{colors.border-muted}`. Drag handle is a square block in `{colors.primary}` with 2px `{colors.primary-bright}` border. Active progress is filled dynamic linear-gradient in `{colors.primary}`. Standard ticks below the slider toggle state and highlight active color if value is equal or greater than the tick value.
 
 
-### Cmd+K Command Palette
+### Search Palette
 
-The core of the keyboard-first UX. Triggered with `⌘K` (macOS) / `Ctrl+K` (Windows/Linux).
+The core of the keyboard-first UX and, since the sidebar was removed, the **only** navigation surface in the product. Triggered with `/` or by clicking the header's search key. There is no separate "show all" command — the palette opens with the full tool list already visible.
 
 - **`cmd-k-overlay`** — Full-viewport scrim at `{colors.surface-overlay}` (rgba(10, 26, 47, 0.85)). Clicking outside dismisses. Captures pointer events.
 - **`cmd-k-modal`** — Centered 640px-wide box (90vw on mobile). Background `{colors.canvas-elevated}`, `{borders.chunky-thick}` (4px mint border), `{elevation.pixel-lg}` (8px hard offset). Padding `{spacing.xl}` (24px). No rounded corners.
-- **`cmd-k-prompt-input`** — A bottom-bordered text input rendered as a terminal prompt. Leading glyph `>` in `{colors.primary}` (constant, not part of the input value), then a blinking mint caret. Typography `{typography.mono-prompt}` (16px / 500). Border bottom only (2px solid `{colors.primary}`), no left/right/top.
-- **`cmd-k-list-item`** — A single-row list item under the input. Padding 10px × 12px, `{typography.mono-body}` text, `{colors.ink}`. Right-aligned key chip (`{component.key-chip}`) showing the shortcut.
+- **`cmd-k-prompt-input`** — A bottom-bordered text input rendered as a terminal prompt. Leading glyph `>` in `{colors.primary}` (constant, not part of the input value), then a blinking mint caret. Typography `{typography.mono-prompt}` (16px / 500). Border bottom only (2px solid `{colors.primary}`), no left/right/top. Empty input is a valid, meaningful state — it means "show every tool."
+- **`cmd-k-list-item`** — A single-row list item under the input. Padding 10px × 12px, `{typography.mono-body}` text, `{colors.ink}`. Right-aligned category label in `{typography.mono-caption}` `{colors.ink-muted}` — every result shows the category it matched by, since a tool can surface via its own name or its category's name.
 - **`cmd-k-list-item-selected`** — The keyboard-highlighted row. Background `{colors.primary-dim}`, text `{colors.on-primary}` at weight 600, 4px mint left border. Enter key activates.
+
+**Matching rules** — a tool appears in the result list when any of the following is true: (a) the query is empty, (b) the query is a substring of the tool's own name, or (c) the query is a substring of the tool's category name. There is no `all` keyword or other special-cased query string.
 
 ### Key Chip
 
@@ -707,7 +702,7 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 
 ### Footer
 
-**`footer`** — A thin 1-row strip at the bottom of the viewport. Background `{colors.canvas-deep}`, `{colors.ink-muted}` text in `{typography.mono-caption}` (12px / +0.5px tracking), `{borders.hairline}` top border, padding 16px × 32px. Contents: version string, GitHub link, theme indicator, optional uptime/build SHA — minimal terminal status-line aesthetic.
+**`footer`** — A thin 1-row strip at the bottom of the document flow (static, not fixed — only the prompt bar is pinned). Background `{colors.canvas-deep}`, `{colors.ink-muted}` text in `{typography.mono-caption}` (12px / +0.5px tracking), `{borders.hairline}` top border, padding 16px × 32px. The version string leads with a mint `$` prompt glyph, mirroring the prompt bar's terminal voice. Contents: `$`-prefixed version string, theme indicator, GitHub link — minimal terminal status-line aesthetic.
 
 ## Do's and Don'ts
 
@@ -716,11 +711,12 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 - Render all text — body, button, code, headline — in a monospace face. VT323 for pixel display, IBM Plex Mono for everything else.
 - Apply **no shadows** — not even hard pixel-offset drops. Convey depth with flat surface-color stepping (`canvas → canvas-elevated → canvas-elevated-2`) and chunky borders. On a button's active state, brighten the fill instead.
 - Keep buttons **borderless**: flat solid-color blocks with no border and no shadow. Distinguish them by fill color (mint / gold / red), not by outline.
-- Build chevron breadcrumb shapes with `clip-path`, not SVG, so they remain crisp at any size.
+- Build the breadcrumb's Home and Category segments as `clip-path` powerline chevrons (mint fill / gold fill, matching `{component.button-primary}` / `{component.button-secondary}` colors); render the current-tool segment as plain `{colors.primary}` text with no fill and no chevron.
+- Keep the prompt bar `position: fixed` to the viewport top on every breakpoint. Reserve matching top spacing on the main canvas so content never renders underneath it.
 - Overlay the canvas with the CRT scanline gradient at exactly ~4% alpha. Gate any flicker animation behind `prefers-reduced-motion: no-preference`.
 - Use chunky 2px borders by default and 4px borders for focused/modal surfaces. Border color signals semantic intent (mint = action/focused, gold = warning, red = error).
-- Make Cmd+K reachable from every page; treat it as the primary navigation modality.
-- Keep the sidebar text-only. The PRD explicitly bans icons in sidebar navigation.
+- Make the search palette reachable from every page (`/` shortcut or the header's search key); treat it as the sole navigation modality — there is no sidebar to fall back on.
+- Let the search palette default to showing every tool when the query is empty, and match on both tool name and category name. Don't special-case an `all` keyword.
 
 ### Don't
 - Don't add `border-radius` anywhere. The pixel-terminal grammar collapses if any corner is rounded.
@@ -730,9 +726,9 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 - Don't use proportional fonts (sans-serif, serif). The whole layout assumes monospace cell width.
 - Don't use weight 500 or italic. The ladder is 400 / 600 only; emphasis is weight or color, never slant.
 - Don't add a fourth accent color. If a new state needs to be communicated, use surface stepping or border thickness, not a new hue.
-- Don't render icons in the sidebar (PRD §2). Tool category icons elsewhere in the product are allowed only as pixel-art SVG.
+- Don't reintroduce a sidebar or off-canvas drawer. Navigation is search-only; don't render icons in navigation chrome (PRD §2). Tool category icons elsewhere in the product are allowed only as pixel-art SVG.
 - Don't animate the scanline opacity above ~5% — flicker becomes a seizure risk above ~6% and a brand violation above ~10%.
-- Don't auto-focus the Cmd+K input on page load. It is invoked, not ambient. (Auto-focus traps screen readers.)
+- Don't auto-focus the search palette's input before the palette itself is opened. It is invoked, not ambient. (Auto-focus traps screen readers.)
 
 ## Responsive Behavior
 
@@ -740,10 +736,10 @@ Toasts appear in the bottom-right corner of the viewport. All toasts share `{col
 
 | Name | Width | Key Changes |
 |---|---|---|
-| Mobile | ≤ 639px | Single-column stack; sidebar drawer toggled from the prompt bar; tool panels span full viewport width minus 16px gutters; Cmd+K modal scales to 90vw with same chunky border |
-| Tablet | 640–1023px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; dual-pane tools collapse to vertically stacked panes |
-| Small Desktop | 1024–1439px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; dual-pane tools side-by-side; default development target |
-| Wide Desktop | ≥ 1440px | Sidebar drawer (toggled via prompt bar key chip); main canvas full-width; tool panels may opt-in to a 1200px max-width centered layout; the rest of the canvas extends to the viewport edges |
+| Mobile | ≤ 639px | Single-column stack; fixed prompt bar persists at the top; breadcrumb category segment hidden; tool panels span full viewport width minus 16px gutters; search palette scales to 90vw with same chunky border |
+| Tablet | 640–1023px | Fixed prompt bar; main canvas full-width; dual-pane tools collapse to vertically stacked panes |
+| Small Desktop | 1024–1439px | Fixed prompt bar; main canvas full-width; dual-pane tools side-by-side; default development target |
+| Wide Desktop | ≥ 1440px | Fixed prompt bar; main canvas full-width; tool panels may opt-in to a 1200px max-width centered layout; the rest of the canvas extends to the viewport edges |
 
 Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation, not a parity goal. Some tools (e.g., a wide regex tester with many capture groups) will surface a "Use a wider viewport for full functionality" notice on ≤ 639px.
 
@@ -751,15 +747,15 @@ Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation
 
 - Minimum 44 × 44px for any tappable element, per WCAG 2.5.8 (Target Size Minimum, AA, new in 2.2). Button height of 40px + 2px border × 2 = 44px hit area when accounting for the chunky border.
 - Key chips (11px text in 4×8 padding) fall below 44px but are display-only — they show the shortcut, they aren't tappable.
-- The Cmd+K trigger key chip in the prompt bar is the exception: it must be a true 44 × 44 button, with the chip merely centered inside it.
+- The search trigger key chip in the prompt bar is the exception: it must be a true 44 × 44 button, with the chip merely centered inside it.
 
 ### Collapsing Strategy
 
-- **Sidebar**: off-canvas drawer at all breakpoints, toggled via a prompt-bar mini-button labeled `[≡]` (pixel hamburger).
-- **Breadcrumb**: full 3-segment chevron at ≥ 768px → collapses to 2 segments (Home > Current) at ≤ 767px, with the category segment hidden.
+- **Prompt bar**: `position: fixed` to the viewport top at every breakpoint; never collapses into a drawer or requires a toggle. There is no sidebar.
+- **Breadcrumb**: 3 segments (Home chevron, Category chevron, current-tool text) at ≥ 768px → collapses to 2 (Home chevron, current-tool text) at ≤ 767px, with the category segment hidden and the home segment's `-14px` overlap margin dropped so it doesn't bleed into the plain text.
 - **Dual-pane tools**: side-by-side at ≥ 768px → vertically stacked at ≤ 767px, with the `{component.dual-pane-divider}` rotating from vertical to horizontal.
 - **Display headings**: `{typography.pixel-display}` (64px) → `{typography.pixel-h1}` (48px) at ≤ 1023px → `{typography.pixel-h2}` (36px) at ≤ 639px.
-- **Cmd+K modal**: 640px → 90vw at ≤ 639px; chunky border thickness (4px) and pixel-offset shadow are preserved at all sizes.
+- **Search palette**: 640px → 90vw at ≤ 639px; chunky border thickness (4px) and pixel-offset shadow are preserved at all sizes.
 
 ### Image & CRT Behavior
 
@@ -784,10 +780,10 @@ Per PRD §5, **desktop is the primary target**. Mobile is a graceful degradation
 - **Internationalization beyond ASCII** is unverified. VT323 was subset to printable ASCII for performance; CJK and combining-mark scripts will fall back to the system monospace and lose pixel fidelity.
 - **Accessibility of the CRT scanline overlay** at ~4% alpha has not been audited against WCAG 1.4.3 contrast for the underlying text. The overlay sits above content with `pointer-events: none`, but its tint could nudge contrast below 4.5:1 on already-marginal pairings. Audit per-tool.
 - **`prefers-reduced-motion` for the scanline flicker** is specified as a hard requirement, but the static overlay itself is non-motion and not toggled — some users with photosensitive epilepsy may still find the static pattern uncomfortable. A user-toggle to disable the overlay entirely is recommended but not yet specced.
-- **Keyboard accessibility of the Cmd+K modal on mobile** is platform-dependent. iOS Safari does not expose a `Cmd` modifier; the on-screen "≡" key chip becomes the canonical trigger on touch devices.
+- **Keyboard accessibility of the search palette on mobile** is platform-dependent. The `/` shortcut requires a hardware keyboard; the always-visible search key chip in the fixed prompt bar is the canonical trigger on touch devices, since there is no off-screen menu to fall back on.
 - **Focus management** when navigating between tool panels via keyboard is described conceptually (`{component.tool-panel-focused}`) but the focus-trap mechanics (Tab order, Escape behavior, return-focus targets) are not yet enumerated.
 - **Print styles** are undefined. The product is a runtime terminal; printed output (e.g., a JSON Formatter result) currently inherits the dark canvas and would burn ink. A monochrome print stylesheet is needed but out of scope for v1.
-- **Icon library scope.** The PRD bans sidebar icons but allows pixel-art icons inside tool content (e.g., copy/paste glyphs). The exact pixel icon set is not yet defined; current usage is ad-hoc per tool.
+- **Icon library scope.** The PRD bans icons in navigation chrome but allows pixel-art icons inside tool content (e.g., copy/paste glyphs). The exact pixel icon set is not yet defined; current usage is ad-hoc per tool.
 
 ## Styling & Enforcement Rules
 

@@ -80,7 +80,7 @@ export class Design {
     { id: "components", label: "03 元件樣本" },
     { id: "layout-chassis", label: "04 工具配置" },
     { id: "tiles", label: "05 工具磁磚" },
-    { id: "command", label: "06 Cmd+K" },
+    { id: "command", label: "06 搜尋工具" },
     { id: "forms", label: "07 表單" },
     { id: "responsive", label: "08 響應式" },
   ];
@@ -103,7 +103,7 @@ export class Design {
       title: "表面與畫布 Surfaces",
       items: [
         { name: "Canvas", value: "#0A1A2F", description: "主內容背景，承接 CRT scanline overlay。", cssVar: "--canvas" },
-        { name: "Canvas Deep", value: "#050E1C", description: "側欄、prompt bar、footer、modal scrim 基底。", cssVar: "--canvas-deep" },
+        { name: "Canvas Deep", value: "#050E1C", description: "Fixed prompt bar、footer、modal scrim 基底。", cssVar: "--canvas-deep" },
         { name: "Canvas Elevated", value: "#122339", description: "工具面板、Cmd+K modal、active nav item。", cssVar: "--canvas-elevated" },
         { name: "Canvas Elevated 2", value: "#15263F", description: "面板內的鍵帽、列表選取列、次級資料槽。", cssVar: "--canvas-elevated-2" },
         { name: "Input Slot", value: "#081424", description: "文字輸入與 textarea 的凹槽色。", cssVar: "--canvas-input" },

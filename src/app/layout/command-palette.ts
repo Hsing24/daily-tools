@@ -24,6 +24,10 @@ interface ToolGroup {
   readonly tools: readonly ToolItem[];
 }
 
+interface MatchedTool extends ToolItem {
+  readonly category: string;
+}
+
 @Component({
   selector: "app-command-palette",
   template: `
@@ -31,7 +35,7 @@ interface ToolGroup {
       <div class="cmd-k-modal" (click)="$event.stopPropagation()">
         <!-- 頂部資訊區 -->
         <div class="d:flex justify-content:space-between align-items:center mb:16">
-          <span class="f:20 font-family:var(--font-pixel) color:var(--primary)">COMMAND PALETTE</span>
+          <span class="f:20 font-family:var(--font-pixel) color:var(--primary)">搜尋工具</span>
           <span class="f:12 color:var(--ink-muted)">[ESC] 關閉</span>
         </div>
 
@@ -44,7 +48,7 @@ interface ToolGroup {
             [value]="query()"
             (input)="onInputChange($event)"
             class="cmd-k-input"
-            placeholder="輸入關鍵字，或輸入 'all' 顯示全部頁面..."
+            placeholder="輸入工具名稱或分類進行搜尋..."
             (keydown.escape)="onEscape($event)"
             (keydown.enter)="onInputEnter($event)"
             (keydown.arrowdown)="onInputArrowDown($event)"
@@ -52,32 +56,30 @@ interface ToolGroup {
           />
         </div>
 
-        <!-- 搜尋結果區 -->
-        @if (query().length > 0) {
-          <div class="cmd-k-list">
-            @for (item of filteredTools(); track item.route; let i = $index) {
-              <button
-                #resultButton
-                type="button"
-                class="cmd-k-list-item"
-                [class.cmd-k-list-item-selected]="focusedIndex() === i"
-                (click)="navigateTo(item)"
-                (keydown.escape)="onEscape($event)"
-                (keydown.arrowdown)="onResultArrowDown($event, i)"
-                (keydown.arrowup)="onResultArrowUp($event, i)"
-                (keydown.tab)="onResultTab($event, i)"
-                (focus)="focusedIndex.set(i)"
-              >
-                <span>{{ item.label }}</span>
-                <span class="f:12 color:var(--ink-muted)">/{{ item.route }}</span>
-              </button>
-            } @empty {
-              <div class="cmd-k-no-results">
-                無搜尋結果
-              </div>
-            }
-          </div>
-        }
+        <!-- 搜尋結果區：空值時顯示全部工具 -->
+        <div class="cmd-k-list">
+          @for (item of filteredTools(); track item.route; let i = $index) {
+            <button
+              #resultButton
+              type="button"
+              class="cmd-k-list-item"
+              [class.cmd-k-list-item-selected]="focusedIndex() === i"
+              (click)="navigateTo(item)"
+              (keydown.escape)="onEscape($event)"
+              (keydown.arrowdown)="onResultArrowDown($event, i)"
+              (keydown.arrowup)="onResultArrowUp($event, i)"
+              (keydown.tab)="onResultTab($event, i)"
+              (focus)="focusedIndex.set(i)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="f:12 color:var(--ink-muted)">{{ item.category }}</span>
+            </button>
+          } @empty {
+            <div class="cmd-k-no-results">
+              查無符合的工具或分類
+            </div>
+          }
+        </div>
       </div>
     </div>
   `,
@@ -179,23 +181,17 @@ export class CommandPalette implements AfterViewInit {
 
   protected readonly filteredTools = computed(() => {
     const q = this.query().toLowerCase().trim();
-    if (!q) {
-      return [];
-    }
-    const showAll = q === "all";
-    const results: ToolItem[] = [];
+    const results: MatchedTool[] = [];
     for (const group of this.toolGroups()) {
+      const categoryMatch = group.name.toLowerCase().includes(q);
       for (const tool of group.tools) {
-        if (tool.available && tool.route) {
-          if (showAll) {
-            results.push(tool);
-          } else {
-            const labelMatch = tool.label.toLowerCase().includes(q);
-            const routeMatch = tool.route.toLowerCase().includes(q);
-            if (labelMatch || routeMatch) {
-              results.push(tool);
-            }
-          }
+        if (!tool.available || !tool.route) {
+          continue;
+        }
+        // 三種情況會被搜尋到：a. 空值顯示全部 b. 工具名稱相符 c. 分類名稱相符
+        const labelMatch = tool.label.toLowerCase().includes(q);
+        if (!q || labelMatch || categoryMatch) {
+          results.push({ ...tool, category: group.name });
         }
       }
     }
