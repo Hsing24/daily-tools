@@ -24,7 +24,8 @@
         (input)="onInput(textarea.value)"
         (paste)="onPaste($event)"
         placeholder="請在此輸入或貼上文字/富文本，系統將即時進行轉換..."
-        class="w:100% h:240 p:16 bg:var(--canvas-input) color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:2px|solid|var(--border-muted) box:border-box resize:vertical transition:border-color|0.1s|ease caret-color:var(--primary) [caret-shape:block] border-color:var(--primary):focus outline:none:focus placeholder:color:var(--ink-disabled)"
+        wrap="off"
+        class="w:100% h:240 p:16 bg:var(--canvas-input) color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:2px|solid|var(--border-muted) box:border-box resize:vertical transition:border-color|0.1s|ease caret-color:var(--primary) [caret-shape:block] border-color:var(--primary):focus outline:none:focus placeholder:color:var(--ink-disabled) overflow-x:auto white-space:pre"
       ></textarea>
     </div>
 
@@ -98,7 +99,7 @@
                 <div class="color:var(--ink-muted) py:8" aria-live="polite">處理中...</div>
               } @else {
                 <pre
-                  class="whitespace:pre-wrap word-break:break-all color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
+                  class="overflow-x:auto white-space:pre color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
                 >{{ conversionResult().markdown }}</pre>
               }
             </div>
@@ -139,7 +140,7 @@
                 <div class="color:var(--ink-muted) py:8" aria-live="polite">處理中...</div>
               } @else {
                 <pre
-                  class="whitespace:pre-wrap word-break:break-all color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
+                  class="overflow-x:auto white-space:pre color:var(--ink-bright) font-family:var(--font-mono) f:14 m:0"
                 >{{ conversionResult().html }}</pre>
               }
             </div>
