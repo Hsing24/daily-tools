@@ -289,9 +289,36 @@ input[type="range"].dt-slider:focus-visible {
   animation: spin 1s linear infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .spinner-spin {
-    animation: none;
+/* --- Diff Checker Scan Laser Animation --- */
+@keyframes scan-animation {
+  0% {
+    transform: translateY(0);
   }
+  50% {
+    transform: translateY(230px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.scan-laser {
+  animation: scan-animation 2.2s ease-in-out infinite;
+}
+
+/* --- Diff Checker Navigation Flash Highlight --- */
+@keyframes block-flash {
+  0% {
+    outline: 4px solid var(--primary-bright);
+  }
+  50% {
+    outline: 4px solid var(--gold-bright);
+  }
+  100% {
+    outline: 4px solid transparent;
+  }
+}
+.diff-block-highlight {
+  outline-offset: -2px;
+  animation: block-flash 1s ease-out;
 }
 

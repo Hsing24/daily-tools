@@ -36,6 +36,11 @@ export const routes: Routes = [
           import("./tools/svg-draw/svg-draw").then((m) => m.SvgDraw),
       },
       {
+        path: "diff-checker",
+        loadComponent: () =>
+          import("./tools/diff-checker/diff-checker").then((m) => m.DiffChecker),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

@@ -34,5 +34,6 @@ describe('Home', () => {
     expect(links).toContain('/word-count');
     expect(links).toContain('/design');
     expect(links).toContain('/text-markdown-html');
+    expect(links).toContain('/diff-checker');
   });
 });

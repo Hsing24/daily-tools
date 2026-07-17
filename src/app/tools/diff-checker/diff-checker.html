@@ -1,0 +1,227 @@
+<div>
+  <app-tool-breadcrumb category="文字工具" current="文字差異比對" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="TEXT UTILITIES v1.0.0"
+      title="文字差異比對 (Diff Checker)"
+      description="比對兩段文字的差異。支援比對前自動排版 (去除首尾空白) 與 Side-by-Side 對齊檢視，自動偵測變更並高亮行內字詞差異。"
+    />
+
+    @if (alertMessage()) {
+      <app-tool-alert [message]="alertMessage()" />
+    }
+
+    <!-- 雙欄輸入框區塊 -->
+    <div class="d:grid grid-cols:1 grid-cols:2@md gap:24 mb:24">
+      
+      <!-- base -->
+      <div class="position:relative">
+        <div class="d:flex jc:space-between ai:center mb:8">
+          <label for="input-text-a" class="color:var(--ink-bright) f:14 font-weight:600">base：</label>
+          <span class="f:12 color:var(--ink-muted)">列數: {{ textA() ? textA().split('\n').length : 0 }}</span>
+        </div>
+
+        <div class="d:flex border:2px|solid|var(--border-muted) focus-within:border-color:var(--primary) bg:var(--canvas-input) h:240 overflow:hidden">
+          <!-- 行號欄 -->
+          <div #lineNumbersA class="py:16 px:8 bg:var(--canvas-deep) color:var(--ink-muted) font-family:var(--font-mono) f:14 lh:1.6 select:none overflow:hidden w:40 text-align:right">
+            @for (line of getLineNumbers(textA()); track $index) {
+              <div class="h:22.4 lh:1.6">{{ line }}</div>
+            }
+          </div>
+          <!-- 輸入區 -->
+          <textarea
+            id="input-text-a"
+            #textareaA
+            [value]="textA()"
+            (input)="onInputA(textareaA.value)"
+            (scroll)="lineNumbersA.scrollTop = textareaA.scrollTop"
+            placeholder="請輸入或貼上 base 文字..."
+            class="flex:1 h:100% p:16|16|16|8 bg:transparent color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:none outline:none resize:none overflow-y:auto overflow-x:auto white-space:pre"
+            wrap="off"
+          ></textarea>
+        </div>
+        
+        <!-- 比對中 Mask -->
+        @if (isComparing()) {
+          <div class="position:absolute inset:0 bg:var(--canvas-deep)|0.85 d:flex flex:col ai:center jc:center z:10 border:2px|solid|var(--primary) pointer-events:none overflow:hidden">
+            <div class="color:var(--primary) font-family:var(--font-pixel) f:16 mb:12 text-align:center animation:crt-flicker|0.15s|infinite">[ SCANNING BASE TEXT... ]</div>
+            <div class="w:100% h:4 bg:var(--primary)|0.4 position:absolute top:0 left:0 scan-laser"></div>
+          </div>
+        }
+
+        <div class="d:flex gap:12 mt:12">
+          <button type="button" (click)="pasteText('A')" [disabled]="isComparing()" class="dt-button dt-button--primary py:6 px:12 f:12">貼上文字</button>
+          <button type="button" (click)="clearText('A')" [disabled]="isComparing() || !textA()" class="dt-button dt-button--warning py:6 px:12 f:12">清除內容</button>
+        </div>
+      </div>
+
+      <!-- compare -->
+      <div class="position:relative">
+        <div class="d:flex jc:space-between ai:center mb:8">
+          <label for="input-text-b" class="color:var(--ink-bright) f:14 font-weight:600">compare：</label>
+          <span class="f:12 color:var(--ink-muted)">列數: {{ textB() ? textB().split('\n').length : 0 }}</span>
+        </div>
+
+        <div class="d:flex border:2px|solid|var(--border-muted) focus-within:border-color:var(--primary) bg:var(--canvas-input) h:240 overflow:hidden">
+          <!-- 行號欄 -->
+          <div #lineNumbersB class="py:16 px:8 bg:var(--canvas-deep) color:var(--ink-muted) font-family:var(--font-mono) f:14 lh:1.6 select:none overflow:hidden w:40 text-align:right">
+            @for (line of getLineNumbers(textB()); track $index) {
+              <div class="h:22.4 lh:1.6">{{ line }}</div>
+            }
+          </div>
+          <!-- 輸入區 -->
+          <textarea
+            id="input-text-b"
+            #textareaB
+            [value]="textB()"
+            (input)="onInputB(textareaB.value)"
+            (scroll)="lineNumbersB.scrollTop = textareaB.scrollTop"
+            placeholder="請輸入或貼上 compare 文字..."
+            class="flex:1 h:100% p:16|16|16|8 bg:transparent color:var(--ink-bright) font-family:var(--font-mono) f:14 lh:1.6 border:none outline:none resize:none overflow-y:auto overflow-x:auto white-space:pre"
+            wrap="off"
+          ></textarea>
+        </div>
+        
+        <!-- 比對中 Mask -->
+        @if (isComparing()) {
+          <div class="position:absolute inset:0 bg:var(--canvas-deep)|0.85 d:flex flex:col ai:center jc:center z:10 border:2px|solid|var(--primary) pointer-events:none overflow:hidden">
+            <div class="color:var(--primary) font-family:var(--font-pixel) f:16 mb:12 text-align:center animation:crt-flicker|0.15s|infinite">[ COMPARING COMPARE TEXT... ]</div>
+            <div class="w:100% h:4 bg:var(--primary)|0.4 position:absolute top:0 left:0 scan-laser"></div>
+          </div>
+        }
+
+        <div class="d:flex gap:12 mt:12">
+          <button type="button" (click)="pasteText('B')" [disabled]="isComparing()" class="dt-button dt-button--primary py:6 px:12 f:12">貼上文字</button>
+          <button type="button" (click)="clearText('B')" [disabled]="isComparing() || !textB()" class="dt-button dt-button--warning py:6 px:12 f:12">清除內容</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 比對觸發按鈕 -->
+    <div class="d:flex jc:center mb:24">
+      <button
+        type="button"
+        data-testid="btn-compare"
+        (click)="startCompare()"
+        [disabled]="isComparing() || (!textA() && !textB())"
+        class="dt-button dt-button--primary px:32 py:12 f:16 font-weight:bold"
+      >
+        {{ isComparing() ? '比較中...' : '開始比對' }}
+      </button>
+    </div>
+
+    <!-- 比對結果區 (Terminal Output) -->
+    @if (hasResult() && !isComparing()) {
+      <app-terminal-output
+        title="DIFF_ANALYSIS.log"
+        status="[COMPLETED]"
+        command="diff-checker --compare base compare --aligned"
+        footer="DIFF REPORT: {{ diffBlocks().length }} CHANGE(S) DETECTED"
+        [visible]="true"
+      >
+        <!-- 雙欄比對內容 (Side-by-Side) -->
+        <div class="w:100% overflow-x:auto mb:12">
+          <table class="w:100% border-collapse:collapse f:13 lh:1.6 font-family:var(--font-mono)">
+            <thead>
+              <tr class="bb:2px|solid|var(--border-muted) text-align:left color:var(--ink-bright) bg:var(--canvas-deep)">
+                <th class="w:40 px:8 py:4 text-align:right">L#</th>
+                <th class="w:50% px:8 py:4 border-right:1px|solid|var(--border-muted)">base</th>
+                <th class="w:40 px:8 py:4 text-align:right">R#</th>
+                <th class="w:50% px:8 py:4">compare</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of alignedLines(); track $index; let idx = $index) {
+                <tr
+                  [id]="getBlockIdForLine(idx)"
+                  class="transition:outline|0.2s|ease"
+                >
+                  <!-- 左側行號 -->
+                  <td class="px:8 py:2 bg:var(--canvas-deep) color:var(--ink-muted) text-align:right select:none">
+                    {{ line.leftLineNum || '' }}
+                  </td>
+                  
+                  <!-- 左側文字 -->
+                  <td
+                    class="px:8 py:2 border-right:1px|solid|var(--border-muted) white-space:pre-wrap break-all"
+                    [class.bg:#8A2018|0.35]="line.type === 'removed'"
+                    [class.bg:#122339]="line.type === 'added'"
+                    [class.bg:#8A2018|0.2]="line.type === 'modified'"
+                  >
+                    @if (line.type === 'removed') {
+                      <span class="color:#FFD166">{{ line.leftText || ' ' }}</span>
+                    } @else if (line.type === 'modified') {
+                      @for (w of line.leftWords; track $index) {
+                        <span [class.bg:#8A2018|0.8]="w.type === 'removed'" [class.color:#FFD166]="w.type === 'removed'">{{ w.text }}</span>
+                      }
+                    } @else if (line.type === 'added') {
+                      <span class="color:var(--ink-disabled) opacity:0.3 select:none">~</span>
+                    } @else {
+                      <span>{{ line.leftText || ' ' }}</span>
+                    }
+                  </td>
+
+                  <!-- 右側行號 -->
+                  <td class="px:8 py:2 bg:var(--canvas-deep) color:var(--ink-muted) text-align:right select:none">
+                    {{ line.rightLineNum || '' }}
+                  </td>
+
+                  <!-- 右側文字 -->
+                  <td
+                    class="px:8 py:2 white-space:pre-wrap break-all"
+                    [class.bg:#2BAE96|0.35]="line.type === 'added'"
+                    [class.bg:#122339]="line.type === 'removed'"
+                    [class.bg:#2BAE96|0.2]="line.type === 'modified'"
+                  >
+                    @if (line.type === 'added') {
+                      <span class="color:#FFD166">{{ line.rightText || ' ' }}</span>
+                    } @else if (line.type === 'modified') {
+                      @for (w of line.rightWords; track $index) {
+                        <span [class.bg:#2BAE96|0.8]="w.type === 'added'" [class.color:#FFD166]="w.type === 'added'">{{ w.text }}</span>
+                      }
+                    } @else if (line.type === 'removed') {
+                      <span class="color:var(--ink-disabled) opacity:0.3 select:none">~</span>
+                    } @else {
+                      <span>{{ line.rightText || ' ' }}</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sticky 導覽列 (貼在比對區塊可視範圍底部) -->
+        <div class="position:sticky bottom:-16 z:20 d:flex ai:center jc:space-between py:12 bg:var(--canvas-deep) border-top:2px|solid|var(--border-muted) mt:16">
+          <div class="color:var(--primary) f:14">
+            總計：<strong>{{ diffBlocks().length }}</strong> 處不同
+            @if (currentBlockIndex() !== -1) {
+              (目前位置：第 {{ currentBlockIndex() + 1 }} 處)
+            }
+          </div>
+          
+          @if (diffBlocks().length > 1) {
+            <div class="d:flex gap:12">
+              <button
+                type="button"
+                (click)="scrollToBlock('prev')"
+                class="dt-button dt-button--secondary py:4 px:8 f:12"
+              >
+                ▲ 上一個
+              </button>
+              <button
+                type="button"
+                (click)="scrollToBlock('next')"
+                class="dt-button dt-button--secondary py:4 px:8 f:12"
+              >
+                ▼ 下一個
+              </button>
+            </div>
+          }
+        </div>
+      </app-terminal-output>
+    }
+  </app-tool-panel>
+</div>

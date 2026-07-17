@@ -46,6 +46,7 @@ export class Layout {
           route: "text-markdown-html",
           available: true,
         },
+        { label: "文字差異比對", route: "diff-checker", available: true },
       ],
     },
     {
