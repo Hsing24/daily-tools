@@ -49,13 +49,13 @@
     <router-outlet />
   </main>
 
-  <footer class="footer d:flex flex:wrap gap:12|24 ai:center jc:space-between p:16|32 px:16@<768 bg:var(--canvas-deep) bt:1px|solid|var(--border-muted) color:var(--ink-muted) font-family:var(--font-mono) f:12 ls:0.5">
+  <footer class="footer d:flex@<768 flex:col@<768 gap:12@<768 d:grid@>=768 grid-cols:3@>=768 ai:center p:16|32 px:16@<768 bg:var(--canvas-deep) bt:1px|solid|var(--border-muted) color:var(--ink-muted) font-family:var(--font-mono) f:12 ls:0.5">
     <span class="d:inline-flex ai:center gap:8">
       <span class="color:var(--primary) font-weight:600" aria-hidden="true">$</span>
       <span>daily-tools --version alpha</span>
     </span>
-    <span>theme: DevTool Terminal / scanline 4%</span>
-    <a class="color:var(--ink-muted) text-decoration:none color:var(--primary):hover" href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <span class="text:center">theme: DevTool Terminal / scanline 4%</span>
+    <a class="color:var(--ink-muted) text-decoration:none color:var(--primary):hover text:right@>=768" href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
   </footer>
 </div>
 
