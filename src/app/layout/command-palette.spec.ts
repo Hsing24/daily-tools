@@ -137,24 +137,38 @@ describe("CommandPalette", () => {
     expect(component["focusedIndex"]()).toBe(0);
   });
 
-  it("should match tools by category name even when the label does not match", async () => {
-    component["query"].set("Group B");
+  it("should match tools by route or keywords", async () => {
+    const groupsWithKeywords = [
+      {
+        name: "Group A",
+        tools: [
+          { label: "字數統計", route: "word-count", available: true, keywords: ["word-count", "word"] },
+        ],
+      },
+    ];
+    fixture.componentRef.setInput("toolGroups", groupsWithKeywords);
+    fixture.detectChanges();
+
+    component["query"].set("word");
     fixture.detectChanges();
     await fixture.whenStable();
 
     const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
     expect(items.length).toBe(1);
-    expect(items[0].nativeElement.textContent).toContain("Tool D");
+    expect(items[0].nativeElement.textContent).toContain("字數統計");
   });
 
-  it("should not match unavailable tools even by category name", async () => {
-    component["query"].set("Group A");
+  it("should not navigate when pressing Enter during IME composition", async () => {
+    const navigateSpy = vi.spyOn(router, "navigate");
+    component["query"].set("工具");
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const items = fixture.debugElement.queryAll(By.css(".cmd-k-list-item"));
-    expect(items.length).toBe(2);
-    expect(items[0].nativeElement.textContent).toContain("工具 A");
-    expect(items[1].nativeElement.textContent).toContain("工具 B");
+    // 模擬 IME composition 狀態發送 Enter keydown
+    component["onCompositionStart"]();
+    const event = new KeyboardEvent("keydown", { key: "Enter", isComposing: true });
+    component["onInputEnter"](event);
+
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 });

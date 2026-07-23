@@ -17,6 +17,7 @@ interface ToolItem {
   readonly label: string;
   readonly route?: string;
   readonly available: boolean;
+  readonly keywords?: readonly string[];
 }
 
 interface ToolGroup {
@@ -47,8 +48,10 @@ interface MatchedTool extends ToolItem {
             type="text"
             [value]="query()"
             (input)="onInputChange($event)"
+            (compositionstart)="onCompositionStart()"
+            (compositionend)="onCompositionEnd()"
             class="cmd-k-input"
-            placeholder="輸入工具名稱或分類進行搜尋..."
+            placeholder="輸入工具名稱、英文字或分類進行搜尋..."
             (keydown.escape)="onEscape($event)"
             (keydown.enter)="onInputEnter($event)"
             (keydown.arrowdown)="onInputArrowDown($event)"
@@ -175,6 +178,7 @@ export class CommandPalette implements AfterViewInit {
 
   protected readonly query = signal<string>("");
   protected readonly focusedIndex = signal<number>(-1);
+  private isComposing = false;
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>("searchInput");
   private readonly resultButtons = viewChildren<ElementRef<HTMLButtonElement>>("resultButton");
@@ -188,9 +192,12 @@ export class CommandPalette implements AfterViewInit {
         if (!tool.available || !tool.route) {
           continue;
         }
-        // 三種情況會被搜尋到：a. 空值顯示全部 b. 工具名稱相符 c. 分類名稱相符
+        // 四種情況會被搜尋到：a. 空值顯示全部 b. 工具名稱相符 c. 分類名稱相符 d. 英文代碼/關鍵字相符
         const labelMatch = tool.label.toLowerCase().includes(q);
-        if (!q || labelMatch || categoryMatch) {
+        const routeMatch = tool.route.toLowerCase().includes(q);
+        const keywordsMatch = tool.keywords?.some((k) => k.toLowerCase().includes(q)) ?? false;
+
+        if (!q || labelMatch || categoryMatch || routeMatch || keywordsMatch) {
           results.push({ ...tool, category: group.name });
         }
       }
@@ -209,6 +216,18 @@ export class CommandPalette implements AfterViewInit {
     this.focusedIndex.set(-1);
   }
 
+  protected onCompositionStart(): void {
+    this.isComposing = true;
+  }
+
+  protected onCompositionEnd(): void {
+    // IME 選字結束時，延遲將 isComposing 設為 false
+    // 避免部分瀏覽器在 compositionend 後緊接着觸發由選字 Enter 所引發的 keydown 事件
+    setTimeout(() => {
+      this.isComposing = false;
+    }, 50);
+  }
+
   protected navigateTo(tool: ToolItem): void {
     if (tool.route) {
       this.router.navigate([tool.route]);
@@ -224,9 +243,14 @@ export class CommandPalette implements AfterViewInit {
   // === 輸入欄位的鍵盤事件 ===
 
   protected onInputEnter(event: Event): void {
+    const kbEvent = event as KeyboardEvent;
+    if (kbEvent.isComposing || this.isComposing || kbEvent.keyCode === 229) {
+      return;
+    }
+
     const results = this.filteredTools();
     if (results.length > 0) {
-      event.preventDefault();
+      kbEvent.preventDefault();
       this.navigateTo(results[0]);
     }
   }

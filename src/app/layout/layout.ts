@@ -14,6 +14,7 @@ interface ToolItem {
   readonly label: string;
   readonly route?: string;
   readonly available: boolean;
+  readonly keywords?: readonly string[];
 }
 
 interface ToolGroup {
@@ -40,36 +41,70 @@ export class Layout {
     {
       name: "文字工具",
       tools: [
-        { label: "字數統計", route: "word-count", available: true },
+        {
+          label: "字數統計",
+          route: "word-count",
+          available: true,
+          keywords: ["word-count", "word", "count"],
+        },
         {
           label: "文字轉 Markdown/HTML",
           route: "text-markdown-html",
           available: true,
+          keywords: ["text-markdown-html", "text", "markdown", "html"],
         },
-        { label: "文字差異比對", route: "diff-checker", available: true },
+        {
+          label: "文字差異比對",
+          route: "diff-checker",
+          available: true,
+          keywords: ["diff-checker", "diff", "checker"],
+        },
       ],
     },
     {
       name: "格式化 / 轉換",
       tools: [
-        { label: "圖片轉檔", route: "image-converter", available: true },
-        { label: "SVG 描圖", route: "svg-draw", available: true },
+        {
+          label: "圖片轉檔",
+          route: "image-converter",
+          available: true,
+          keywords: ["image-converter", "image", "converter"],
+        },
+        {
+          label: "SVG 描圖",
+          route: "svg-draw",
+          available: true,
+          keywords: ["svg-draw", "svg", "draw"],
+        },
         {
           label: "圖片 ASCII 轉換器",
           route: "image-to-ascii",
           available: true,
+          keywords: ["image-to-ascii", "image", "ascii"],
         },
       ],
     },
     {
       name: "資料與解析",
       tools: [
-        { label: "密碼產生器", route: "password-generator", available: true },
+        {
+          label: "密碼產生器",
+          route: "password-generator",
+          available: true,
+          keywords: ["password-generator", "password", "generator"],
+        },
       ],
     },
     {
       name: "系統",
-      tools: [{ label: "設計系統", route: "design", available: true }],
+      tools: [
+        {
+          label: "設計系統",
+          route: "design",
+          available: true,
+          keywords: ["design", "system"],
+        },
+      ],
     },
   ];
 
