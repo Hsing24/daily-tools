@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="4" viewBox="0 0 32 4">
+  <!-- 100% -->
+  <rect x="0" y="0" width="8" height="4" fill="#2bae96" />
+  <!-- 75% -->
+  <rect x="8" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="10" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="8" y="2" width="2" height="2" fill="#2bae96" />
+  <rect x="12" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="14" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="12" y="2" width="2" height="2" fill="#2bae96" />
+  <!-- 50% -->
+  <rect x="16" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="18" y="2" width="2" height="2" fill="#2bae96" />
+  <rect x="20" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="22" y="2" width="2" height="2" fill="#2bae96" />
+  <!-- 25% -->
+  <rect x="24" y="0" width="2" height="2" fill="#2bae96" />
+  <rect x="28" y="0" width="2" height="2" fill="#2bae96" />
+</svg>

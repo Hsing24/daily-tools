@@ -41,6 +41,13 @@ export const routes: Routes = [
           import("./tools/diff-checker/diff-checker").then((m) => m.DiffChecker),
       },
       {
+        path: "image-to-ascii",
+        loadComponent: () =>
+          import("./tools/image-to-ascii/image-to-ascii").then(
+            (m) => m.ImageToAscii
+          ),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

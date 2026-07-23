@@ -1,0 +1,403 @@
+<div>
+  <app-tool-breadcrumb category="格式化 / 轉換" current="圖片 ASCII 轉換器" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="IMAGE UTILITIES v1.0.0"
+      title="圖片 ASCII 轉換器 (Image to ASCII)"
+      description="將圖片轉換為 ASCII 藝術圖形，支援豐富的誤差擴散抖動 (Dithering) 與動態效果，並可打包導出為無依賴的 TypeScript 播放器模組。"
+    />
+
+    @if (errorMessage()) {
+    <app-tool-alert [message]="errorMessage()" variant="error" />
+    }
+
+    @if (successMessage()) {
+    <app-tool-alert [message]="successMessage()" variant="success" />
+    }
+
+    <!-- 圖片上傳區 -->
+    @if (!uploadedImage()) {
+    <div
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave()"
+      (drop)="onDrop($event)"
+      [class.border-color:var(--primary)]="isDragging()"
+      class="d:flex flex:col align-items:center justify-content:center h:300 border:2px|dashed|var(--border-muted) bg:var(--canvas-input) transition:border-color|0.15s|ease cursor:pointer position:relative mb:24"
+    >
+      <input
+        type="file"
+        id="image-file-input"
+        accept="image/*"
+        (change)="onFileSelected($event)"
+        class="position:absolute inset:0 opacity:0 w:100% h:100% cursor:pointer"
+      />
+      <div class="f:48 mb:16 color:var(--primary)">⎘</div>
+      <p class="f:16 color:var(--ink-bright) mb:8 font-weight:600">將圖片拖放到此處，或點擊進行上傳</p>
+      <p class="f:12 color:var(--ink-muted)">支援 PNG, JPG 格式。轉換將完全在您的瀏覽器端安全地進行。</p>
+    </div>
+    } @else {
+    <!-- 主工作區：上方導覽列 + 下方沉浸式工作面板 -->
+    <div class="d:flex flex:col border:2px|solid|var(--border-muted) bg:var(--canvas-elevated) h:650 position:relative overflow:hidden mb:24">
+      
+      <!-- 頂部控制列 (Tab 切換 + 工具操作按鈕) -->
+      <div class="d:flex justify-content:space-between align-items:center border-bottom:2px|solid|var(--border-muted) bg:var(--canvas-deep) px:16 py:4 h:48 select:none">
+        
+        <!-- Tab 按鈕 -->
+        <div class="d:flex gap:4 h:100%">
+          <button
+            type="button"
+            (click)="activeTab.set('preview')"
+            [class.color:var(--primary-bright)]="activeTab() === 'preview'"
+            [class.bg:var(--canvas-elevated-2)!]="activeTab() === 'preview'"
+            [class.border-bottom:2px|solid|var(--primary)]="activeTab() === 'preview'"
+            [class.font-weight:bold]="activeTab() === 'preview'"
+            [class.color:var(--ink)]="activeTab() !== 'preview'"
+            [class.bg:transparent!]="activeTab() !== 'preview'"
+            [class.font-weight:normal]="activeTab() !== 'preview'"
+            class="dt-button dt-button--ghost h:100% px:16 f:12 border-radius:0 border:none"
+          >
+            即時效果預覽
+          </button>
+          <button
+            type="button"
+            (click)="activeTab.set('code')"
+            [class.color:var(--primary-bright)]="activeTab() === 'code'"
+            [class.bg:var(--canvas-elevated-2)!]="activeTab() === 'code'"
+            [class.border-bottom:2px|solid|var(--primary)]="activeTab() === 'code'"
+            [class.font-weight:bold]="activeTab() === 'code'"
+            [class.color:var(--ink)]="activeTab() !== 'code'"
+            [class.bg:transparent!]="activeTab() !== 'code'"
+            [class.font-weight:normal]="activeTab() !== 'code'"
+            class="dt-button dt-button--ghost h:100% px:16 f:12 border-radius:0 border:none"
+          >
+            TypeScript 代碼 / 導出
+          </button>
+        </div>
+
+        <!-- 功能按鈕組 -->
+        <div class="d:flex gap:8 align-items:center">
+          @if (activeTab() === 'preview' && animationType() === 'typewriter') {
+          <button
+            type="button"
+            (click)="charWidth.set(charWidth())"
+            class="dt-button dt-button--secondary py:4 px:8 f:11 font-weight:600"
+          >
+            重播動畫
+          </button>
+          }
+          <button
+            type="button"
+            (click)="toggleSettings()"
+            [class.bg:var(--primary-bright)]="showSettings()"
+            [class.color:var(--on-primary)]="showSettings()"
+            class="dt-button dt-button--ghost py:4 px:8 f:11 font-weight:600 border:1px|solid|var(--primary)!"
+          >
+            參數設定
+          </button>
+          <div class="w:1 h:20 bg:var(--border-muted)"></div>
+          <button
+            type="button"
+            (click)="clearImage()"
+            class="dt-button dt-button--warning py:4 px:8 f:11 font-weight:600"
+          >
+            清除圖片
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 下方面板主體 (Tab 內容 + 右側抽屜) -->
+      <div class="flex:1 d:flex position:relative overflow:hidden">
+        
+        <!-- Tab 1: 預覽畫面 (完全佔滿) -->
+        @if (activeTab() === 'preview') {
+        <div
+          [class.pr:340]="showSettings()"
+          class="flex:1 d:flex align-items:center justify-content:center bg:#050e1c p:16 overflow:auto transition:padding-right|0.25s|ease-in-out"
+        >
+          <div class="max-w:100% max-h:100% d:flex justify-content:center align-items:center">
+            <canvas #previewCanvas class="display:block max-w:100% max-h:500"></canvas>
+          </div>
+        </div>
+        }
+
+        <!-- Tab 2: 代碼產生區 (完全佔滿) -->
+        @if (activeTab() === 'code') {
+        <div
+          [class.pr:340]="showSettings()"
+          class="flex:1 d:flex flex:col p:16 bg:#050e1c gap:12 overflow-y:auto transition:padding-right|0.25s|ease-in-out"
+        >
+          <div class="d:flex justify-content:space-between align-items:center flex:wrap gap:8">
+            <span class="f:12 color:var(--ink-bright)">
+              產生的代碼已根據當前設定打包 (尺寸: {{ asciiResult()?.width }}x{{ asciiResult()?.height }})
+            </span>
+            <div class="d:flex gap:8">
+              <button
+                type="button"
+                (click)="copyCode()"
+                class="dt-button dt-button--primary py:4 px:12 f:12 font-weight:600"
+              >
+                複製代碼
+              </button>
+              <button
+                type="button"
+                (click)="downloadTsFile()"
+                class="dt-button dt-button--secondary py:4 px:12 f:12 font-weight:600"
+              >
+                下載 .ts 檔
+              </button>
+            </div>
+          </div>
+
+          <!-- 代碼文字框 -->
+          <div class="flex:1 d:flex">
+            <textarea
+              readonly
+              [value]="generatedTsCode()"
+              class="flex:1 min-h:250 p:12 bg:var(--syntax-monokai-bg) color:var(--syntax-monokai-fg) font-family:var(--font-mono) f:11 lh:1.5 border:1px|solid|var(--border-muted) resize:none outline:none"
+            ></textarea>
+          </div>
+
+          <!-- 說明 -->
+          <div class="p:12 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) f:11 font-family:var(--font-mono)">
+            <h4 class="f:12 font-weight:bold color:var(--primary) mb:4">🚀 使用說明：</h4>
+            <p class="color:var(--ink) mb:4">將下載的 <code>ascii-image.ts</code> 放入專案中，在 HTML 建立 Canvas，並引入啟動：</p>
+            <pre class="bg:var(--canvas-input) p:6 border:1px|solid|var(--border-muted) color:var(--ink-bright) m:0 overflow-x:auto">
+import {{ '{' }} renderAscii {{ '}' }} from './ascii-image';
+const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontSize: 12 {{ '}' }});
+// player.destroy(); // 釋放動畫</pre>
+          </div>
+        </div>
+        }
+
+        <!-- 右側設定抽屜面板 (用 absolute 定位，支援平滑滑入滑出) -->
+        <div
+          [style.transform]="showSettings() ? 'none' : 'translateX(100%)'"
+          class="position:absolute top:0 right:0 bottom:0 z:30 w:340 max-w:85% bg:var(--canvas-elevated) border-left:2px|solid|var(--border-default) d:flex flex:col transition:transform|0.25s|ease-in-out select:none"
+        >
+          
+          <!-- 抽屜標頭 -->
+          <div class="d:flex justify-content:space-between align-items:center border-bottom:1px|solid|var(--border-muted) px:16 py:12 bg:var(--canvas-deep)">
+            <span class="f:14 font-weight:bold color:var(--primary)">⚙️ 轉換參數設定</span>
+            <button
+              type="button"
+              (click)="showSettings.set(false)"
+              class="dt-button dt-button--ghost p:4 font-weight:bold f:14 border-radius:0!"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- 抽屜內容 (可滾動) -->
+          <div class="flex:1 overflow-y:auto p:16 d:flex flex:col gap:16">
+            
+            <!-- 解析度 -->
+            <div>
+              <app-tool-slider
+                label="解析度 (字元寬度)"
+                [min]="30"
+                [max]="150"
+                [value]="charWidth()"
+                (valueChange)="charWidth.set($event)"
+                [ticks]="[30, 60, 90, 120, 150]"
+              />
+              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定寬度：{{ charWidth() }} 字元 (高約 {{ asciiResult()?.height }} 行)</span>
+            </div>
+
+            <!-- 對比度 -->
+            <div>
+              <app-tool-slider
+                label="對比度調整"
+                [min]="-50"
+                [max]="50"
+                [value]="contrast()"
+                (valueChange)="contrast.set($event)"
+                [ticks]="[-50, -25, 0, 25, 50]"
+              />
+              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定：{{ contrast() > 0 ? '+' : '' }}{{ contrast() }}%</span>
+            </div>
+
+            <!-- 亮度 -->
+            <div>
+              <app-tool-slider
+                label="亮度調整"
+                [min]="-50"
+                [max]="50"
+                [value]="brightness()"
+                (valueChange)="brightness.set($event)"
+                [ticks]="[-50, -25, 0, 25, 50]"
+              />
+              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定：{{ brightness() > 0 ? '+' : '' }}{{ brightness() }}%</span>
+            </div>
+
+            <!-- 誤差擴散抖動 (Dithering) -->
+            <div class="d:flex align-items:center justify-content:space-between p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">
+              <div>
+                <span class="d:block f:12 color:var(--ink-bright) font-weight:600">誤差擴散抖動 (Dither)</span>
+                <span class="d:block f:11 color:var(--ink-muted) mt:2">點化漸層，增加細節感</span>
+              </div>
+              <label class="d:inline-flex align-items:center cursor:pointer">
+                <input
+                  type="checkbox"
+                  [checked]="dither()"
+                  (change)="dither.set(!dither())"
+                  class="w:16 h:16 accent-color:var(--primary) cursor:pointer"
+                />
+              </label>
+            </div>
+
+            <!-- 字元集 -->
+            <div>
+              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">選擇字元集</label>
+              
+              <div class="position:relative w:100% max-w:100% mb:6 overflow:hidden">
+                <!-- 滾動內盒 -->
+                <div
+                  #charsetScrollContainer
+                  (scroll)="onScroll($event, 'charset')"
+                  class="w:100% overflow-x:auto white-space:nowrap scrollbar:none select:none"
+                >
+                  <app-tool-radio-group
+                    [options]="charSetRadioOptions"
+                    [value]="selectedCharSetType()"
+                    (valueChange)="selectCharSetType($event)"
+                    class="d:inline-block"
+                  />
+                </div>
+                <!-- 左側物理漸隱遮罩 -->
+                @if (charsetScroll().showLeft) {
+                <div class="position:absolute left:0 top:0 z:10 w:32 pointer-events:none mask-left-svg"></div>
+                }
+                <!-- 右側物理漸隱遮罩 -->
+                @if (charsetScroll().showRight) {
+                <div class="position:absolute right:0 top:0 z:10 w:32 pointer-events:none mask-right-svg"></div>
+                }
+              </div>
+
+              <!-- 註解風格滾動示意 -->
+              @if (charsetScroll().hasScroll) {
+              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+                /* 左右滾動檢視更多 */
+              </div>
+              }
+
+              <!-- 自訂字元集輸入 -->
+              @if (selectedCharSetType() === 'custom') {
+              <div class="mt:6">
+                <input
+                  type="text"
+                  [value]="customCharSet()"
+                  (input)="onCustomCharSetInput(customInput.value)"
+                  #customInput
+                  placeholder="自訂字元 (由暗至亮)"
+                  class="w:100% bg:var(--canvas-input) color:var(--ink-bright) border:1px|solid|var(--border-muted) border-color:var(--primary):focus outline:none:focus p:6 f:11 font-family:var(--font-mono)"
+                />
+              </div>
+              }
+            </div>
+
+            <!-- 色彩模式 -->
+            <div>
+              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">色彩風格</label>
+              
+              <div class="position:relative w:100% max-w:100% overflow:hidden">
+                <!-- 滾動內盒 -->
+                <div
+                  #colorScrollContainer
+                  (scroll)="onScroll($event, 'color')"
+                  class="w:100% overflow-x:auto white-space:nowrap scrollbar:none select:none"
+                >
+                  <app-tool-radio-group
+                    [options]="colorModeOptions"
+                    [value]="colorMode()"
+                    (valueChange)="onColorModeChange($event)"
+                    class="d:inline-block"
+                  />
+                </div>
+                <!-- 左側物理漸隱遮罩 -->
+                @if (colorScroll().showLeft) {
+                <div class="position:absolute left:0 top:0 z:10 w:32 pointer-events:none mask-left-svg"></div>
+                }
+                <!-- 右側物理漸隱遮罩 -->
+                @if (colorScroll().showRight) {
+                <div class="position:absolute right:0 top:0 z:10 w:32 pointer-events:none mask-right-svg"></div>
+                }
+              </div>
+
+              <!-- 註解風格滾動示意 -->
+              @if (colorScroll().hasScroll) {
+              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+                /* 左右滾動檢視更多 */
+              </div>
+              }
+            </div>
+
+            <!-- 動畫特效 -->
+            <div>
+              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">動畫特效</label>
+              
+              <div class="position:relative w:100% max-w:100% overflow:hidden">
+                <!-- 滾動內盒 -->
+                <div
+                  #animScrollContainer
+                  (scroll)="onScroll($event, 'anim')"
+                  class="w:100% overflow-x:auto white-space:nowrap scrollbar:none select:none"
+                >
+                  <app-tool-radio-group
+                    [options]="animationOptions"
+                    [value]="animationType()"
+                    (valueChange)="onAnimationTypeChange($event)"
+                    class="d:inline-block"
+                  />
+                </div>
+                <!-- 左側物理漸隱遮罩 -->
+                @if (animScroll().showLeft) {
+                <div class="position:absolute left:0 top:0 z:10 w:32 pointer-events:none mask-left-svg"></div>
+                }
+                <!-- 右側物理漸隱遮罩 -->
+                @if (animScroll().showRight) {
+                <div class="position:absolute right:0 top:0 z:10 w:32 pointer-events:none mask-right-svg"></div>
+                }
+              </div>
+
+              <!-- 註解風格滾動示意 -->
+              @if (animScroll().hasScroll) {
+              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+                /* 左右滾動檢視更多 */
+              </div>
+              }
+            </div>
+
+            <!-- CRT 效果 -->
+            <div class="d:flex flex:col gap:8 p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">
+              <label class="d:flex align-items:center justify-content:space-between cursor:pointer">
+                <span class="f:12 color:var(--ink-bright)">CRT 模擬掃描線</span>
+                <input
+                  type="checkbox"
+                  [checked]="scanlines()"
+                  (change)="scanlines.set(!scanlines())"
+                  class="w:16 h:16 accent-color:var(--primary) cursor:pointer"
+                />
+              </label>
+              <label class="d:flex align-items:center justify-content:space-between cursor:pointer">
+                <span class="f:12 color:var(--ink-bright)">CRT 畫面微閃爍</span>
+                <input
+                  type="checkbox"
+                  [checked]="flicker()"
+                  (change)="flicker.set(!flicker())"
+                  class="w:16 h:16 accent-color:var(--primary) cursor:pointer"
+                />
+              </label>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+    }
+  </app-tool-panel>
+</div>

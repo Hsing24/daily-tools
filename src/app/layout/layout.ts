@@ -54,6 +54,11 @@ export class Layout {
       tools: [
         { label: "圖片轉檔", route: "image-converter", available: true },
         { label: "SVG 描圖", route: "svg-draw", available: true },
+        {
+          label: "圖片 ASCII 轉換器",
+          route: "image-to-ascii",
+          available: true,
+        },
       ],
     },
     {

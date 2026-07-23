@@ -1,0 +1,36 @@
+/*
+ * image-to-ascii.css
+ * 使用背景圖形式引入 SVG 並實現垂直平鋪遮罩，填充色已於 SVG 內部寫死為 Mint Dim (#2bae96)
+ */
+
+/* 方案 a：強制定義 app-tool-radio-group 與其子元素的高度為固定的 42px */
+app-tool-radio-group {
+  height: 42px;
+  display: inline-block;
+}
+
+app-tool-radio-group > div {
+  height: 42px;
+}
+
+app-tool-radio-group label {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 遮罩高度固定為 42px，寬度為固定的 32px，與按鈕齊高 */
+.mask-left-svg {
+  height: 42px;
+  width: 32px;
+  background-image: url('../../../assets/mask-left.svg');
+  background-repeat: repeat-y;
+  background-size: 32px 4px;
+}
+
+.mask-right-svg {
+  height: 42px;
+  width: 32px;
+  background-image: url('../../../assets/mask-right.svg');
+  background-repeat: repeat-y;
+  background-size: 32px 4px;
+}
