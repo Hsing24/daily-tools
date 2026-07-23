@@ -62,6 +62,12 @@ export class Layout {
       ],
     },
     {
+      name: "資料與解析",
+      tools: [
+        { label: "密碼產生器", route: "password-generator", available: true },
+      ],
+    },
+    {
       name: "系統",
       tools: [{ label: "設計系統", route: "design", available: true }],
     },

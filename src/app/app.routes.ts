@@ -48,6 +48,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "password-generator",
+        loadComponent: () =>
+          import("./tools/password-generator/password-generator").then(
+            (m) => m.PasswordGenerator
+          ),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

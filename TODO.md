@@ -4,12 +4,12 @@
 - [x] 字數統計：貼上文字後，統計字數。
 - [x] Text to Markdown/HTML：將文字轉換為 Markdown 或 HTML 格式。
 - [x] Diff checker：比較兩段文字的差異。
-- [ ] emoji、符號表
+- [ ] 萬用字元與表情符號集 (Emoji n Symbols)
 
 ## 資料與解析
 - [ ] JSON formatter：將 JSON 格式化為易讀格式。
 - [ ] JWT decoder：解碼 JWT 令牌。
-- [ ] 產生密碼：可以自訂強度。
+- [x] 密碼產生器 (Password Generator)：可以自訂強度。
 
 ## 圖片與視覺
 - [x] image converter：將圖片轉換為不同格式。
