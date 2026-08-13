@@ -1,15 +1,11 @@
 /// <reference lib="webworker" />
 
-import ImageTracer from 'imagetracerjs';
-import type { TraceOptions, TraceWorkerOutput } from './svg-draw-tracer';
+import ImageTracer from "imagetracerjs";
+import type { TraceWorkerOutput, TraceWorkerRequest } from "./svg-draw-tracer";
 
-addEventListener('message', (event: MessageEvent) => {
-  const { data, width, height, options } = event.data as {
-    data: ArrayBuffer;
-    width: number;
-    height: number;
-    options: TraceOptions;
-  };
+addEventListener("message", (event: MessageEvent) => {
+  const request = event.data as TraceWorkerRequest;
+  const { data, width, height, options, generation } = request;
 
   try {
     const start = performance.now();
@@ -17,12 +13,13 @@ addEventListener('message', (event: MessageEvent) => {
     const clampedArray = new Uint8ClampedArray(data);
     const imgd = { width, height, data: clampedArray };
 
-    const svgString: string = ImageTracer.imagedataToSVG(imgd, options as any);
+    const svgString: string = ImageTracer.imagedataToSVG(imgd, options);
 
     const elapsedMs = performance.now() - start;
 
     const output: TraceWorkerOutput = {
-      type: 'done',
+      type: "done",
+      generation,
       svgString,
       elapsedMs,
     };
@@ -30,7 +27,8 @@ addEventListener('message', (event: MessageEvent) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const output: TraceWorkerOutput = {
-      type: 'error',
+      type: "error",
+      generation,
       error: message,
     };
     postMessage(output);

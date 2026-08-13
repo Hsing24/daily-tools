@@ -17,7 +17,7 @@ export interface TraceOptions {
 }
 
 /** 預設組合名稱 */
-export type TracePresetName = 'pixel_perfect' | 'detailed' | 'simple';
+export type TracePresetName = "pixel_perfect" | "detailed" | "simple";
 
 /** 預設追蹤參數 */
 export const TRACE_PRESETS: Record<TracePresetName, TraceOptions> = {
@@ -90,8 +90,8 @@ export function formatEstimatedTime(seconds: number): string {
 
 /** 格式化檔案大小 */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
   const k = 1024;
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   const size = bytes / Math.pow(k, i);
@@ -100,8 +100,39 @@ export function formatFileSize(bytes: number): string {
 
 /** Worker 輸出訊息格式 */
 export interface TraceWorkerOutput {
-  type: 'done' | 'error';
+  type: "done" | "error";
+  generation: number;
   svgString?: string;
   elapsedMs?: number;
   error?: string;
+}
+
+export interface TraceWorkerRequest {
+  type: "trace";
+  generation: number;
+  data: ArrayBuffer;
+  width: number;
+  height: number;
+  options: TraceOptions;
+}
+
+export const MAX_TRACE_PIXELS = 20_000_000;
+export const SUPPORTED_TRACE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/avif",
+]);
+
+export function isTracePresetName(value: string): value is TracePresetName {
+  return value in TRACE_PRESETS;
+}
+
+export function isSupportedTraceFile(file: File): boolean {
+  return SUPPORTED_TRACE_MIMES.has(file.type.toLowerCase());
+}
+
+export function validateSvgOutput(svg: string): boolean {
+  const trimmed = svg.trim();
+  return /^<svg(?:\s|>)/i.test(trimmed) && /<\/svg>$/i.test(trimmed);
 }

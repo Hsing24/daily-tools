@@ -1,18 +1,27 @@
-import { Component, signal, computed, OnDestroy } from "@angular/core";
+import { Component, computed, OnDestroy, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { StatRow } from "../../shared/ui/stat-row/stat-row";
-import { ToolRadioGroup, RadioOption } from "../../shared/ui/tool-radio-group/tool-radio-group";
+import {
+  ToolRadioGroup,
+  RadioOption,
+} from "../../shared/ui/tool-radio-group/tool-radio-group";
 import {
   TRACE_PRESETS,
   WARNING_THRESHOLD_SECONDS,
   estimateTraceTime,
   formatEstimatedTime,
   formatFileSize,
+  isSupportedTraceFile,
+  isTracePresetName,
+  MAX_TRACE_PIXELS,
+  type TracePresetName,
   type TraceWorkerOutput,
+  type TraceWorkerRequest,
+  validateSvgOutput,
 } from "./svg-draw-tracer";
 
 @Component({
@@ -33,83 +42,103 @@ import {
   },
 })
 export class SvgDraw implements OnDestroy {
-  // --- Helpers for Template ---
   protected readonly formatFileSize = formatFileSize;
 
   protected readonly presetOptions: RadioOption[] = [
-    { value: "pixel_perfect", label: "一比一 (最高品質)" },
+    { value: "pixel_perfect", label: "最高細節" },
     { value: "detailed", label: "精細 (高品質)" },
     { value: "simple", label: "簡易 (適合 Logo)" },
   ];
 
-  // --- Reactive State ---
   protected readonly sourceFile = signal<File | null>(null);
-  protected readonly sourcePreviewUrl = signal<string>("");
-  protected readonly sourceWidth = signal<number>(0);
-  protected readonly sourceHeight = signal<number>(0);
-  protected readonly tracePreset = signal<string>("pixel_perfect");
-  protected readonly status = signal<"idle" | "ready" | "tracing" | "done" | "error">("idle");
-  protected readonly svgOutput = signal<string>("");
-  protected readonly svgPreviewUrl = signal<string>("");
-  protected readonly elapsedSeconds = signal<number>(0);
-  protected readonly errorMessage = signal<string>("");
-  protected readonly isDragging = signal<boolean>(false);
-  protected readonly alertMessage = signal<string>("");
-  protected readonly alertVariant = signal<"success" | "error" | "warning">("success");
+  protected readonly sourcePreviewUrl = signal("");
+  protected readonly sourceWidth = signal(0);
+  protected readonly sourceHeight = signal(0);
+  protected readonly tracePreset = signal<TracePresetName>("pixel_perfect");
+  protected readonly status = signal<
+    "idle" | "ready" | "tracing" | "done" | "error"
+  >("idle");
+  protected readonly svgOutput = signal("");
+  protected readonly svgPreviewUrl = signal("");
+  protected readonly elapsedSeconds = signal(0);
+  protected readonly errorMessage = signal("");
+  protected readonly isDragging = signal(false);
+  protected readonly alertMessage = signal("");
+  protected readonly alertVariant = signal<"success" | "error" | "warning">(
+    "success",
+  );
 
-  // --- Computed State ---
   protected readonly estimatedSeconds = computed(() =>
-    estimateTraceTime(this.sourceWidth(), this.sourceHeight(), this.tracePreset())
+    estimateTraceTime(
+      this.sourceWidth(),
+      this.sourceHeight(),
+      this.tracePreset(),
+    ),
   );
-
   protected readonly estimatedTimeText = computed(() =>
-    formatEstimatedTime(this.estimatedSeconds())
+    formatEstimatedTime(this.estimatedSeconds()),
   );
-
-  protected readonly isTimeWarning = computed(() =>
-    this.estimatedSeconds() >= WARNING_THRESHOLD_SECONDS
+  protected readonly isTimeWarning = computed(
+    () => this.estimatedSeconds() >= WARNING_THRESHOLD_SECONDS,
   );
-
   protected readonly svgBlobSize = computed(() => {
     const svg = this.svgOutput();
     return svg ? new Blob([svg], { type: "image/svg+xml" }).size : 0;
   });
-
   protected readonly elapsedTimeText = computed(() =>
-    formatEstimatedTime(this.elapsedSeconds())
+    formatEstimatedTime(this.elapsedSeconds()),
   );
 
-  // --- Private properties ---
   private worker: Worker | null = null;
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private traceStartTime = 0;
+  private traceGeneration = 0;
+  private fileGeneration = 0;
+  private alertTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly pendingDownloadUrls = new Map<
+    ReturnType<typeof setTimeout>,
+    string
+  >();
+  private destroyed = false;
 
   ngOnDestroy(): void {
-    this.cleanupWorker();
+    this.destroyed = true;
+    this.traceGeneration += 1;
+    this.fileGeneration += 1;
+    this.stopWorker();
+    this.stopTimer();
     this.cleanupUrls();
+    if (this.alertTimer !== undefined) clearTimeout(this.alertTimer);
+    for (const [timer, url] of this.pendingDownloadUrls) {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+    }
+    this.pendingDownloadUrls.clear();
   }
 
   private cleanupUrls(): void {
-    if (this.sourcePreviewUrl()) {
-      URL.revokeObjectURL(this.sourcePreviewUrl());
-    }
-    if (this.svgPreviewUrl()) {
-      URL.revokeObjectURL(this.svgPreviewUrl());
-    }
+    const sourceUrl = this.sourcePreviewUrl();
+    const svgUrl = this.svgPreviewUrl();
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+    if (svgUrl && svgUrl !== sourceUrl) URL.revokeObjectURL(svgUrl);
   }
 
-  private cleanupWorker(): void {
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-    }
-    if (this.timerInterval) {
+  private stopWorker(): void {
+    this.worker?.terminate();
+    this.worker = null;
+  }
+
+  private stopTimer(): void {
+    if (this.timerInterval !== null) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
   }
 
-  // --- Drag & Drop Handlers ---
+  private isCurrentTrace(generation: number): boolean {
+    return !this.destroyed && generation === this.traceGeneration;
+  }
+
   protected onDragOver(event: DragEvent): void {
     event.preventDefault();
     this.isDragging.set(true);
@@ -122,52 +151,76 @@ export class SvgDraw implements OnDestroy {
   protected async onDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     this.isDragging.set(false);
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      await this.loadFile(files[0]);
-    }
+    const file = event.dataTransfer?.files?.[0];
+    if (file) await this.loadFile(file);
   }
 
   protected async onFileSelect(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      await this.loadFile(input.files[0]);
-      input.value = ""; // Reset for re-selection
+    const file = input.files?.[0];
+    if (file) {
+      await this.loadFile(file);
+      input.value = "";
     }
   }
 
   private async loadFile(file: File): Promise<void> {
-    if (!file.type.startsWith("image/")) {
-      this.showAlert("選擇的檔案不是有效的圖片格式。", "error");
+    if (!isSupportedTraceFile(file)) {
+      this.showAlert("只支援 PNG、JPEG、WebP、AVIF 圖片。", "error");
       return;
     }
 
+    const generation = ++this.fileGeneration;
+    this.traceGeneration += 1;
+    this.stopWorker();
+    this.stopTimer();
+    this.cleanupUrls();
     this.resetState();
-    this.sourceFile.set(file);
+
     const previewUrl = URL.createObjectURL(file);
+    this.sourceFile.set(file);
     this.sourcePreviewUrl.set(previewUrl);
 
     try {
       const { width, height } = await this.getImageDimensions(file);
+      if (generation !== this.fileGeneration || this.destroyed) {
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
       this.sourceWidth.set(width);
       this.sourceHeight.set(height);
       this.status.set("ready");
-    } catch (err) {
-      this.showAlert("無法讀取圖片尺寸。", "error");
-      this.reset();
+    } catch {
+      if (generation !== this.fileGeneration || this.destroyed) {
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+      URL.revokeObjectURL(previewUrl);
+      this.resetState();
+      this.showAlert("無法讀取圖片尺寸，或圖片超過大小限制。", "error");
     }
   }
 
-  private getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  private getImageDimensions(
+    file: File,
+  ): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
+      const cleanup = (): void => URL.revokeObjectURL(url);
+
       img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        cleanup();
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        if (!width || !height || width * height > MAX_TRACE_PIXELS) {
+          reject(new Error("Image exceeds pixel budget"));
+          return;
+        }
+        resolve({ width, height });
       };
       img.onerror = () => {
-        URL.revokeObjectURL(url);
+        cleanup();
         reject(new Error("Image load error"));
       };
       img.src = url;
@@ -175,84 +228,96 @@ export class SvgDraw implements OnDestroy {
   }
 
   protected onPresetChange(value: string): void {
+    if (!isTracePresetName(value)) return;
     this.tracePreset.set(value);
-    // If we have already done or got error, reset to ready status to suggest re-running
-    if (this.status() === "done" || this.status() === "error") {
+    if (this.status() === "done" || this.status() === "error")
       this.status.set("ready");
-    }
   }
 
-  // --- Tracing Logic ---
   protected async startTrace(): Promise<void> {
     const file = this.sourceFile();
-    if (!file) return;
+    if (!file || this.status() === "tracing") return;
 
+    const generation = ++this.traceGeneration;
+    this.stopWorker();
+    this.stopTimer();
     this.status.set("tracing");
     this.errorMessage.set("");
     this.elapsedSeconds.set(0);
     this.traceStartTime = performance.now();
-
-    // Start timer interval to show elapsed seconds
     this.timerInterval = setInterval(() => {
-      const elapsed = (performance.now() - this.traceStartTime) / 1000;
-      this.elapsedSeconds.set(elapsed);
+      if (this.isCurrentTrace(generation)) {
+        this.elapsedSeconds.set(
+          (performance.now() - this.traceStartTime) / 1000,
+        );
+      }
     }, 100);
 
     try {
       const imageData = await this.getImageData(file);
-      const buffer = imageData.data.buffer.slice(0); // Transferable ArrayBuffer copy
+      if (!this.isCurrentTrace(generation)) return;
 
-      this.cleanupWorker();
-
-      this.worker = new Worker(new URL("./svg-draw.worker", import.meta.url), {
+      const buffer = imageData.data.slice().buffer as ArrayBuffer;
+      const worker = new Worker(new URL("./svg-draw.worker", import.meta.url), {
         type: "module",
       });
+      this.worker = worker;
 
-      this.worker.onmessage = (event: MessageEvent<TraceWorkerOutput>) => {
+      worker.onmessage = (event: MessageEvent<TraceWorkerOutput>) => {
         const result = event.data;
-        this.cleanupWorker();
+        if (
+          !this.isCurrentTrace(generation) ||
+          result.generation !== generation
+        )
+          return;
 
-        if (result.type === "done" && result.svgString) {
-          const actualElapsedSec = result.elapsedMs ? result.elapsedMs / 1000 : (performance.now() - this.traceStartTime) / 1000;
-          this.elapsedSeconds.set(actualElapsedSec);
+        this.stopWorker();
+        this.stopTimer();
+        if (
+          result.type === "done" &&
+          result.svgString &&
+          validateSvgOutput(result.svgString)
+        ) {
+          this.elapsedSeconds.set(
+            (performance.now() - this.traceStartTime) / 1000,
+          );
           this.svgOutput.set(result.svgString);
-
-          // Create SVG preview URL
-          const blob = new Blob([result.svgString], { type: "image/svg+xml" });
-          const svgUrl = URL.createObjectURL(blob);
-          this.svgPreviewUrl.set(svgUrl);
-
+          this.replaceSvgPreview(result.svgString);
           this.status.set("done");
           this.showAlert("描圖完成！", "success");
         } else {
+          const message = result.error || "描圖輸出格式無效";
           this.status.set("error");
-          this.errorMessage.set(result.error || "未知描圖錯誤");
-          this.showAlert(result.error || "描圖失敗", "error");
+          this.errorMessage.set(message);
+          this.showAlert(message, "error");
         }
       };
 
-      this.worker.onerror = (err) => {
-        this.cleanupWorker();
+      worker.onerror = () => {
+        if (!this.isCurrentTrace(generation)) return;
+        this.stopWorker();
+        this.stopTimer();
         this.status.set("error");
         this.errorMessage.set("Worker 執行緒錯誤。");
         this.showAlert("Worker 錯誤", "error");
       };
 
-      const presetOptions = TRACE_PRESETS[this.tracePreset() as keyof typeof TRACE_PRESETS] || TRACE_PRESETS.pixel_perfect;
-
-      this.worker.postMessage(
-        {
-          data: buffer,
-          width: imageData.width,
-          height: imageData.height,
-          options: presetOptions,
-        },
-        [buffer]
-      );
-    } catch (err: any) {
-      this.cleanupWorker();
+      const request: TraceWorkerRequest = {
+        type: "trace",
+        generation,
+        data: buffer,
+        width: imageData.width,
+        height: imageData.height,
+        options: TRACE_PRESETS[this.tracePreset()],
+      };
+      worker.postMessage(request, [buffer]);
+    } catch (err: unknown) {
+      if (!this.isCurrentTrace(generation)) return;
+      this.stopWorker();
+      this.stopTimer();
+      const message = err instanceof Error ? err.message : "無法獲取圖片數據";
       this.status.set("error");
-      this.errorMessage.set(err?.message || "無法獲取圖片數據");
+      this.errorMessage.set(message);
       this.showAlert("讀取圖片數據失敗", "error");
     }
   }
@@ -261,26 +326,27 @@ export class SvgDraw implements OnDestroy {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
+      const cleanup = (): void => URL.revokeObjectURL(url);
+
       img.onload = () => {
-        URL.revokeObjectURL(url);
+        cleanup();
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          reject(new Error("Could not get 2D canvas context"));
+          reject(new Error("無法取得 Canvas 2D context"));
           return;
         }
         ctx.drawImage(img, 0, 0);
         try {
-          const imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          resolve(imgd);
-        } catch (e) {
-          reject(e);
+          resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        } catch (error: unknown) {
+          reject(error);
         }
       };
       img.onerror = () => {
-        URL.revokeObjectURL(url);
+        cleanup();
         reject(new Error("Image data load error"));
       };
       img.src = url;
@@ -288,7 +354,11 @@ export class SvgDraw implements OnDestroy {
   }
 
   protected cancelTrace(): void {
-    this.cleanupWorker();
+    if (this.status() !== "tracing") return;
+    this.traceGeneration += 1;
+    this.stopWorker();
+    this.stopTimer();
+    this.elapsedSeconds.set(0);
     this.status.set("ready");
     this.showAlert("已取消描圖作業。", "warning");
   }
@@ -298,18 +368,19 @@ export class SvgDraw implements OnDestroy {
     if (!svg) return;
 
     const originalName = this.sourceFile()?.name ?? "image";
-    const baseName = originalName.substring(0, originalName.lastIndexOf(".")) || originalName;
-    const downloadName = `${baseName}.svg`;
+    const baseName =
+      originalName.substring(0, originalName.lastIndexOf(".")) || originalName;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${baseName}.svg`;
+    anchor.click();
 
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = downloadName;
-    a.click();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const timer = setTimeout(() => {
+      this.pendingDownloadUrls.delete(timer);
+      URL.revokeObjectURL(url);
+    }, 1000);
+    this.pendingDownloadUrls.set(timer, url);
   }
 
   protected async copySvgCode(): Promise<void> {
@@ -325,7 +396,10 @@ export class SvgDraw implements OnDestroy {
   }
 
   protected reset(): void {
-    this.cleanupWorker();
+    this.fileGeneration += 1;
+    this.traceGeneration += 1;
+    this.stopWorker();
+    this.stopTimer();
     this.cleanupUrls();
     this.resetState();
   }
@@ -342,9 +416,23 @@ export class SvgDraw implements OnDestroy {
     this.errorMessage.set("");
   }
 
-  protected showAlert(message: string, variant: "success" | "error" | "warning"): void {
+  private replaceSvgPreview(svg: string): void {
+    const oldUrl = this.svgPreviewUrl();
+    if (oldUrl) URL.revokeObjectURL(oldUrl);
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    this.svgPreviewUrl.set(url);
+  }
+
+  protected showAlert(
+    message: string,
+    variant: "success" | "error" | "warning",
+  ): void {
+    if (this.alertTimer !== undefined) clearTimeout(this.alertTimer);
     this.alertMessage.set(message);
     this.alertVariant.set(variant);
-    setTimeout(() => this.alertMessage.set(""), 4000);
+    this.alertTimer = setTimeout(() => {
+      this.alertMessage.set("");
+      this.alertTimer = undefined;
+    }, 4000);
   }
 }
