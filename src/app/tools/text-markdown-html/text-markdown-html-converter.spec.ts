@@ -1,6 +1,7 @@
 import {
   convertTextToMarkdownAndHtml,
   convertHtmlToMarkdown,
+  convertMarkdownToHtml,
 } from "./text-markdown-html-converter";
 
 describe("convertTextToMarkdownAndHtml", () => {
@@ -47,21 +48,64 @@ describe("convertTextToMarkdownAndHtml", () => {
   });
 
   it("應該將 Markdown 語法轉換為 HTML，且 Markdown 欄位保持原樣不跳脫", () => {
-    const result = convertTextToMarkdownAndHtml("# 標題\n\n這是**粗體**與*斜體*還有[連結](https://google.com)");
-    expect(result.markdown).toBe("# 標題\n\n這是**粗體**與*斜體*還有[連結](https://google.com)");
+    const result = convertTextToMarkdownAndHtml(
+      "# 標題\n\n這是**粗體**與*斜體*還有[連結](https://google.com)",
+    );
+    expect(result.markdown).toBe(
+      "# 標題\n\n這是**粗體**與*斜體*還有[連結](https://google.com)",
+    );
     expect(result.html).toBe(
-      "<h1>標題</h1>\n<p>這是<strong>粗體</strong>與<em>斜體</em>還有<a href=\"https://google.com\">連結</a></p>"
+      '<h1>標題</h1>\n<p>這是<strong>粗體</strong>與<em>斜體</em>還有<a href="https://google.com">連結</a></p>',
     );
   });
 
+  it("應該保護危險連結與 HTML", () => {
+    const result = convertMarkdownToHtml(
+      '[安全](https://example.com "示例") [危險](javascript:alert(1))\n\n<script>alert(1)</script> <b>粗體</b>',
+    );
+
+    expect(result).toContain(
+      '<a href="https://example.com" title="示例">安全</a>',
+    );
+    expect(result).not.toContain("javascript:");
+    expect(result).not.toContain("<script");
+    expect(result).not.toContain("<b>");
+  });
+
+  it("應支援巢狀清單、有序清單、程式碼區塊與括號 URL", () => {
+    const result = convertMarkdownToHtml(
+      "1. 第一項\n2. 第二項\n   - 巢狀項目\n\n```ts\nconst value = `code`\n```\n\n[文件](https://example.com/a_(b))",
+    );
+
+    expect(result).toContain("<ol>");
+    expect(result).toContain("<li>巢狀項目</li>");
+    expect(result).toContain("<pre><code>");
+    expect(result).toContain('href="https://example.com/a_(b)"');
+  });
+
   it("應該正確將 HTML 富文本轉換成 Markdown (convertHtmlToMarkdown)", () => {
-    const htmlInput = "<h1>Conventional Commits</h1><p>Please visit <a href=\"https://example.com\">our site</a> and <strong>be bold</strong>.</p>";
+    const htmlInput =
+      '<h1>Conventional Commits</h1><p>Please visit <a href="https://example.com">our site</a> and <strong>be bold</strong>.</p>';
     const result = convertHtmlToMarkdown(htmlInput);
-    expect(result).toBe("# Conventional Commits\n\nPlease visit [our site](https://example.com) and **be bold**.");
+    expect(result).toBe(
+      "# Conventional Commits\n\nPlease visit [our site](https://example.com) and **be bold**.",
+    );
+  });
+
+  it("HTML 轉 Markdown 應保留有序清單與程式碼區塊，並移除危險連結", () => {
+    const result = convertHtmlToMarkdown(
+      '<ol><li>第一項</li><li>第二項</li></ol><pre><code>const x = `code`;</code></pre><a href="javascript:alert(1)">危險</a>',
+    );
+
+    expect(result).toContain("1.  第一項");
+    expect(result).toContain("2.  第二項");
+    expect(result).toContain("```\nconst x = `code`;\n```");
+    expect(result).not.toContain("javascript:");
   });
 
   it("效能驗收：應在 1 秒內完成 50,000 字元的大量文字轉換 (SC-001, T027)", () => {
-    const baseSegment = "這是測試段落中的第一行文字。\n這是同一段落的第二行，含有一些 *特殊字元* 和 <p>HTML 標籤</p>。\n\n";
+    const baseSegment =
+      "這是測試段落中的第一行文字。\n這是同一段落的第二行，含有一些 *特殊字元* 和 <p>HTML 標籤</p>。\n\n";
     const repeatCount = Math.ceil(50000 / baseSegment.length);
     const largeInput = baseSegment.repeat(repeatCount);
 

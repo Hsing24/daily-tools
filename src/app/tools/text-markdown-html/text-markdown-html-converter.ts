@@ -1,3 +1,7 @@
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import TurndownService from "turndown";
+
 export interface TextConversionResult {
   /** Markdown 格式輸出 */
   readonly markdown: string;
@@ -5,150 +9,102 @@ export interface TextConversionResult {
   readonly html: string;
 }
 
-export function convertHtmlToMarkdown(html: string): string {
-  if (!html) return "";
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  let markdown = walkNode(doc.body);
+const ALLOWED_URI_PATTERN = /^(?:https?:|mailto:|tel:)/i;
+const MARKDOWN_OPTIONS = {
+  async: false,
+  breaks: true,
+  gfm: true,
+  headerIds: false,
+  mangle: false,
+} as const;
 
-  // 清理多餘的連續空行
-  markdown = markdown
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-
-  return markdown;
+function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_ATTR: ["href", "title", "start", "checked", "disabled"],
+    ALLOWED_TAGS: [
+      "a",
+      "blockquote",
+      "br",
+      "code",
+      "del",
+      "em",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "li",
+      "ol",
+      "p",
+      "pre",
+      "strong",
+      "ul",
+    ],
+    ALLOW_DATA_ATTR: false,
+    FORBID_ATTR: ["style", "class", "id", "target"],
+    FORBID_TAGS: ["form", "iframe", "img", "input", "script", "style", "svg"],
+    ALLOWED_URI_REGEXP: ALLOWED_URI_PATTERN,
+  });
 }
 
-function walkNode(node: Node): string {
-  if (node.nodeType === 3) {
-    return node.nodeValue || "";
-  }
+function normalizeMarkdown(markdown: string): string {
+  return markdown
+    .replace(/\r\n?/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
-  if (node.nodeType !== 1) {
-    return "";
-  }
-
-  const element = node as HTMLElement;
-  const tagName = element.tagName.toUpperCase();
-
-  let childrenContent = "";
-  element.childNodes.forEach((child) => {
-    childrenContent += walkNode(child);
+function createTurndown(): TurndownService {
+  const service = new TurndownService({
+    bulletListMarker: "-",
+    codeBlockStyle: "fenced",
+    emDelimiter: "*",
+    headingStyle: "atx",
   });
 
-  switch (tagName) {
-    case "H1":
-      return `\n\n# ${childrenContent}\n\n`;
-    case "H2":
-      return `\n\n## ${childrenContent}\n\n`;
-    case "H3":
-      return `\n\n### ${childrenContent}\n\n`;
-    case "H4":
-      return `\n\n#### ${childrenContent}\n\n`;
-    case "H5":
-      return `\n\n##### ${childrenContent}\n\n`;
-    case "H6":
-      return `\n\n###### ${childrenContent}\n\n`;
-    case "P":
-      return `\n\n${childrenContent}\n\n`;
-    case "BR":
-      return "\n";
-    case "STRONG":
-    case "B":
-      return `**${childrenContent}**`;
-    case "EM":
-    case "I":
-      return `*${childrenContent}*`;
-    case "CODE":
-      return `\`${childrenContent}\``;
-    case "A": {
-      const href = element.getAttribute("href") || "";
-      return `[${childrenContent}](${href})`;
-    }
-    case "LI":
-      return `\n- ${childrenContent}`;
-    case "UL":
-    case "OL":
-      return `\n${childrenContent}\n`;
-    default:
-      return childrenContent;
-  }
+  service.addRule("safeLinks", {
+    filter: "a",
+    replacement(content, node) {
+      const anchor = node as HTMLAnchorElement;
+      const href = anchor.getAttribute("href") ?? "";
+      if (!ALLOWED_URI_PATTERN.test(href)) return content;
+      const title = anchor.getAttribute("title");
+      const titlePart = title ? ` \"${title.replace(/\"/g, '\\\"')}\"` : "";
+      return `[${content}](${href}${titlePart})`;
+    },
+  });
+
+  return service;
+}
+
+export function convertHtmlToMarkdown(html: string): string {
+  if (!html) return "";
+
+  const cleanHtml = sanitizeHtml(html);
+  const markdown = createTurndown().turndown(cleanHtml);
+  return normalizeMarkdown(markdown);
 }
 
 export function convertMarkdownToHtml(markdown: string): string {
   if (!markdown) return "";
 
-  // 1. 正規化換行
-  let html = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-
-  // 2. 基本 HTML 轉義以防腳本注入
-  html = html
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  // 3. 轉換 headings
-  html = html.replace(/^# (.*?)$/gm, "<h1>$1</h1>");
-  html = html.replace(/^## (.*?)$/gm, "<h2>$1</h2>");
-  html = html.replace(/^### (.*?)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^#### (.*?)$/gm, "<h4>$1</h4>");
-  html = html.replace(/^##### (.*?)$/gm, "<h5>$1</h5>");
-  html = html.replace(/^###### (.*?)$/gm, "<h6>$1</h6>");
-
-  // 4. 轉換清單項目 (以 - 開頭)
-  html = html.replace(/^- (.*?)$/gm, "<li>$1</li>");
-  html = html.replace(/(<li>.*?<\/li>\n?)+/g, (match) => {
-    return `<ul>\n${match}</ul>\n`;
-  });
-
-  // 5. 轉換粗體與斜體與程式碼
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  html = html.replace(/`(.*?)`/g, "<code>$1</code>");
-
-  // 6. 轉換連結 [text](url)
-  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
-
-  // 7. 切分段落
-  const paragraphs = html.split(/\n{2,}/);
-  const resultParagraphs = paragraphs.map((p) => {
-    const trimmed = p.trim();
-    if (!trimmed) return "";
-    if (
-      trimmed.startsWith("<h") ||
-      trimmed.startsWith("<ul") ||
-      trimmed.startsWith("<ol") ||
-      trimmed.startsWith("<li")
-    ) {
-      return trimmed;
-    }
-    // 段落內單個換行轉成 <br>
-    const lines = trimmed.split("\n");
-    return `<p>${lines.join("<br>")}</p>`;
-  });
-
-  return resultParagraphs.filter((p) => p !== "").join("\n");
+  const normalized = normalizeMarkdown(markdown);
+  const html = marked.parse(normalized, MARKDOWN_OPTIONS);
+  if (typeof html !== "string") {
+    throw new Error("Markdown conversion unexpectedly became asynchronous");
+  }
+  return sanitizeHtml(html).trim();
 }
 
-export function convertTextToMarkdownAndHtml(text: string): TextConversionResult {
-  if (text === null || text === undefined || text === "") {
-    return { markdown: "", html: "" };
-  }
+export function convertTextToMarkdownAndHtml(
+  text: string,
+): TextConversionResult {
+  const markdown = normalizeMarkdown(text ?? "");
+  if (!markdown) return { markdown: "", html: "" };
 
-  // 1. 正規化換行
-  let normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
-  // 2. 修剪外圍空白
-  normalized = normalized.trim();
-  if (normalized === "") {
-    return { markdown: "", html: "" };
-  }
-
-  const paragraphs = normalized.split(/\n{2,}/);
-  const markdown = paragraphs.join("\n\n");
-  const html = convertMarkdownToHtml(markdown);
-
-  return { markdown, html };
+  return {
+    markdown,
+    html: convertMarkdownToHtml(markdown),
+  };
 }

@@ -1,4 +1,4 @@
-import { Component, signal, computed } from "@angular/core";
+import { Component, DestroyRef, computed, inject, signal } from "@angular/core";
 import { TerminalOutput } from "../../shared/ui/terminal-output/terminal-output";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
@@ -8,7 +8,7 @@ import { ToolRadioGroup } from "../../shared/ui/tool-radio-group/tool-radio-grou
 import {
   convertTextToMarkdownAndHtml,
   convertHtmlToMarkdown,
-  TextConversionResult,
+  type TextConversionResult,
 } from "./text-markdown-html-converter";
 
 @Component({
@@ -24,10 +24,11 @@ import {
   templateUrl: "./text-markdown-html.html",
   styleUrl: "./text-markdown-html.css",
   host: {
-    class: "d:block font-family:var(--font-mono) color:var(--ink)"
-  }
+    class: "d:block font-family:var(--font-mono) color:var(--ink)",
+  },
 })
 export class TextMarkdownHtml {
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly sourceText = signal("");
   protected readonly isProcessing = signal(false);
   protected readonly clipboardAlert = signal("");
@@ -41,10 +42,21 @@ export class TextMarkdownHtml {
   });
 
   protected readonly conversionResult = computed(() =>
-    this.conversionResultSignal()
+    this.conversionResultSignal(),
   );
 
-  private pendingTimeoutId: any = null;
+  private pendingTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  private revision = 0;
+  private markdownCopyTimer: ReturnType<typeof setTimeout> | undefined;
+  private htmlCopyTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.cancelPendingConversion();
+      this.clearCopyTimer("markdown");
+      this.clearCopyTimer("html");
+    });
+  }
 
   protected onInput(value: string): void {
     this.sourceText.set(value);
@@ -63,18 +75,19 @@ export class TextMarkdownHtml {
   }
 
   protected updateResult(value: string): void {
-    if (this.pendingTimeoutId !== null) {
-      clearTimeout(this.pendingTimeoutId);
-      this.pendingTimeoutId = null;
-    }
+    const currentRevision = ++this.revision;
+    this.cancelPendingConversion();
+    this.conversionResultSignal.set({ markdown: "", html: "" });
 
     if (value.length > 20000) {
       this.isProcessing.set(true);
       this.pendingTimeoutId = setTimeout(() => {
+        this.pendingTimeoutId = undefined;
+        if (currentRevision !== this.revision) return;
         const result = convertTextToMarkdownAndHtml(value);
+        if (currentRevision !== this.revision) return;
         this.conversionResultSignal.set(result);
         this.isProcessing.set(false);
-        this.pendingTimeoutId = null;
       }, 0);
     } else {
       const result = convertTextToMarkdownAndHtml(value);
@@ -91,20 +104,21 @@ export class TextMarkdownHtml {
         navigator.clipboard &&
         typeof navigator.clipboard.read === "function"
       ) {
-        const clipboardItems = await navigator.clipboard.read();
-        let pasted = false;
-        for (const item of clipboardItems) {
-          if (item.types.includes("text/html")) {
-            const blob = await item.getType("text/html");
-            const htmlText = await blob.text();
-            const markdown = convertHtmlToMarkdown(htmlText);
-            this.sourceText.set(markdown);
-            this.updateResult(markdown);
-            pasted = true;
-            break;
+        try {
+          const clipboardItems = await navigator.clipboard.read();
+          for (const item of clipboardItems) {
+            if (item.types.includes("text/html")) {
+              const blob = await item.getType("text/html");
+              const htmlText = await blob.text();
+              const markdown = convertHtmlToMarkdown(htmlText);
+              this.sourceText.set(markdown);
+              this.updateResult(markdown);
+              return;
+            }
           }
+        } catch {
+          // Permission denied: try plain text clipboard below.
         }
-        if (pasted) return;
       }
 
       // 如果不支援或沒有 HTML 格式， fallback 至 readText 讀取純文字
@@ -119,27 +133,28 @@ export class TextMarkdownHtml {
       this.updateResult(clipboardText);
     } catch (err) {
       this.clipboardAlert.set(
-        "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。"
+        "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。",
       );
     }
   }
 
   protected clear(): void {
+    this.revision += 1;
+    this.cancelPendingConversion();
     this.sourceText.set("");
     this.clipboardAlert.set("");
     this.copyMarkdownStatus.set("");
     this.copyHtmlStatus.set("");
     this.outputFormat.set("markdown");
     this.isProcessing.set(false);
-    if (this.pendingTimeoutId !== null) {
-      clearTimeout(this.pendingTimeoutId);
-      this.pendingTimeoutId = null;
-    }
     this.conversionResultSignal.set({ markdown: "", html: "" });
   }
 
   protected async copyMarkdown(): Promise<void> {
+    const revision = this.revision;
+    const markdown = this.conversionResult().markdown;
     this.copyMarkdownStatus.set("");
+    this.clearCopyTimer("markdown");
     try {
       if (
         !navigator.clipboard ||
@@ -147,10 +162,12 @@ export class TextMarkdownHtml {
       ) {
         throw new Error("Clipboard API not supported");
       }
-      await navigator.clipboard.writeText(this.conversionResult().markdown);
+      await navigator.clipboard.writeText(markdown);
+      if (revision !== this.revision) return;
       this.copyMarkdownStatus.set("已複製！");
-      setTimeout(() => {
+      this.markdownCopyTimer = setTimeout(() => {
         this.copyMarkdownStatus.set("");
+        this.markdownCopyTimer = undefined;
       }, 2000);
     } catch (err) {
       this.copyMarkdownStatus.set("複製失敗");
@@ -158,7 +175,10 @@ export class TextMarkdownHtml {
   }
 
   protected async copyHtml(): Promise<void> {
+    const revision = this.revision;
+    const html = this.conversionResult().html;
     this.copyHtmlStatus.set("");
+    this.clearCopyTimer("html");
     try {
       if (
         !navigator.clipboard ||
@@ -166,13 +186,33 @@ export class TextMarkdownHtml {
       ) {
         throw new Error("Clipboard API not supported");
       }
-      await navigator.clipboard.writeText(this.conversionResult().html);
+      await navigator.clipboard.writeText(html);
+      if (revision !== this.revision) return;
       this.copyHtmlStatus.set("已複製！");
-      setTimeout(() => {
+      this.htmlCopyTimer = setTimeout(() => {
         this.copyHtmlStatus.set("");
+        this.htmlCopyTimer = undefined;
       }, 2000);
     } catch (err) {
       this.copyHtmlStatus.set("複製失敗");
+    }
+  }
+
+  private cancelPendingConversion(): void {
+    if (this.pendingTimeoutId !== undefined) {
+      clearTimeout(this.pendingTimeoutId);
+      this.pendingTimeoutId = undefined;
+    }
+  }
+
+  private clearCopyTimer(format: "markdown" | "html"): void {
+    const timer =
+      format === "markdown" ? this.markdownCopyTimer : this.htmlCopyTimer;
+    if (timer !== undefined) clearTimeout(timer);
+    if (format === "markdown") {
+      this.markdownCopyTimer = undefined;
+    } else {
+      this.htmlCopyTimer = undefined;
     }
   }
 }
