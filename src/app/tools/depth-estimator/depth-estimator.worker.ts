@@ -5,6 +5,7 @@ import {
   DepthModelId,
   DeviceType,
 } from "./depth-estimator-types";
+import { resizeDepthArray } from "./depth-estimator-core";
 
 // 關閉本地模型載入限制，使用遠端 Hugging Face Hub / 瀏覽器快取
 env.allowLocalModels = false;
@@ -19,9 +20,13 @@ let loadedDevice: DeviceType = "webgpu";
  */
 async function getDepthPipeline(
   model: DepthModelId,
-  preferredDevice: DeviceType = "webgpu"
+  preferredDevice: DeviceType = "webgpu",
 ): Promise<{ pipe: any; device: DeviceType }> {
-  if (currentPipeline && loadedModel === model && loadedDevice === preferredDevice) {
+  if (
+    currentPipeline &&
+    loadedModel === model &&
+    loadedDevice === preferredDevice
+  ) {
     return { pipe: currentPipeline, device: loadedDevice };
   }
 
@@ -36,7 +41,10 @@ async function getDepthPipeline(
           progress: {
             status: "downloading",
             file: progressData?.file,
-            progress: typeof progressData?.progress === "number" ? Math.round(progressData.progress) : undefined,
+            progress:
+              typeof progressData?.progress === "number"
+                ? Math.round(progressData.progress)
+                : undefined,
             loaded: progressData?.loaded,
             total: progressData?.total,
           },
@@ -51,7 +59,10 @@ async function getDepthPipeline(
     return { pipe, device: chosenDevice };
   } catch (gpuError) {
     if (chosenDevice === "webgpu") {
-      console.warn("WebGPU initialization failed, falling back to WASM (CPU)...", gpuError);
+      console.warn(
+        "WebGPU initialization failed, falling back to WASM (CPU)...",
+        gpuError,
+      );
       chosenDevice = "wasm";
 
       const pipe = await pipeline("depth-estimation", model, {
@@ -62,7 +73,10 @@ async function getDepthPipeline(
             progress: {
               status: "downloading",
               file: progressData?.file,
-              progress: typeof progressData?.progress === "number" ? Math.round(progressData.progress) : undefined,
+              progress:
+                typeof progressData?.progress === "number"
+                  ? Math.round(progressData.progress)
+                  : undefined,
               loaded: progressData?.loaded,
               total: progressData?.total,
             },
@@ -88,21 +102,25 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   try {
     if (req.type === "init") {
-      const { device } = await getDepthPipeline(req.model, req.device ?? "webgpu");
+      const { device } = await getDepthPipeline(
+        req.model,
+        req.device ?? "webgpu",
+      );
       const readyMsg: WorkerResponse = { type: "ready", device };
       self.postMessage(readyMsg);
       return;
     }
 
     if (req.type === "estimate") {
-      const startTime = performance.now();
-
       self.postMessage({
         type: "progress",
         progress: { status: "processing", message: "深度模型推論中..." },
       } as WorkerResponse);
 
-      const { pipe, device } = await getDepthPipeline(req.model, req.device ?? "webgpu");
+      const { pipe, device } = await getDepthPipeline(
+        req.model,
+        req.device ?? "webgpu",
+      );
 
       // 將傳入的 ImageBitmap 繪製到 OffscreenCanvas 並轉為 RawImage
       const bitmap = req.imageBitmap;
@@ -121,6 +139,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       const rawImage = new RawImage(imgData.data, width, height, 4);
 
       // 執行模型推論
+      const startTime = performance.now();
       const output = await pipe(rawImage);
       const endTime = performance.now();
       const inferenceTimeMs = Math.round(endTime - startTime);
@@ -154,18 +173,25 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
           depthFloatArray[i] = (Number(tensorData[i]) - minD) / range;
         }
 
+        const resizedDepthArray = resizeDepthArray(
+          depthFloatArray,
+          outWidth,
+          outHeight,
+          width,
+          height,
+        );
         const successMsg: WorkerResponse = {
           type: "success",
-          depthArray: depthFloatArray,
-          width: outWidth,
-          height: outHeight,
+          depthArray: resizedDepthArray,
+          width,
+          height,
           minDepth: minD,
           maxDepth: maxD,
           inferenceTimeMs,
           device,
         };
 
-        self.postMessage(successMsg, [depthFloatArray.buffer]);
+        self.postMessage(successMsg, [resizedDepthArray.buffer]);
       } else if (output.depth && output.depth.data) {
         outWidth = output.depth.width;
         outHeight = output.depth.height;

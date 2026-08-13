@@ -29,9 +29,13 @@ import {
   WorkerResponse,
 } from "./depth-estimator-types";
 import {
+  adjustDepthArray,
   depthArrayToImageData,
+  encodeGrayscalePng,
+  exportDepthToGlb,
   exportDepthToObj,
   generateSampleDepthMap,
+  prepareDepthForExport,
 } from "./depth-estimator-core";
 
 @Component({
@@ -55,7 +59,7 @@ import {
 export class DepthEstimator implements OnInit, OnDestroy {
   // Signals 狀態管理
   readonly selectedModel = signal<DepthModelId>(
-    "onnx-community/depth-anything-v2-small"
+    "onnx-community/depth-anything-v2-small",
   );
   readonly preferredDevice = signal<DeviceType>("webgpu");
   readonly activeDevice = signal<DeviceType | null>(null);
@@ -66,6 +70,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
   readonly brightness = signal<number>(0); // -50 ~ 50 (%)
   readonly splitPosition = signal<number>(50); // 0 ~ 100 (%)
   readonly depthScale3D = signal<number>(35); // 5 ~ 100 (%)
+  readonly edgeSoftening = signal<number>(0.5); // 0 ~ 2 (% of width)
   readonly isPointCloud = signal<boolean>(false);
 
   readonly isLoading = signal<boolean>(false);
@@ -76,9 +81,13 @@ export class DepthEstimator implements OnInit, OnDestroy {
   } | null>(null);
 
   readonly inputImageUrl = signal<string | null>(null);
+  readonly sourceImageUrl = signal<string | null>(null);
   readonly inputImageElement = signal<HTMLImageElement | null>(null);
   readonly imageDimensions = signal<{ width: number; height: number } | null>(
-    null
+    null,
+  );
+  readonly sourceDimensions = signal<{ width: number; height: number } | null>(
+    null,
   );
   readonly depthResult = signal<DepthResult | null>(null);
   readonly isDragging = signal<boolean>(false);
@@ -162,7 +171,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
         value: dims ? `${dims.width} × ${dims.height} px` : "---",
       },
       {
-        label: "深度範圍",
+        label: "相對深度（disparity，非公尺）",
         value: res
           ? `${res.minDepth.toFixed(2)} ~ ${res.maxDepth.toFixed(2)}`
           : "---",
@@ -178,21 +187,40 @@ export class DepthEstimator implements OnInit, OnDestroy {
     ];
   });
 
+  private readonly processedPreviewDepth = computed(() => {
+    const res = this.depthResult();
+    if (!res) return new Float32Array();
+    return prepareDepthForExport(
+      res.depthArray,
+      res.width,
+      res.height,
+      res.width,
+      res.height,
+      {
+        invert: this.invertDepth(),
+        contrast: this.contrast() / 100,
+        brightness: this.brightness() / 100,
+        blurPercent: this.edgeSoftening(),
+      },
+    );
+  });
+
   ngOnInit(): void {
     this.initWorker();
   }
 
   clearImage(): void {
     this.inputImageUrl.set(null);
+    this.sourceImageUrl.set(null);
     this.inputImageElement.set(null);
     this.imageDimensions.set(null);
+    this.sourceDimensions.set(null);
     this.depthResult.set(null);
     this.alertState.set(null);
     if (this.fileInputRef()?.nativeElement) {
       this.fileInputRef()!.nativeElement.value = "";
     }
   }
-
 
   ngOnDestroy(): void {
     if (this.animationFrameId !== null) {
@@ -209,7 +237,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       try {
         this.worker = new Worker(
           new URL("./depth-estimator.worker.ts", import.meta.url),
-          { type: "module" }
+          { type: "module" },
         );
 
         this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -284,8 +312,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
     img.crossOrigin = "anonymous";
     img.onload = () => {
       this.inputImageUrl.set(dataUrl);
+      this.sourceImageUrl.set(dataUrl);
       this.inputImageElement.set(img);
       this.imageDimensions.set({ width: 384, height: 384 });
+      this.sourceDimensions.set({ width: 384, height: 384 });
 
       this.depthResult.set({
         depthArray: sample.depthArray,
@@ -371,8 +401,13 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
+      this.sourceImageUrl.set(dataUrl);
       const img = new Image();
       img.onload = () => {
+        this.sourceDimensions.set({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
         // 限制最大推論輸入尺寸，兼顧效能與記憶體
         const maxDimension = 640;
         let w = img.naturalWidth;
@@ -417,7 +452,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
   protected startDepthEstimation(
     imgElement?: HTMLImageElement,
     width?: number,
-    height?: number
+    height?: number,
   ): void {
     const img = imgElement || this.inputImageElement();
     const dims = this.imageDimensions();
@@ -493,12 +528,15 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const imgData = depthArrayToImageData(res.depthArray, res.width, res.height, {
-      colorMap: this.colorMap(),
-      invert: this.invertDepth(),
-      contrast: this.contrast() / 100,
-      brightness: this.brightness() / 100,
-    });
+    const processedDepth = this.getProcessedDepth(res.width, res.height);
+    const imgData = depthArrayToImageData(
+      processedDepth,
+      res.width,
+      res.height,
+      {
+        colorMap: this.colorMap(),
+      },
+    );
 
     ctx.putImageData(imgData, 0, 0);
   }
@@ -522,15 +560,12 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     // 產生深度圖 ImageData
     const depthImgData = depthArrayToImageData(
-      res.depthArray,
+      this.getProcessedDepth(res.width, res.height),
       res.width,
       res.height,
       {
         colorMap: this.colorMap(),
-        invert: this.invertDepth(),
-        contrast: this.contrast() / 100,
-        brightness: this.brightness() / 100,
-      }
+      },
     );
 
     // 建立暫存 depth canvas
@@ -622,13 +657,12 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const maxDisplacement = 18; // 最大位移像素
     const shiftX = this.parallaxOffset.x * maxDisplacement;
     const shiftY = this.parallaxOffset.y * maxDisplacement;
-    const invert = this.invertDepth();
+    const processedDepth = this.getProcessedDepth(w, h);
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const idx = y * w + x;
-        let d = res.depthArray[idx] ?? 0;
-        if (invert) d = 1.0 - d;
+        const d = processedDepth[idx] ?? 0;
 
         // 前景位移大，背景位移小
         const dx = Math.round((d - 0.5) * shiftX);
@@ -786,7 +820,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array(positions),
-      gl.DYNAMIC_DRAW
+      gl.DYNAMIC_DRAW,
     );
 
     const aPosLoc = gl.getAttribLocation(this.glProgram, "aPosition");
@@ -798,7 +832,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array(texCoords),
-      gl.DYNAMIC_DRAW
+      gl.DYNAMIC_DRAW,
     );
 
     const aTexLoc = gl.getAttribLocation(this.glProgram, "aTexCoord");
@@ -831,7 +865,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
         new Uint16Array(indices),
-        gl.DYNAMIC_DRAW
+        gl.DYNAMIC_DRAW,
       );
       gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
     }
@@ -848,10 +882,22 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const f = 1.0 / Math.tan(fov / 2);
 
     const proj = [
-      f / aspect, 0, 0, 0,
-      0, f, 0, 0,
-      0, 0, (far + near) / (near - far), -1,
-      0, 0, (2 * far * near) / (near - far), 0,
+      f / aspect,
+      0,
+      0,
+      0,
+      0,
+      f,
+      0,
+      0,
+      0,
+      0,
+      (far + near) / (near - far),
+      -1,
+      0,
+      0,
+      (2 * far * near) / (near - far),
+      0,
     ];
 
     // 相機旋轉與位移 (Yaw, Pitch, Zoom)
@@ -862,10 +908,22 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     // View Matrix
     const view = [
-      cy, sy * sp, -sy * cp, 0,
-      0, cp, sp, 0,
-      sy, -cy * sp, cy * cp, 0,
-      0, 0, -this.zoom * 2.5, 1,
+      cy,
+      sy * sp,
+      -sy * cp,
+      0,
+      0,
+      cp,
+      sp,
+      0,
+      sy,
+      -cy * sp,
+      cy * cp,
+      0,
+      0,
+      0,
+      -this.zoom * 2.5,
+      1,
     ];
 
     // Matrix Multiply (Proj x View)
@@ -956,6 +1014,11 @@ export class DepthEstimator implements OnInit, OnDestroy {
     this.renderCurrentView();
   }
 
+  protected onEdgeSofteningChange(val: number): void {
+    this.edgeSoftening.set(val);
+    this.renderCurrentView();
+  }
+
   protected onDepthScale3DChange(val: number): void {
     this.depthScale3D.set(val);
     this.render3DMeshCanvas();
@@ -966,58 +1029,111 @@ export class DepthEstimator implements OnInit, OnDestroy {
     this.render3DMeshCanvas();
   }
 
-  /**
-   * 匯出下載 8-bit PNG
-   */
-  protected downloadPng(): void {
+  private getProcessedDepth(
+    targetWidth: number,
+    targetHeight: number,
+  ): Float32Array {
     const res = this.depthResult();
-    if (!res) return;
+    if (!res) return new Float32Array();
+    if (targetWidth === res.width && targetHeight === res.height) {
+      return this.processedPreviewDepth();
+    }
 
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = res.width;
-    tempCanvas.height = res.height;
-    const ctx = tempCanvas.getContext("2d");
-    if (!ctx) return;
+    return prepareDepthForExport(
+      res.depthArray,
+      res.width,
+      res.height,
+      targetWidth,
+      targetHeight,
+      {
+        invert: this.invertDepth(),
+        contrast: this.contrast() / 100,
+        brightness: this.brightness() / 100,
+        blurPercent: this.edgeSoftening(),
+      },
+    );
+  }
 
-    const imgData = depthArrayToImageData(res.depthArray, res.width, res.height, {
-      colorMap: this.colorMap(),
-      invert: this.invertDepth(),
-      contrast: this.contrast() / 100,
-      brightness: this.brightness() / 100,
+  private async pngBytesToDataUrl(bytes: Uint8Array): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(
+        new Blob([bytes.buffer.slice(0) as ArrayBuffer], { type: "image/png" }),
+      );
     });
-    ctx.putImageData(imgData, 0, 0);
+  }
 
+  private triggerDownload(href: string, filename: string): void {
     const a = document.createElement("a");
-    a.href = tempCanvas.toDataURL("image/png");
-    a.download = `depth-map-${this.colorMap()}-${Date.now()}.png`;
+    a.href = href;
+    a.download = filename;
     a.click();
   }
 
-  /**
-   * 匯出下載 16-bit 灰階 PNG (供 Blender / ControlNet)
-   */
-  protected download16BitPng(): void {
+  private async downloadDepthPng(bitDepth: 8 | 16): Promise<void> {
     const res = this.depthResult();
-    if (!res) return;
+    const dimensions = this.sourceDimensions() ?? this.imageDimensions();
+    if (!res || !dimensions) return;
+
+    try {
+      const processedDepth = this.getProcessedDepth(
+        dimensions.width,
+        dimensions.height,
+      );
+      const bytes = await encodeGrayscalePng(
+        processedDepth,
+        dimensions.width,
+        dimensions.height,
+        bitDepth,
+        { minDepth: res.minDepth, maxDepth: res.maxDepth },
+      );
+      const href = await this.pngBytesToDataUrl(bytes);
+      this.triggerDownload(href, `depth-map-${bitDepth}bit-${Date.now()}.png`);
+    } catch {
+      this.alertState.set({
+        type: "error",
+        message: "PNG 編碼失敗，請確認瀏覽器支援 CompressionStream",
+      });
+    }
+  }
+
+  /** 匯出單通道 8-bit 灰階 PNG。 */
+  protected async downloadPng(): Promise<void> {
+    await this.downloadDepthPng(8);
+  }
+
+  /** 匯出保留 float 深度階調的單通道 16-bit 灰階 PNG。 */
+  protected async download16BitPng(): Promise<void> {
+    await this.downloadDepthPng(16);
+  }
+
+  /** 匯出目前著色盤預覽，供簡報與說明使用。 */
+  protected downloadPreviewPng(): void {
+    const res = this.depthResult();
+    const dimensions = this.sourceDimensions() ?? this.imageDimensions();
+    if (!res || !dimensions) return;
 
     const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = res.width;
-    tempCanvas.height = res.height;
+    tempCanvas.width = dimensions.width;
+    tempCanvas.height = dimensions.height;
     const ctx = tempCanvas.getContext("2d");
     if (!ctx) return;
 
-    const imgData = depthArrayToImageData(res.depthArray, res.width, res.height, {
-      colorMap: "grayscale",
-      invert: this.invertDepth(),
-      contrast: 1.0,
-      brightness: 0.0,
-    });
+    const imgData = depthArrayToImageData(
+      this.getProcessedDepth(dimensions.width, dimensions.height),
+      dimensions.width,
+      dimensions.height,
+      {
+        colorMap: this.colorMap(),
+      },
+    );
     ctx.putImageData(imgData, 0, 0);
-
-    const a = document.createElement("a");
-    a.href = tempCanvas.toDataURL("image/png");
-    a.download = `depth-map-16bit-${Date.now()}.png`;
-    a.click();
+    this.triggerDownload(
+      tempCanvas.toDataURL("image/png"),
+      `depth-preview-${this.colorMap()}-${Date.now()}.png`,
+    );
   }
 
   /**
@@ -1027,10 +1143,19 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const res = this.depthResult();
     if (!res) return;
 
-    const objContent = exportDepthToObj(res.depthArray, res.width, res.height, {
-      step: 2,
-      depthScale: (this.depthScale3D() / 100) * 0.8,
+    const dimensions = this.sourceDimensions() ?? {
+      width: res.width,
+      height: res.height,
+    };
+    const adjustedDepth = adjustDepthArray(res.depthArray, {
       invert: this.invertDepth(),
+      contrast: this.contrast() / 100,
+      brightness: this.brightness() / 100,
+    });
+    const objContent = exportDepthToObj(adjustedDepth, res.width, res.height, {
+      depthScale: (this.depthScale3D() / 100) * 0.8,
+      maxGridDimension: 192,
+      sourceDimensions: dimensions,
     });
 
     const blob = new Blob([objContent], { type: "text/plain;charset=utf-8" });
@@ -1040,6 +1165,58 @@ export class DepthEstimator implements OnInit, OnDestroy {
     a.download = `depth-mesh-${Date.now()}.obj`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** 匯出含來源圖片貼圖的 glTF 2.0 binary。 */
+  protected async downloadGlb(): Promise<void> {
+    const res = this.depthResult();
+    const sourceImageUrl = this.sourceImageUrl();
+    if (!res || !sourceImageUrl) return;
+
+    try {
+      const dimensions = this.sourceDimensions() ?? {
+        width: res.width,
+        height: res.height,
+      };
+      const adjustedDepth = adjustDepthArray(res.depthArray, {
+        invert: this.invertDepth(),
+        contrast: this.contrast() / 100,
+        brightness: this.brightness() / 100,
+      });
+      const imageBytes = new Uint8Array(
+        await (await fetch(sourceImageUrl)).arrayBuffer(),
+      );
+      const rawMimeType = sourceImageUrl.slice(5, sourceImageUrl.indexOf(";"));
+      const imageMimeType =
+        rawMimeType === "image/jpeg" ||
+        rawMimeType === "image/png" ||
+        rawMimeType === "image/webp"
+          ? rawMimeType
+          : "image/png";
+      const glb = exportDepthToGlb(
+        adjustedDepth,
+        res.width,
+        res.height,
+        imageBytes,
+        imageMimeType,
+        {
+          maxGridDimension: 192,
+          depthScale: (this.depthScale3D() / 100) * 0.8,
+          sourceDimensions: dimensions,
+        },
+      );
+      const blob = new Blob([glb.buffer as ArrayBuffer], {
+        type: "model/gltf-binary",
+      });
+      const url = URL.createObjectURL(blob);
+      this.triggerDownload(url, `depth-scene-${Date.now()}.glb`);
+      URL.revokeObjectURL(url);
+    } catch {
+      this.alertState.set({
+        type: "error",
+        message: "GLB 匯出失敗，請重新載入圖片後再試",
+      });
+    }
   }
 
   /**
@@ -1057,15 +1234,12 @@ export class DepthEstimator implements OnInit, OnDestroy {
       if (!ctx) return;
 
       const imgData = depthArrayToImageData(
-        res.depthArray,
+        this.getProcessedDepth(res.width, res.height),
         res.width,
         res.height,
         {
           colorMap: this.colorMap(),
-          invert: this.invertDepth(),
-          contrast: this.contrast() / 100,
-          brightness: this.brightness() / 100,
-        }
+        },
       );
       ctx.putImageData(imgData, 0, 0);
 

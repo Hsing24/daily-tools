@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
+  adjustDepthArray,
   getDepthColor,
   depthArrayToImageData,
+  encodeGrayscalePng,
+  exportDepthToGlb,
   exportDepthToObj,
+  gaussianBlurDepthArray,
   generateSampleDepthMap,
+  prepareDepthForExport,
+  resizeDepthArray,
 } from "./depth-estimator-core";
 
 describe("depth-estimator-core", () => {
@@ -58,10 +64,8 @@ describe("depth-estimator-core", () => {
       const width = 4;
       const height = 4;
       const depthArray = new Float32Array([
-        0.0, 0.2, 0.4, 0.6,
-        0.8, 1.0, 0.5, 0.3,
-        0.1, 0.9, 0.7, 0.2,
-        0.0, 0.4, 0.8, 1.0,
+        0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 0.5, 0.3, 0.1, 0.9, 0.7, 0.2, 0.0, 0.4,
+        0.8, 1.0,
       ]);
 
       const imgData = depthArrayToImageData(depthArray, width, height, {
@@ -111,6 +115,157 @@ describe("depth-estimator-core", () => {
       expect(vLines.length).toBe(16);
       expect(fLines.length).toBe(18);
     });
+
+    it("should preserve source aspect ratio with a bounded grid", () => {
+      const objStr = exportDepthToObj(
+        new Float32Array(384 * 384).fill(0.5),
+        384,
+        384,
+        {
+          maxGridDimension: 192,
+          sourceDimensions: { width: 1600, height: 1000 },
+        },
+      );
+
+      expect(objStr).toContain("# Dimensions: 1600x1000, Grid: 192x120");
+      const vertices = objStr
+        .split("\n")
+        .filter((line) => line.startsWith("v "));
+      const first = vertices[0]?.split(" ").map(Number) ?? [];
+      const last = vertices.at(-1)?.split(" ").map(Number) ?? [];
+      expect((last[1] ?? 0) - (first[1] ?? 0)).toBeCloseTo(3.2, 3);
+      expect(Math.abs((last[2] ?? 0) - (first[2] ?? 0))).toBeCloseTo(2, 3);
+    });
+  });
+
+  describe("depth export pipeline", () => {
+    it("should resize float depth bilinearly without reducing it to 8-bit", () => {
+      const output = resizeDepthArray(
+        new Float32Array([0, 0.25, 0.75, 1]),
+        2,
+        2,
+        4,
+        4,
+      );
+      expect(output).toHaveLength(16);
+      expect(new Set(output).size).toBeGreaterThan(4);
+    });
+
+    it("should bake numeric adjustments", () => {
+      const output = adjustDepthArray(new Float32Array([0.25, 0.75]), {
+        invert: true,
+        contrast: 1,
+        brightness: 0,
+      });
+      expect(output[0]).toBeCloseTo(0.75);
+      expect(output[1]).toBeCloseTo(0.25);
+    });
+
+    it("should leave values unchanged when edge softening is zero", () => {
+      const input = new Float32Array([0, 1, 0, 1]);
+      expect(gaussianBlurDepthArray(input, 2, 2, 0)).toEqual(input);
+    });
+
+    it("should clamp edges while softening a hard boundary", () => {
+      const input = new Float32Array(21).fill(1);
+      input.fill(0, 0, 10);
+      const output = gaussianBlurDepthArray(input, 21, 1, 3);
+      expect(output[0]).toBeCloseTo(0, 3);
+      expect(output[20]).toBeCloseTo(1, 3);
+      expect(output[10]).toBeGreaterThan(0);
+      expect(output[10]).toBeLessThan(1);
+    });
+
+    it("should restore requested source dimensions", () => {
+      const output = prepareDepthForExport(
+        new Float32Array(16).map((_, index) => index / 15),
+        4,
+        4,
+        16,
+        10,
+        { blurPercent: 0 },
+      );
+      expect(output).toHaveLength(160);
+    });
+
+    it.each([8, 16] as const)(
+      "should encode %i-bit single-channel grayscale PNG",
+      async (bitDepth) => {
+        const width = 32;
+        const height = 20;
+        const depth = new Float32Array(width * height).map(
+          (_, index) => index / (width * height - 1),
+        );
+        const png = await encodeGrayscalePng(depth, width, height, bitDepth, {
+          minDepth: 0.15,
+          maxDepth: 3.57,
+        });
+
+        expect(new DataView(png.buffer).getUint32(16)).toBe(width);
+        expect(new DataView(png.buffer).getUint32(20)).toBe(height);
+        expect(png[24]).toBe(bitDepth);
+        expect(png[25]).toBe(0);
+        expect(new TextDecoder().decode(png)).toContain("DepthMin\u00000.15");
+      },
+    );
+
+    it("should retain more than 256 distinct 16-bit samples", async () => {
+      const depth = new Float32Array(1024).map((_, index) => index / 1023);
+      const png = await encodeGrayscalePng(depth, 1024, 1, 16);
+      const bytes = new DataView(png.buffer);
+      let offset = 8;
+      let compressed = new Uint8Array();
+      while (offset < png.length) {
+        const length = bytes.getUint32(offset);
+        const type = new TextDecoder().decode(
+          png.subarray(offset + 4, offset + 8),
+        );
+        if (type === "IDAT")
+          compressed = png.slice(offset + 8, offset + 8 + length);
+        offset += length + 12;
+      }
+      const stream = new Response(
+        compressed.buffer as ArrayBuffer,
+      ).body!.pipeThrough(new DecompressionStream("deflate"));
+      const scanline = new Uint8Array(await new Response(stream).arrayBuffer());
+      const samples = new Set<number>();
+      for (let i = 1; i < scanline.length; i += 2) {
+        samples.add((scanline[i] ?? 0) * 256 + (scanline[i + 1] ?? 0));
+      }
+      expect(samples.size).toBeGreaterThan(256);
+    });
+  });
+
+  describe("exportDepthToGlb", () => {
+    it("should create a valid GLB with embedded texture and aspect-correct mesh", () => {
+      const depth = new Float32Array(384 * 384).map(
+        (_, index) => index / (384 * 384 - 1),
+      );
+      const imageBytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3, 4]);
+      const glb = exportDepthToGlb(depth, 384, 384, imageBytes, "image/png", {
+        maxGridDimension: 192,
+        sourceDimensions: { width: 1600, height: 1000 },
+      });
+      const view = new DataView(glb.buffer);
+      expect(view.getUint32(0, true)).toBe(0x46546c67);
+      expect(view.getUint32(4, true)).toBe(2);
+      expect(view.getUint32(8, true)).toBe(glb.length);
+      const jsonLength = view.getUint32(12, true);
+      const json = JSON.parse(
+        new TextDecoder().decode(glb.subarray(20, 20 + jsonLength)).trim(),
+      );
+      expect(json.accessors[0].count).toBe(192 * 120);
+      expect(json.accessors[0].min[0]).toBe(-1.6);
+      expect(json.accessors[0].max[0]).toBe(1.6);
+      expect(json.images[0].mimeType).toBe("image/png");
+      expect(json.images[0].bufferView).toBe(3);
+
+      const obj = exportDepthToObj(depth, 384, 384, {
+        maxGridDimension: 192,
+        sourceDimensions: { width: 1600, height: 1000 },
+      });
+      expect(glb.length).toBeLessThan(new TextEncoder().encode(obj).length);
+    });
   });
 
   describe("generateSampleDepthMap", () => {
@@ -123,7 +278,9 @@ describe("depth-estimator-core", () => {
       // Center should have higher depth (nearer) than corners
       const centerIdx = 16 * 32 + 16;
       const cornerIdx = 0;
-      expect(sample.depthArray[centerIdx]).toBeGreaterThan(sample.depthArray[cornerIdx]);
+      expect(sample.depthArray[centerIdx]).toBeGreaterThan(
+        sample.depthArray[cornerIdx],
+      );
     });
   });
 });

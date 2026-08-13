@@ -32,11 +32,13 @@ describe("DepthEstimator 元件", () => {
         data: new Uint8ClampedArray(w * h * 4),
       })),
       putImageData: vi.fn(),
-      getImageData: vi.fn().mockImplementation((_x: number, _y: number, w: number, h: number) => ({
-        width: w,
-        height: h,
-        data: new Uint8ClampedArray(w * h * 4),
-      })),
+      getImageData: vi
+        .fn()
+        .mockImplementation((_x: number, _y: number, w: number, h: number) => ({
+          width: w,
+          height: h,
+          data: new Uint8ClampedArray(w * h * 4),
+        })),
       createRadialGradient: vi.fn().mockReturnValue({
         addColorStop: vi.fn(),
       }),
@@ -93,13 +95,17 @@ describe("DepthEstimator 元件", () => {
       UNSIGNED_BYTE: 5121,
     };
 
-    HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((type: string) => {
-      if (type === "2d") return mockContext2D;
-      if (type === "webgl") return mockContextWebGL;
-      return null;
-    }) as any;
+    HTMLCanvasElement.prototype.getContext = vi
+      .fn()
+      .mockImplementation((type: string) => {
+        if (type === "2d") return mockContext2D;
+        if (type === "webgl") return mockContextWebGL;
+        return null;
+      }) as any;
 
-    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,mock");
+    HTMLCanvasElement.prototype.toDataURL = vi
+      .fn()
+      .mockReturnValue("data:image/png;base64,mock");
 
     await TestBed.configureTestingModule({
       imports: [DepthEstimator],
@@ -122,7 +128,6 @@ describe("DepthEstimator 元件", () => {
     const panels = element.querySelector("app-tool-radio-group");
     expect(panels).toBeFalsy();
   });
-
 
   it("切換預覽模式應更新 previewMode Signal", () => {
     expect(component.previewMode()).toBe("depth");
@@ -159,5 +164,77 @@ describe("DepthEstimator 元件", () => {
 
     expect(component.contrast()).toBe(120);
     expect(component.brightness()).toBe(15);
+  });
+
+  it("8-bit 與 16-bit 資料匯出應保留原圖尺寸及灰階格式", async () => {
+    component.sourceDimensions.set({ width: 1600, height: 1000 });
+    component.imageDimensions.set({ width: 640, height: 400 });
+    component.depthResult.set({
+      depthArray: new Float32Array(640 * 400).map(
+        (_, index) => index / (640 * 400 - 1),
+      ),
+      width: 640,
+      height: 400,
+      minDepth: 0.15,
+      maxDepth: 3.57,
+      inferenceTimeMs: 42,
+      device: "webgpu",
+    });
+    const hrefs: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      hrefs.push(this.href);
+    });
+
+    await component["downloadPng"]();
+    await component["download16BitPng"]();
+
+    expect(hrefs).toHaveLength(2);
+    const pngs = hrefs.map((href) => {
+      const base64 = href.split(",")[1] ?? "";
+      return Uint8Array.from(atob(base64), (character) =>
+        character.charCodeAt(0),
+      );
+    });
+    for (const png of pngs) {
+      const header = new DataView(png.buffer);
+      expect(header.getUint32(16)).toBe(1600);
+      expect(header.getUint32(20)).toBe(1000);
+      expect(png[25]).toBe(0);
+    }
+    expect(pngs[0]?.[24]).toBe(8);
+    expect(pngs[1]?.[24]).toBe(16);
+    expect(hrefs[0]).not.toBe(hrefs[1]);
+  });
+
+  it("資料匯出不受著色盤影響，但會烘入深度反轉", async () => {
+    component.sourceDimensions.set({ width: 8, height: 4 });
+    component.imageDimensions.set({ width: 8, height: 4 });
+    component.depthResult.set({
+      depthArray: new Float32Array(32).map((_, index) => index / 31),
+      width: 8,
+      height: 4,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 10,
+      device: "wasm",
+    });
+    const hrefs: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      hrefs.push(this.href);
+    });
+
+    component.colorMap.set("inferno");
+    await component["downloadPng"]();
+    component.colorMap.set("viridis");
+    await component["downloadPng"]();
+    component.invertDepth.set(true);
+    await component["downloadPng"]();
+
+    expect(hrefs[0]).toBe(hrefs[1]);
+    expect(hrefs[2]).not.toBe(hrefs[1]);
   });
 });
