@@ -1,12 +1,73 @@
 export interface TextStats {
-  /** 全部字元數（含空白），以 Unicode 碼點計 */
+  /** 全部 grapheme cluster 數（含空白） */
   readonly charactersWithSpaces: number;
-  /** 不含任何空白字元的字元數（碼點） */
+  /** 不含空白 grapheme cluster 數 */
   readonly charactersNoSpaces: number;
-  /** 字數：CJK 字元數 + emoji 數 + 其餘空白分隔詞段數 */
+  /** CJK grapheme、emoji cluster 與其他 word-like segment 數 */
   readonly words: number;
   /** 行數：空字串為 0，否則為換行分割段數 */
   readonly lines: number;
+}
+
+interface WordSegment {
+  segment: string;
+  isWordLike: boolean;
+}
+
+const CJK_PATTERN =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+const EMOJI_PATTERN = /\p{Emoji}/u;
+
+function segmentGraphemes(text: string): string[] {
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, {
+      granularity: "grapheme",
+    });
+    return Array.from(segmenter.segment(text), (part) => part.segment);
+  }
+  return Array.from(text);
+}
+
+function segmentWords(text: string): WordSegment[] {
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
+    return Array.from(segmenter.segment(text), (part) => ({
+      segment: part.segment,
+      isWordLike: part.isWordLike ?? false,
+    }));
+  }
+
+  return (text.match(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu) ?? []).map(
+    (segment) => ({
+      segment,
+      isWordLike: /[\p{L}\p{N}]/u.test(segment),
+    }),
+  );
+}
+
+function isWhitespace(grapheme: string): boolean {
+  return /^[\s\u3000]+$/u.test(grapheme);
+}
+
+function countWords(text: string): number {
+  let count = 0;
+  for (const word of segmentWords(text)) {
+    const graphemes = segmentGraphemes(word.segment);
+    if (word.isWordLike) {
+      let cjkCount = 0;
+      let hasOtherWordContent = false;
+      for (const grapheme of graphemes) {
+        if (CJK_PATTERN.test(grapheme)) cjkCount += 1;
+        else if (!isWhitespace(grapheme)) hasOtherWordContent = true;
+      }
+      count += cjkCount + (hasOtherWordContent ? 1 : 0);
+    } else {
+      count += graphemes.filter((grapheme) =>
+        EMOJI_PATTERN.test(grapheme),
+      ).length;
+    }
+  }
+  return count;
 }
 
 export function computeTextStats(text: string): TextStats {
@@ -19,38 +80,12 @@ export function computeTextStats(text: string): TextStats {
     };
   }
 
-  // 1. 全部字元數（含空白），以 Unicode 碼點計
-  const codePoints = [...text];
-  const charactersWithSpaces = codePoints.length;
-
-  // 2. 不含任何空白字元的字元數（碼點）
-  // 空白定義：\s 或 CJK 全形空白 \u3000
-  const isSpace = (char: string) => /\s/.test(char) || char === "\u3000";
-  const charactersNoSpaces = codePoints.filter((c) => !isSpace(c)).length;
-
-  // 3. 字數：cjk + emoji + other
-  const cjkRegex =
-    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu;
-  const emojiRegex = /\p{Extended_Pictographic}/gu;
-
-  const cjkCount = (text.match(cjkRegex) || []).length;
-  const emojiCount = (text.match(emojiRegex) || []).length;
-
-  // 將 CJK 與 emoji 皆替換為空白
-  const temp = text.replace(cjkRegex, " ").replace(emojiRegex, " ");
-  // 以空白（含 \u3000）進行分割並濾除空字串
-  const otherWords = temp.split(/[\s\u3000]+/).filter((w) => w !== "");
-  const otherCount = otherWords.length;
-
-  const words = cjkCount + emojiCount + otherCount;
-
-  // 4. 行數：空字串為 0，否則為換行分割段數
-  const lines = text.split(/\r\n|\r|\n/).length;
-
+  const graphemes = segmentGraphemes(text);
   return {
-    charactersWithSpaces,
-    charactersNoSpaces,
-    words,
-    lines,
+    charactersWithSpaces: graphemes.length,
+    charactersNoSpaces: graphemes.filter((grapheme) => !isWhitespace(grapheme))
+      .length,
+    words: countWords(text),
+    lines: text.split(/\r\n|\r|\n/).length,
   };
 }

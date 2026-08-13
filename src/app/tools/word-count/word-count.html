@@ -5,7 +5,7 @@
     <app-tool-header
       eyebrow="TEXT UTILITIES v1.0.0"
       title="字數統計 (Word Count)"
-      description="分析您輸入的文字，依據混合規則提供精準的字元數、字數與行數統計。適合中英混排、含 emoji 的內容統計。"
+      description="分析輸入文字，依 Unicode grapheme 與 word segmentation 提供字元數、字數與行數統計。適合中英混排及 emoji。"
     />
 
     @if (alertMessage()) {
@@ -14,7 +14,9 @@
 
     <!-- Input -->
     <div class="d:block mb:16">
-      <label for="word-count-input" class="d:block mb:8 color:var(--ink-bright) f:14 font-weight:600"
+      <label
+        for="word-count-input"
+        class="d:block mb:8 color:var(--ink-bright) f:14 font-weight:600"
         >請輸入、貼上欲統計之文字：</label
       >
       <textarea

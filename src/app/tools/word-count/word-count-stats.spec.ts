@@ -66,11 +66,34 @@ describe("computeTextStats", () => {
     expect(stats.lines).toBe(1);
   });
 
-  it('應正確處理含有全形標點的中文與英文 "Hello，世界！"', () => {
+  it("純標點不應計入字數", () => {
     const stats = computeTextStats("Hello，世界！");
     expect(stats.charactersWithSpaces).toBe(9);
     expect(stats.charactersNoSpaces).toBe(9);
-    expect(stats.words).toBe(4); // 世 (1) + 界 (1) + Hello， (1) + ！ (1)
+    expect(stats.words).toBe(3);
     expect(stats.lines).toBe(1);
+  });
+
+  it("應以 grapheme cluster 計算家庭 emoji、膚色、旗幟與 combining mark", () => {
+    const stats = computeTextStats("👨‍👩‍👧‍👦👍🏽🇹🇼e\u0301✈️");
+
+    expect(stats.charactersWithSpaces).toBe(5);
+    expect(stats.charactersNoSpaces).toBe(5);
+    expect(stats.words).toBe(5);
+  });
+
+  it("純標點與 CJK 標點不應計入字數", () => {
+    const stats = computeTextStats("！？。，、…");
+
+    expect(stats.charactersWithSpaces).toBe(6);
+    expect(stats.charactersNoSpaces).toBe(6);
+    expect(stats.words).toBe(0);
+  });
+
+  it("CRLF 應保留行數語意", () => {
+    const stats = computeTextStats("a\r\nb\r\n");
+
+    expect(stats.lines).toBe(3);
+    expect(stats.words).toBe(2);
   });
 });
