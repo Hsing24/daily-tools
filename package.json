@@ -7,8 +7,10 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "pnpm run audit-styles",
-    "audit-styles": "node scripts/audit-styles.js"
+    "lint": "pnpm run audit-styles && pnpm run audit-tools",
+    "audit-styles": "node scripts/audit-styles.js",
+    "audit-tools": "node scripts/audit-tools.js",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "private": true,
   "packageManager": "pnpm@11.10.0",

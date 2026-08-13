@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# push 前的最後一道關卡：樣式稽核、工具目錄同步檢查、單元測試。
+# 由 package.json 的 prepare 腳本透過 git config core.hooksPath .githooks 啟用。
+#
+# 臨時跳過：
+#   SKIP_TESTS=1 git push   # 只跑稽核，略過單元測試
+#   git push --no-verify    # 完全略過本 hook
+set -e
+
+echo "▶ pre-push｜樣式與工具目錄稽核"
+pnpm run lint
+
+if [ "$SKIP_TESTS" = "1" ]; then
+  echo "⏭  已設定 SKIP_TESTS=1，略過單元測試"
+else
+  # --isolate：讓各 spec 檔在獨立環境執行，避免跨檔共用 global 造成偶發失敗（多約 6 秒）
+  echo "▶ pre-push｜單元測試"
+  pnpm exec ng test --watch=false --isolate
+fi
+
+echo "✅ pre-push 檢查全數通過"
