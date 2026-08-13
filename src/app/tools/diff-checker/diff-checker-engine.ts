@@ -1,3 +1,5 @@
+import { diffArrays } from "diff";
+
 export interface AlignedLine {
   type: "added" | "removed" | "equal" | "modified";
   leftLineNum?: number;
@@ -19,60 +21,60 @@ export interface DiffBlock {
   endIndex: number;
 }
 
-/**
- * 將一行文字拆解為單字、空白、標點符號 token，利於行內細部對照
- */
+export const MAX_DIFF_LINES = 10_000;
+export const MAX_DIFF_CHARACTERS = 200_000;
+
+/** 使用 Unicode-aware word segmentation，保留空白與標點 token。 */
 export function tokenizeLine(line: string): string[] {
-  return line.match(/([a-zA-Z0-9]+|\s+|[^\w\s])/g) || [];
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
+    return Array.from(segmenter.segment(line), (part) => part.segment);
+  }
+
+  return line.match(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu) ?? [];
 }
 
-/**
- * 計算兩組陣列的 LCS 編輯路徑
- */
+/** 以 jsdiff Myers diff 計算編輯路徑，避免自製 O(mn) matrix。 */
 export function getLcs<T>(
   a: T[],
   b: T[],
-  compareFn: (x: T, y: T) => boolean = (x, y) => x === y
-): { type: "added" | "removed" | "equal"; item: T; indexA?: number; indexB?: number }[] {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  compareFn: (x: T, y: T) => boolean = (x, y) => x === y,
+): {
+  type: "added" | "removed" | "equal";
+  item: T;
+  indexA?: number;
+  indexB?: number;
+}[] {
+  const changes = diffArrays(a, b, { comparator: compareFn });
+  const result: {
+    type: "added" | "removed" | "equal";
+    item: T;
+    indexA?: number;
+    indexB?: number;
+  }[] = [];
+  let indexA = 0;
+  let indexB = 0;
 
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (compareFn(a[i - 1], b[j - 1])) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
+  for (const change of changes) {
+    for (const item of change.value) {
+      if (change.added) {
+        result.push({ type: "added", item, indexB });
+        indexB += 1;
+      } else if (change.removed) {
+        result.push({ type: "removed", item, indexA });
+        indexA += 1;
       } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        result.push({ type: "equal", item, indexA, indexB });
+        indexA += 1;
+        indexB += 1;
       }
-    }
-  }
-
-  const result: { type: "added" | "removed" | "equal"; item: T; indexA?: number; indexB?: number }[] = [];
-  let i = m;
-  let j = n;
-
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && compareFn(a[i - 1], b[j - 1])) {
-      result.unshift({ type: "equal", item: a[i - 1], indexA: i - 1, indexB: j - 1 });
-      i--;
-      j--;
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      result.unshift({ type: "added", item: b[j - 1], indexB: j - 1 });
-      j--;
-    } else {
-      result.unshift({ type: "removed", item: a[i - 1], indexA: i - 1 });
-      i--;
     }
   }
 
   return result;
 }
 
-/**
- * 比對兩組行，回傳對齊的行陣列，並將相鄰的移除/新增行合併為 modified 且加上詞級高亮
- */
-export function diffLines(linesA: string[], linesB: string[]): AlignedLine[] {
+function createAlignedLines(linesA: string[], linesB: string[]): AlignedLine[] {
   const lcsResult = getLcs(linesA, linesB);
   const aligned: AlignedLine[] = [];
   let leftLineNum = 1;
@@ -87,8 +89,8 @@ export function diffLines(linesA: string[], linesB: string[]): AlignedLine[] {
         leftText: step.item,
         rightText: step.item,
       });
-      leftLineNum++;
-      rightLineNum++;
+      leftLineNum += 1;
+      rightLineNum += 1;
     } else if (step.type === "removed") {
       aligned.push({
         type: "removed",
@@ -96,101 +98,115 @@ export function diffLines(linesA: string[], linesB: string[]): AlignedLine[] {
         leftText: step.item,
         rightText: "",
       });
-      leftLineNum++;
-    } else if (step.type === "added") {
+      leftLineNum += 1;
+    } else {
       aligned.push({
         type: "added",
         rightLineNum,
         leftText: "",
         rightText: step.item,
       });
-      rightLineNum++;
+      rightLineNum += 1;
     }
   }
 
-  // 合併相鄰的 removed + added 為 modified 行並進行 word diff
+  return aligned;
+}
+
+function pairChangedLines(lines: AlignedLine[]): AlignedLine[] {
   const merged: AlignedLine[] = [];
-  for (let i = 0; i < aligned.length; i++) {
-    const current = aligned[i];
-    const next = aligned[i + 1];
+  let index = 0;
 
-    if (current.type === "removed" && next && next.type === "added") {
-      const leftWords = diffWords(current.leftText, next.rightText, "left");
-      const rightWords = diffWords(current.leftText, next.rightText, "right");
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.type !== "removed" && line.type !== "added") {
+      merged.push(line);
+      index += 1;
+      continue;
+    }
 
+    const removed: AlignedLine[] = [];
+    const added: AlignedLine[] = [];
+    while (
+      index < lines.length &&
+      (lines[index].type === "removed" || lines[index].type === "added")
+    ) {
+      const changed = lines[index];
+      if (changed.type === "removed") removed.push(changed);
+      else added.push(changed);
+      index += 1;
+    }
+
+    const pairCount = Math.min(removed.length, added.length);
+    for (let pairIndex = 0; pairIndex < pairCount; pairIndex += 1) {
+      const left = removed[pairIndex];
+      const right = added[pairIndex];
       merged.push({
         type: "modified",
-        leftLineNum: current.leftLineNum,
-        rightLineNum: next.rightLineNum,
-        leftText: current.leftText,
-        rightText: next.rightText,
-        leftWords,
-        rightWords,
+        leftLineNum: left.leftLineNum,
+        rightLineNum: right.rightLineNum,
+        leftText: left.leftText,
+        rightText: right.rightText,
+        leftWords: diffWords(left.leftText, right.rightText, "left"),
+        rightWords: diffWords(left.leftText, right.rightText, "right"),
       });
-      i++; // 跳過下一個已對齊的 added 行
-    } else {
-      merged.push(current);
     }
+    merged.push(...removed.slice(pairCount), ...added.slice(pairCount));
   }
 
   return merged;
 }
 
-export function diffWords(leftText: string, rightText: string, side: "left" | "right"): WordToken[] {
-  const tokensA = tokenizeLine(leftText);
-  const tokensB = tokenizeLine(rightText);
-  const lcsWords = getLcs(tokensA, tokensB);
+/** 比對完整行內容，保留空白行、縮排、trailing spaces 與換行差異。 */
+export function diffLines(linesA: string[], linesB: string[]): AlignedLine[] {
+  return pairChangedLines(createAlignedLines(linesA, linesB));
+}
+
+export function diffWords(
+  leftText: string,
+  rightText: string,
+  side: "left" | "right",
+): WordToken[] {
+  const changes = getLcs(tokenizeLine(leftText), tokenizeLine(rightText));
   const result: WordToken[] = [];
 
-  for (const step of lcsWords) {
-    if (step.type === "equal") {
-      result.push({ type: "equal", text: step.item });
-    } else if (step.type === "removed" && side === "left") {
-      result.push({ type: "removed", text: step.item });
-    } else if (step.type === "added" && side === "right") {
-      result.push({ type: "added", text: step.item });
-    }
+  for (const change of changes) {
+    if (change.type === "equal")
+      result.push({ type: "equal", text: change.item });
+    if (change.type === "removed" && side === "left")
+      result.push({ type: "removed", text: change.item });
+    if (change.type === "added" && side === "right")
+      result.push({ type: "added", text: change.item });
   }
 
   return result;
 }
 
-/**
- * 尋找所有連續變更行所組成的差異區塊 (Diff Block)
- */
 export function findDiffBlocks(lines: AlignedLine[]): DiffBlock[] {
   const blocks: DiffBlock[] = [];
   let currentBlock: { startIndex: number; endIndex: number } | null = null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const isChange = line.type === "added" || line.type === "removed" || line.type === "modified";
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const isChange =
+      line.type === "added" ||
+      line.type === "removed" ||
+      line.type === "modified";
 
     if (isChange) {
-      if (currentBlock === null) {
-        currentBlock = { startIndex: i, endIndex: i };
-      } else {
-        currentBlock.endIndex = i;
-      }
-    } else {
-      if (currentBlock !== null) {
-        blocks.push({
-          id: `diff-block-${blocks.length}`,
-          startIndex: currentBlock.startIndex,
-          endIndex: currentBlock.endIndex,
-        });
-        currentBlock = null;
-      }
+      currentBlock ??= { startIndex: index, endIndex: index };
+      currentBlock.endIndex = index;
+    } else if (currentBlock) {
+      blocks.push({ id: `diff-block-${blocks.length}`, ...currentBlock });
+      currentBlock = null;
     }
   }
 
-  if (currentBlock !== null) {
-    blocks.push({
-      id: `diff-block-${blocks.length}`,
-      startIndex: currentBlock.startIndex,
-      endIndex: currentBlock.endIndex,
-    });
-  }
-
+  if (currentBlock)
+    blocks.push({ id: `diff-block-${blocks.length}`, ...currentBlock });
   return blocks;
+}
+
+export function splitTextIntoLines(text: string): string[] {
+  return text ? text.split("\n") : [];
 }

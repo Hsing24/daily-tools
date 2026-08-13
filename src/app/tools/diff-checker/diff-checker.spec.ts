@@ -50,13 +50,13 @@ describe("DiffChecker 元件", () => {
     expect(terminalOutput).toBeFalsy();
   });
 
-  it("當使用者點擊比對時，應自動排版、鎖住輸入並顯示掃描動畫，1.2秒後呈現結果", async () => {
+  it("當使用者點擊比對時，應保留原文並呈現結果", async () => {
     const textareas = element.querySelectorAll("textarea");
-    
+
     // 輸入含前後空白與空白行的文字
     textareas[0].value = "  hello world  \n\n  test  ";
     textareas[0].dispatchEvent(new Event("input"));
-    
+
     textareas[1].value = "  hello brave world  \n  test  ";
     textareas[1].dispatchEvent(new Event("input"));
 
@@ -64,17 +64,15 @@ describe("DiffChecker 元件", () => {
 
     // 取得「開始比對」按鈕並點擊
     const compareBtn = element.querySelector(
-      '[data-testid="btn-compare"]'
+      '[data-testid="btn-compare"]',
     ) as HTMLButtonElement;
     expect(compareBtn).toBeTruthy();
     compareBtn.click();
     fixture.detectChanges();
 
-    // 1. 確認已自動套用排版：去除首尾空白且移除空行
-    // textA -> "hello world\ntest"
-    // textB -> "hello brave world\ntest"
-    expect(component["textA"]()).toBe("hello world\ntest");
-    expect(component["textB"]()).toBe("hello brave world\ntest");
+    // 比對不得回寫或刪除原始空白
+    expect(component["textA"]()).toBe("  hello world  \n\n  test  ");
+    expect(component["textB"]()).toBe("  hello brave world  \n  test  ");
 
     // 2. 確認進入比對中狀態，且出現掃描 mask
     expect(component["isComparing"]()).toBe(true);
@@ -89,12 +87,31 @@ describe("DiffChecker 元件", () => {
     // 4. 比對完成，確認 mask 移除，結果區出現
     expect(component["isComparing"]()).toBe(false);
     expect(component["hasResult"]()).toBe(true);
-    
+
     masks = element.querySelectorAll(".scan-laser");
     expect(masks.length).toBe(0);
 
     const terminalOutput = element.querySelector("app-terminal-output");
     expect(terminalOutput).toBeTruthy();
+  });
+
+  it("比較期間輸入變更時，舊 callback 不得提交結果", () => {
+    const textareas = element.querySelectorAll("textarea");
+    textareas[0].value = "old";
+    textareas[0].dispatchEvent(new Event("input"));
+    textareas[1].value = "new";
+    textareas[1].dispatchEvent(new Event("input"));
+    fixture.detectChanges();
+
+    (
+      element.querySelector('[data-testid="btn-compare"]') as HTMLButtonElement
+    ).click();
+    component["onInputA"]("latest");
+    vi.runAllTimers();
+
+    expect(component["isComparing"]()).toBe(false);
+    expect(component["hasResult"]()).toBe(false);
+    expect(component["alignedLines"]()).toEqual([]);
   });
 
   it("在顯示結果後，若任一欄位有新輸入或空白鍵，應立刻隱藏結果區", async () => {
@@ -107,10 +124,10 @@ describe("DiffChecker 元件", () => {
     fixture.detectChanges();
 
     const compareBtn = element.querySelector(
-      '[data-testid="btn-compare"]'
+      '[data-testid="btn-compare"]',
     ) as HTMLButtonElement;
     compareBtn.click();
-    
+
     vi.advanceTimersByTime(1200);
     fixture.detectChanges();
     await fixture.whenStable();

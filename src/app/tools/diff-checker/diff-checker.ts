@@ -1,156 +1,205 @@
-import { Component, signal, computed } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { FormsModule } from "@angular/forms";
+import { Component, computed, OnDestroy, signal } from "@angular/core";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { TerminalOutput } from "../../shared/ui/terminal-output/terminal-output";
-import { diffLines, findDiffBlocks, AlignedLine } from "./diff-checker-engine";
+import {
+  AlignedLine,
+  diffLines,
+  findDiffBlocks,
+  MAX_DIFF_CHARACTERS,
+  MAX_DIFF_LINES,
+  splitTextIntoLines,
+} from "./diff-checker-engine";
 
 @Component({
   selector: "app-diff-checker",
-  imports: [
-    CommonModule,
-    FormsModule,
-    ToolBreadcrumb,
-    ToolPanel,
-    ToolHeader,
-    ToolAlert,
-    TerminalOutput,
-  ],
+  imports: [ToolBreadcrumb, ToolPanel, ToolHeader, ToolAlert, TerminalOutput],
   templateUrl: "./diff-checker.html",
   styleUrl: "./diff-checker.css",
   host: {
     class: "d:block font-family:var(--font-mono) color:var(--ink)",
   },
 })
-export class DiffChecker {
+export class DiffChecker implements OnDestroy {
   protected readonly textA = signal("");
   protected readonly textB = signal("");
   protected readonly isComparing = signal(false);
   protected readonly hasResult = signal(false);
   protected readonly alertMessage = signal("");
-
-  // 比對結果資料
   protected readonly alignedLines = signal<AlignedLine[]>([]);
-  protected readonly diffBlocks = computed(() => findDiffBlocks(this.alignedLines()));
+  protected readonly diffBlocks = computed(() =>
+    findDiffBlocks(this.alignedLines()),
+  );
   protected readonly currentBlockIndex = signal(-1);
+  protected readonly leftLineNumbers = computed(() =>
+    this.getLineNumbers(this.textA()),
+  );
+  protected readonly rightLineNumbers = computed(() =>
+    this.getLineNumbers(this.textB()),
+  );
 
-  protected onInputA(val: string): void {
-    this.textA.set(val);
-    this.hasResult.set(false);
+  private compareTimer: ReturnType<typeof setTimeout> | undefined;
+  private highlightTimer: ReturnType<typeof setTimeout> | undefined;
+  private highlightedElement: HTMLElement | null = null;
+  private compareGeneration = 0;
+  private inputGeneration = 0;
+
+  ngOnDestroy(): void {
+    this.compareGeneration += 1;
+    this.cancelCompareTimer();
+    this.clearHighlight();
   }
 
-  protected onInputB(val: string): void {
-    this.textB.set(val);
-    this.hasResult.set(false);
+  protected onInputA(value: string): void {
+    this.inputGeneration += 1;
+    this.textA.set(value);
+    this.invalidateResult();
   }
 
-  protected getLineNumbers(text: string): number[] {
-    const linesCount = text ? text.split(/\r?\n/).length : 1;
-    return Array.from({ length: linesCount }, (_, i) => i + 1);
+  protected onInputB(value: string): void {
+    this.inputGeneration += 1;
+    this.textB.set(value);
+    this.invalidateResult();
+  }
+
+  private invalidateResult(): void {
+    this.compareGeneration += 1;
+    this.cancelCompareTimer();
+    this.isComparing.set(false);
+    this.hasResult.set(false);
+    this.alignedLines.set([]);
+    this.currentBlockIndex.set(-1);
+  }
+
+  private getLineNumbers(text: string): number[] {
+    return Array.from(
+      { length: splitTextIntoLines(text).length },
+      (_, index) => index + 1,
+    );
   }
 
   protected async pasteText(target: "A" | "B"): Promise<void> {
     this.alertMessage.set("");
+    const generation = ++this.inputGeneration;
     try {
-      if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+      if (
+        !navigator.clipboard ||
+        typeof navigator.clipboard.readText !== "function"
+      ) {
         throw new Error("Clipboard API not supported");
       }
-      const val = await navigator.clipboard.readText();
-      if (target === "A") {
-        this.textA.set(val);
-      } else {
-        this.textB.set(val);
+      const value = await navigator.clipboard.readText();
+      if (generation !== this.inputGeneration) return;
+      if (target === "A") this.textA.set(value);
+      else this.textB.set(value);
+      this.invalidateResult();
+    } catch {
+      if (generation === this.inputGeneration) {
+        this.alertMessage.set(
+          "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。",
+        );
       }
-      this.hasResult.set(false);
-    } catch (err) {
-      this.alertMessage.set(
-        "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。"
-      );
     }
   }
 
   protected clearText(target: "A" | "B"): void {
-    if (target === "A") {
-      this.textA.set("");
-    } else {
-      this.textB.set("");
-    }
-    this.hasResult.set(false);
+    this.inputGeneration += 1;
+    if (target === "A") this.textA.set("");
+    else this.textB.set("");
+    this.invalidateResult();
     this.alertMessage.set("");
-  }
-
-  // 內部文字格式化輔助函數：移除首尾空白，且過濾移除空白行
-  private getFormattedText(raw: string): string {
-    if (!raw) return "";
-    return raw
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(line => line !== "")
-      .join("\n");
   }
 
   protected startCompare(): void {
-    this.isComparing.set(true);
+    if (this.isComparing()) return;
+
+    const leftText = this.textA();
+    const rightText = this.textB();
+    const leftLines = splitTextIntoLines(leftText);
+    const rightLines = splitTextIntoLines(rightText);
+    if (
+      leftText.length + rightText.length > MAX_DIFF_CHARACTERS ||
+      leftLines.length + rightLines.length > MAX_DIFF_LINES
+    ) {
+      this.hasResult.set(false);
+      this.alertMessage.set(
+        "文字內容過大，請縮小至 200,000 字元與 10,000 行內再比較。",
+      );
+      return;
+    }
+
+    const generation = ++this.compareGeneration;
+    this.cancelCompareTimer();
     this.alertMessage.set("");
+    this.isComparing.set(true);
+    this.hasResult.set(false);
+    this.alignedLines.set([]);
+    this.currentBlockIndex.set(-1);
 
-    // 1. 比對前先自動排版並回寫輸入框 (只 trim 首尾空白，不移除空行)
-    const formattedA = this.getFormattedText(this.textA());
-    const formattedB = this.getFormattedText(this.textB());
-    this.textA.set(formattedA);
-    this.textB.set(formattedB);
+    this.compareTimer = setTimeout(() => {
+      this.compareTimer = undefined;
+      if (generation !== this.compareGeneration) return;
 
-    // 2. 模擬比對動畫 1.2 秒以展示 CRT 雷射掃描效果
-    setTimeout(() => {
       try {
-        const linesA = formattedA.split(/\r?\n/);
-        const linesB = formattedB.split(/\r?\n/);
-        const result = diffLines(linesA, linesB);
-
+        const result = diffLines(leftLines, rightLines);
+        if (generation !== this.compareGeneration) return;
         this.alignedLines.set(result);
         this.currentBlockIndex.set(-1);
         this.isComparing.set(false);
         this.hasResult.set(true);
-      } catch (err) {
+      } catch {
+        if (generation !== this.compareGeneration) return;
         this.isComparing.set(false);
         this.alertMessage.set("比對過程中發生錯誤。");
       }
-    }, 1200);
+    }, 0);
   }
 
-  protected getBlockIdForLine(lineIdx: number): string | null {
-    const blocks = this.diffBlocks();
-    const block = blocks.find(b => lineIdx >= b.startIndex && lineIdx <= b.endIndex);
-    return block ? block.id : null;
+  protected getBlockIdForLine(lineIndex: number): string | null {
+    const block = this.diffBlocks().find(
+      (candidate) =>
+        lineIndex >= candidate.startIndex && lineIndex <= candidate.endIndex,
+    );
+    return block?.id ?? null;
   }
 
-  protected scrollToBlock(dir: "prev" | "next"): void {
+  protected scrollToBlock(direction: "prev" | "next"): void {
     const blocks = this.diffBlocks();
     if (blocks.length === 0) return;
 
-    let idx = this.currentBlockIndex();
-    if (dir === "next") {
-      idx = Math.min(idx + 1, blocks.length - 1);
-    } else {
-      idx = Math.max(idx - 1, 0);
-    }
+    let index = this.currentBlockIndex();
+    if (direction === "next") index = Math.min(index + 1, blocks.length - 1);
+    else index = Math.max(index - 1, 0);
+    if (this.currentBlockIndex() === -1) index = 0;
 
-    if (this.currentBlockIndex() === -1) {
-      idx = 0;
-    }
+    this.currentBlockIndex.set(index);
+    const element = document.getElementById(blocks[index].id);
+    if (!element) return;
 
-    this.currentBlockIndex.set(idx);
-    const targetBlock = blocks[idx];
-    const element = document.getElementById(targetBlock.id);
+    this.clearHighlight();
+    element.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    element.classList.add("diff-block-highlight");
+    this.highlightedElement = element;
+    this.highlightTimer = setTimeout(() => {
+      element.classList.remove("diff-block-highlight");
+      this.highlightedElement = null;
+      this.highlightTimer = undefined;
+    }, 1000);
+  }
 
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-      element.classList.add("diff-block-highlight");
-      setTimeout(() => {
-        element.classList.remove("diff-block-highlight");
-      }, 1000);
+  private cancelCompareTimer(): void {
+    if (this.compareTimer !== undefined) {
+      clearTimeout(this.compareTimer);
+      this.compareTimer = undefined;
     }
+  }
+
+  private clearHighlight(): void {
+    if (this.highlightTimer !== undefined) clearTimeout(this.highlightTimer);
+    this.highlightTimer = undefined;
+    this.highlightedElement?.classList.remove("diff-block-highlight");
+    this.highlightedElement = null;
   }
 }

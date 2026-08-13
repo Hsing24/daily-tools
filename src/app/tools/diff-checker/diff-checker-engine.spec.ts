@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  type AlignedLine,
   tokenizeLine,
   getLcs,
   diffLines,
@@ -18,7 +19,11 @@ describe("Diff Checker Engine", () => {
     it("should split Chinese characters and mixings correctly", () => {
       const line = "哈囉 world 世界";
       const tokens = tokenizeLine(line);
-      expect(tokens).toEqual(["哈", "囉", " ", "world", " ", "世", "界"]);
+      expect(tokens).toEqual(["哈囉", " ", "world", " ", "世界"]);
+    });
+
+    it("should keep grapheme clusters intact", () => {
+      expect(tokenizeLine("👨‍👩‍👧‍👦 👍🏽 🇹🇼")).toEqual(["👨‍👩‍👧‍👦", " ", "👍🏽", " ", "🇹🇼"]);
     });
   });
 
@@ -81,11 +86,30 @@ describe("Diff Checker Engine", () => {
       const leftWords = result[0].leftWords || [];
       const rightWords = result[0].rightWords || [];
 
-      expect(leftWords.map(w => w.text).join("")).toBe("hello world");
-      expect(rightWords.map(w => w.text).join("")).toBe("hello brave world");
+      expect(leftWords.map((w) => w.text).join("")).toBe("hello world");
+      expect(rightWords.map((w) => w.text).join("")).toBe("hello brave world");
 
-      const braveToken = rightWords.find(w => w.text === "brave");
+      const braveToken = rightWords.find((w) => w.text === "brave");
       expect(braveToken?.type).toBe("added");
+    });
+
+    it("should preserve blank lines, indentation, trailing spaces, and CRLF", () => {
+      const result = diffLines(
+        ["  same  ", "", "last\r"],
+        ["  same  ", "", "last"],
+      );
+
+      expect(result[0].type).toBe("equal");
+      expect(result[0].leftText).toBe("  same  ");
+      expect(result[1].leftText).toBe("");
+      expect(result.some((line) => line.type === "modified")).toBe(true);
+    });
+
+    it("should pair multiple removed and added lines", () => {
+      const result = diffLines(["old one", "old two"], ["new one", "new two"]);
+
+      expect(result).toHaveLength(2);
+      expect(result.every((line) => line.type === "modified")).toBe(true);
     });
   });
 
@@ -98,7 +122,7 @@ describe("Diff Checker Engine", () => {
         { type: "equal", leftText: "d", rightText: "d" },
         { type: "modified", leftText: "e", rightText: "f" },
         { type: "equal", leftText: "g", rightText: "g" },
-      ] as any[];
+      ] as AlignedLine[];
 
       const blocks = findDiffBlocks(aligned);
       expect(blocks.length).toBe(2);
