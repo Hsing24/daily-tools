@@ -6,23 +6,96 @@ export interface ConvertOptions {
   width: number;
   charSet: string;
   dither: boolean;
-  contrast: number;     // -100 到 100
-  brightness: number;   // -100 到 100
-  colorMode: 'monochrome' | 'retro-green' | 'retro-amber' | 'original';
+  contrast: number; // -100 到 100
+  brightness: number; // -100 到 100
+  colorMode: "monochrome" | "retro-green" | "retro-amber" | "original";
   charAspectRatio: number; // 通常為 0.55
 }
 
 export interface ConvertResult {
   width: number;
   height: number;
-  chars: string;
+  chars: string[];
   colors?: string[]; // 只有在 original 模式下需要
+}
+
+export const MAX_SOURCE_PIXELS = 20_000_000;
+export const MAX_OUTPUT_CELLS = 200_000;
+export const DEFAULT_ALPHA_BACKGROUND: readonly [number, number, number] = [
+  255, 255, 255,
+];
+
+export type AsciiColorMode = ConvertOptions["colorMode"];
+export type AsciiAnimationType = "none" | "typewriter" | "matrix" | "jitter";
+
+function splitGraphemes(text: string): string[] {
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, {
+      granularity: "grapheme",
+    });
+    return Array.from(segmenter.segment(text), (part) => part.segment);
+  }
+  return Array.from(text);
+}
+
+export function getGraphemeCharset(charSet: string): string[] {
+  return splitGraphemes(charSet);
+}
+
+function validateOptions(
+  sourceCanvas: HTMLCanvasElement,
+  options: ConvertOptions,
+  charSet: string[],
+): void {
+  if (
+    !Number.isInteger(sourceCanvas.width) ||
+    !Number.isInteger(sourceCanvas.height) ||
+    sourceCanvas.width <= 0 ||
+    sourceCanvas.height <= 0
+  ) {
+    throw new Error("來源圖片尺寸無效");
+  }
+  if (sourceCanvas.width * sourceCanvas.height > MAX_SOURCE_PIXELS) {
+    throw new Error(
+      `來源圖片過大，最多支援 ${MAX_SOURCE_PIXELS.toLocaleString()} pixels`,
+    );
+  }
+  if (!Number.isInteger(options.width) || options.width <= 0) {
+    throw new Error("ASCII 寬度必須是正整數");
+  }
+  if (!charSet.length) throw new Error("字元集至少需要 1 個 grapheme");
+  if (
+    !Number.isFinite(options.charAspectRatio) ||
+    options.charAspectRatio <= 0
+  ) {
+    throw new Error("字元寬高比必須大於 0");
+  }
+  if (
+    !Number.isFinite(options.contrast) ||
+    options.contrast < -100 ||
+    options.contrast > 100
+  ) {
+    throw new Error("對比度必須介於 -100 至 100");
+  }
+  if (
+    !Number.isFinite(options.brightness) ||
+    options.brightness < -100 ||
+    options.brightness > 100
+  ) {
+    throw new Error("亮度必須介於 -100 至 100");
+  }
 }
 
 /**
  * 調整對比度與亮度
  */
-function adjustColor(r: number, g: number, b: number, contrast: number, brightness: number): [number, number, number] {
+function adjustColor(
+  r: number,
+  g: number,
+  b: number,
+  contrast: number,
+  brightness: number,
+): [number, number, number] {
   // 1. 調整亮度
   let nr = r + brightness;
   let ng = g + brightness;
@@ -41,7 +114,7 @@ function adjustColor(r: number, g: number, b: number, contrast: number, brightne
   return [
     Math.min(255, Math.max(0, nr)),
     Math.min(255, Math.max(0, ng)),
-    Math.min(255, Math.max(0, nb))
+    Math.min(255, Math.max(0, nb)),
   ];
 }
 
@@ -68,15 +141,24 @@ function rgbToHex(r: number, g: number, b: number): string {
  */
 export function convertImageToAscii(
   sourceCanvas: HTMLCanvasElement,
-  options: ConvertOptions
+  options: ConvertOptions,
 ): ConvertResult {
   const imgW = sourceCanvas.width;
   const imgH = sourceCanvas.height;
 
-  // 計算轉換後的字元寬高
+  const charSet = getGraphemeCharset(options.charSet);
+  validateOptions(sourceCanvas, options, charSet);
+
   const targetW = options.width;
-  // 高度需考慮字元寬高比（例如等寬字型高度約為寬度的 1.8 倍，所以寬高比約 0.55）
-  const targetH = Math.max(1, Math.round(targetW * (imgH / imgW) * options.charAspectRatio));
+  const targetH = Math.max(
+    1,
+    Math.round(targetW * (imgH / imgW) * options.charAspectRatio),
+  );
+  if (targetW * targetH > MAX_OUTPUT_CELLS) {
+    throw new Error(
+      `ASCII 輸出過大，最多支援 ${MAX_OUTPUT_CELLS.toLocaleString()} cells`,
+    );
+  }
 
   // 建立一個離屏 Canvas 用於重取樣圖片
   const offscreenCanvas = document.createElement("canvas");
@@ -93,33 +175,33 @@ export function convertImageToAscii(
   const data = imgData.data;
 
   const totalPixels = targetW * targetH;
+  if (data.length < totalPixels * 4) throw new Error("圖片像素資料尺寸無效");
   const rValues = new Float32Array(totalPixels);
   const gValues = new Float32Array(totalPixels);
   const bValues = new Float32Array(totalPixels);
 
-  // 1. 預先調整對比度與亮度
+  const charSetLen = charSet.length;
+  const asciiChars: string[] = [];
+  const asciiColors: string[] = [];
+
+  const background = DEFAULT_ALPHA_BACKGROUND;
+  const getAdjustedRgb = (pixelIndex: number): [number, number, number] => {
+    const idx = pixelIndex * 4;
+    const alpha = data[idx + 3] / 255;
+    const r = data[idx] * alpha + background[0] * (1 - alpha);
+    const g = data[idx + 1] * alpha + background[1] * (1 - alpha);
+    const b = data[idx + 2] * alpha + background[2] * (1 - alpha);
+    return adjustColor(r, g, b, options.contrast, options.brightness);
+  };
+
   for (let i = 0; i < totalPixels; i++) {
-    const idx = i * 4;
-    const [ar, ag, ab] = adjustColor(
-      data[idx],
-      data[idx + 1],
-      data[idx + 2],
-      options.contrast,
-      options.brightness
-    );
+    const [ar, ag, ab] = getAdjustedRgb(i);
     rValues[i] = ar;
     gValues[i] = ag;
     bValues[i] = ab;
   }
 
-  const charSet = options.charSet;
-  const charSetLen = charSet.length;
-  let asciiChars = "";
-  const asciiColors: string[] = [];
-
-  // 2. 進行灰階與抖動處理
   if (options.dither) {
-    // 建立亮度快取，因為我們要在其上擴散誤差
     const lums = new Float32Array(totalPixels);
     for (let i = 0; i < totalPixels; i++) {
       lums[i] = getLuminance(rValues[i], gValues[i], bValues[i]);
@@ -130,19 +212,18 @@ export function convertImageToAscii(
         const idx = y * targetW + x;
         const oldVal = lums[idx];
 
-        // 映射到最近的字元索引
-        // 限制在 0-255 區間，防禦負誤差或溢出造成的越界
         const clampedVal = Math.min(255, Math.max(0, oldVal));
-        const charIdx = Math.min(
-          charSetLen - 1,
-          Math.floor((clampedVal / 255) * charSetLen)
-        );
-        // 量化後的值
-        const newVal = (charIdx / (charSetLen - 1)) * 255;
+        const charIdx =
+          charSetLen === 1
+            ? 0
+            : Math.min(
+                charSetLen - 1,
+                Math.round((clampedVal / 255) * (charSetLen - 1)),
+              );
+        const newVal =
+          charSetLen === 1 ? 0 : (charIdx / (charSetLen - 1)) * 255;
         const err = oldVal - newVal;
 
-        // 誤差擴散 (Floyd-Steinberg)
-        // 右方 (x + 1, y)
         if (x + 1 < targetW) {
           lums[idx + 1] += err * (7 / 16);
         }
@@ -159,22 +240,24 @@ export function convertImageToAscii(
           lums[idx + targetW + 1] += err * (1 / 16);
         }
 
-        asciiChars += charSet[charIdx];
+        asciiChars.push(charSet[charIdx]);
         if (options.colorMode === "original") {
           asciiColors.push(rgbToHex(rValues[idx], gValues[idx], bValues[idx]));
         }
       }
     }
   } else {
-    // 無抖動，直接映射
     for (let i = 0; i < totalPixels; i++) {
       const lum = getLuminance(rValues[i], gValues[i], bValues[i]);
       const clampedLum = Math.min(255, Math.max(0, lum));
-      const charIdx = Math.min(
-        charSetLen - 1,
-        Math.floor((clampedLum / 255) * charSetLen)
-      );
-      asciiChars += charSet[charIdx];
+      const charIdx =
+        charSetLen === 1
+          ? 0
+          : Math.min(
+              charSetLen - 1,
+              Math.round((clampedLum / 255) * (charSetLen - 1)),
+            );
+      asciiChars.push(charSet[charIdx]);
       if (options.colorMode === "original") {
         asciiColors.push(rgbToHex(rValues[i], gValues[i], bValues[i]));
       }
@@ -195,14 +278,26 @@ export function convertImageToAscii(
 export function generateTsCode(
   result: ConvertResult,
   config: {
-    colorMode: 'monochrome' | 'retro-green' | 'retro-amber' | 'original';
-    animationType: 'none' | 'typewriter' | 'matrix' | 'jitter';
+    colorMode: "monochrome" | "retro-green" | "retro-amber" | "original";
+    animationType: "none" | "typewriter" | "matrix" | "jitter";
     scanlines: boolean;
     flicker: boolean;
-  }
+  },
 ): string {
   // 將 ASCII 影像分行，並轉換為 JSON 格式
-  const lines: string[] = [];
+  if (
+    !Number.isInteger(result.width) ||
+    !Number.isInteger(result.height) ||
+    result.width <= 0 ||
+    result.height <= 0 ||
+    result.chars.length !== result.width * result.height ||
+    (result.colors !== undefined &&
+      result.colors.length !== result.chars.length)
+  ) {
+    throw new Error("ASCII 結果尺寸或字元資料無效");
+  }
+
+  const lines: string[][] = [];
   for (let y = 0; y < result.height; y++) {
     lines.push(result.chars.slice(y * result.width, (y + 1) * result.width));
   }
@@ -251,7 +346,7 @@ export const WIDTH = ${result.width};
 export const HEIGHT = ${result.height};
 
 // ASCII 字元矩陣資料 (每一行)
-export const ASCII_ROWS: string[] = ${JSON.stringify(lines, null, 2)};
+export const ASCII_ROWS: string[][] = ${JSON.stringify(lines, null, 2)};
 
 // 影像顏色調色盤與索引 (彩色模式時使用)
 export const COLOR_DATA: { palette: string[]; indices: number[] } | undefined = ${colorDataStr};
@@ -279,6 +374,25 @@ export function renderAscii(
     ...customOptions
   };
 
+  if (!canvas || typeof canvas.getContext !== 'function') {
+    throw new TypeError('renderAscii requires an HTMLCanvasElement');
+  }
+  if (!Number.isFinite(options.fps) || options.fps <= 0 || options.fps > 120) {
+    throw new RangeError('fps must be between 1 and 120');
+  }
+  if (!Number.isFinite(options.fontSize) || options.fontSize <= 0) {
+    throw new RangeError('fontSize must be greater than 0');
+  }
+  if (!['monochrome', 'retro-green', 'retro-amber', 'original'].includes(options.colorMode)) {
+    throw new RangeError('Unknown color mode');
+  }
+  if (!['none', 'typewriter', 'matrix', 'jitter'].includes(options.animationType)) {
+    throw new RangeError('Unknown animation type');
+  }
+  if (ASCII_ROWS.length !== HEIGHT || ASCII_ROWS.some((row) => row.length !== WIDTH)) {
+    throw new Error('ASCII_ROWS dimensions do not match WIDTH and HEIGHT');
+  }
+
   // 初始化自訂顏色
   if (!options.textColor) {
     if (options.colorMode === 'retro-green') {
@@ -292,8 +406,7 @@ export function renderAscii(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    console.error("無法取得 Canvas 2D 繪圖上下文");
-    return { destroy: () => {} };
+    throw new Error('Canvas 2D context is unavailable');
   }
 
   // 設定 Canvas 解析度（防鋸齒、高 DPI）
@@ -313,9 +426,10 @@ export function renderAscii(
   ctx.textBaseline = 'top';
   ctx.font = \`\${options.fontSize}px VT323, "IBM Plex Mono", "Courier New", monospace\`;
 
-  let animationId: number;
+  let animationId: number | undefined;
   let lastTime = 0;
   const frameInterval = 1000 / options.fps;
+  const shouldAnimate = options.animationType !== 'none';
 
   // 動態效果專用狀態
   let typewriterIndex = 0; // 打字機印出的字元數
@@ -332,9 +446,9 @@ export function renderAscii(
   function draw(timestamp: number) {
     if (isDestroyed) return;
 
-    animationId = requestAnimationFrame(draw);
+    if (shouldAnimate) animationId = requestAnimationFrame(draw);
 
-    if (timestamp - lastTime < frameInterval) return;
+    if (shouldAnimate && timestamp - lastTime < frameInterval) return;
     lastTime = timestamp;
 
     // 1. 清除畫布，填滿背景色
@@ -432,13 +546,13 @@ export function renderAscii(
     }
   }
 
-  // 啟動動畫
-  animationId = requestAnimationFrame(draw);
+  if (shouldAnimate) animationId = requestAnimationFrame(draw);
+  else draw(0);
 
   return {
     destroy: () => {
       isDestroyed = true;
-      cancelAnimationFrame(animationId);
+      if (animationId !== undefined) cancelAnimationFrame(animationId);
     }
   };
 }

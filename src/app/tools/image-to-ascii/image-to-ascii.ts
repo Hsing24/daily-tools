@@ -1,25 +1,66 @@
-import { Component, signal, computed, effect, viewChild, ElementRef } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { convertImageToAscii, generateTsCode, ConvertResult } from "./image-to-ascii-core";
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  OnDestroy,
+  signal,
+  viewChild,
+} from "@angular/core";
+import {
+  convertImageToAscii,
+  generateTsCode,
+  MAX_SOURCE_PIXELS,
+  type AsciiAnimationType,
+  type AsciiColorMode,
+  type ConvertResult,
+} from "./image-to-ascii-core";
 import { ToolSlider } from "../../shared/ui/tool-slider/tool-slider";
-import { ToolRadioGroup, RadioOption } from "../../shared/ui/tool-radio-group/tool-radio-group";
+import {
+  ToolRadioGroup,
+  RadioOption,
+} from "../../shared/ui/tool-radio-group/tool-radio-group";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
+
+type CharSetType =
+  "standard" | "minimal" | "binary" | "chinese" | "blocks" | "custom";
+
+function isAsciiColorMode(value: string): value is AsciiColorMode {
+  return ["monochrome", "retro-green", "retro-amber", "original"].includes(
+    value,
+  );
+}
+
+function isAsciiAnimationType(value: string): value is AsciiAnimationType {
+  return ["none", "typewriter", "matrix", "jitter"].includes(value);
+}
+
+function isCharSetType(value: string): value is CharSetType {
+  return [
+    "standard",
+    "minimal",
+    "binary",
+    "chinese",
+    "blocks",
+    "custom",
+  ].includes(value);
+}
 
 // 我們元件內部渲染器，與導出播放器的畫圖邏輯相同
 function renderAsciiInComponent(
   canvas: HTMLCanvasElement,
   result: ConvertResult,
   options: {
-    colorMode: 'monochrome' | 'retro-green' | 'retro-amber' | 'original';
-    animationType: 'none' | 'typewriter' | 'matrix' | 'jitter';
+    colorMode: AsciiColorMode;
+    animationType: AsciiAnimationType;
     scanlines: boolean;
     flicker: boolean;
-  }
+  },
 ) {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   const safeCtx = ctx;
 
@@ -38,20 +79,21 @@ function renderAsciiInComponent(
   canvas.height = displayHeight * dpr;
 
   safeCtx.scale(dpr, dpr);
-  safeCtx.textBaseline = 'top';
+  safeCtx.textBaseline = "top";
   safeCtx.font = `${fontSize}px VT323, "IBM Plex Mono", "Courier New", monospace`;
 
-  let textColor = '#e6f1ff'; // 預設白金色
-  if (options.colorMode === 'retro-green') {
-    textColor = '#3fe0c5'; // 復古薄荷綠
-  } else if (options.colorMode === 'retro-amber') {
-    textColor = '#f1b434'; // 復古琥珀色
+  let textColor = "#e6f1ff"; // 預設白金色
+  if (options.colorMode === "retro-green") {
+    textColor = "#3fe0c5"; // 復古薄荷綠
+  } else if (options.colorMode === "retro-amber") {
+    textColor = "#f1b434"; // 復古琥珀色
   }
 
-  let animationId: number;
+  let animationId: number | undefined;
   let lastTime = 0;
   const fps = 30;
   const frameInterval = 1000 / fps;
+  const isAnimated = options.animationType !== "none";
 
   // 動畫狀態
   let typewriterIndex = 0;
@@ -67,7 +109,7 @@ function renderAsciiInComponent(
   // 預先處理調色盤顏色以利 original 彩色模式渲染
   let palette: string[] = [];
   let colorIndices: number[] = [];
-  if (result.colors && options.colorMode === 'original') {
+  if (result.colors && options.colorMode === "original") {
     const paletteMap = new Map<string, number>();
     for (const color of result.colors) {
       let idx = paletteMap.get(color);
@@ -83,29 +125,29 @@ function renderAsciiInComponent(
   function draw(timestamp: number) {
     if (isDestroyed) return;
 
-    animationId = requestAnimationFrame(draw);
+    if (isAnimated) animationId = requestAnimationFrame(draw);
 
-    if (timestamp - lastTime < frameInterval) return;
+    if (isAnimated && timestamp - lastTime < frameInterval) return;
     lastTime = timestamp;
 
     // 清除背景 (CRT Dark Navy 0a1a2f)
-    safeCtx.fillStyle = '#0a1a2f';
+    safeCtx.fillStyle = "#0a1a2f";
     safeCtx.fillRect(0, 0, displayWidth, displayHeight);
 
     // 繪製 ASCII
     for (let y = 0; y < result.height; y++) {
       for (let x = 0; x < result.width; x++) {
         const charIdx = y * result.width + x;
-        const char = result.chars[charIdx] || ' ';
+        const char = result.chars[charIdx] || " ";
 
-        if (char === ' ') continue;
+        if (char === " ") continue;
 
         let shouldDraw = true;
         let opacity = 1.0;
 
-        if (options.animationType === 'typewriter') {
+        if (options.animationType === "typewriter") {
           shouldDraw = charIdx <= typewriterIndex;
-        } else if (options.animationType === 'matrix') {
+        } else if (options.animationType === "matrix") {
           const dropY = matrixProgress[x];
           if (y > dropY) {
             shouldDraw = false;
@@ -124,15 +166,15 @@ function renderAsciiInComponent(
         let renderX = x * charWidth;
         let renderY = y * charHeight;
 
-        if (options.animationType === 'jitter') {
+        if (options.animationType === "jitter") {
           renderX += (Math.random() - 0.5) * 0.8;
           renderY += (Math.random() - 0.5) * 0.8;
         }
 
         let fillStyle = textColor;
-        if (options.colorMode === 'original' && result.colors) {
+        if (options.colorMode === "original" && result.colors) {
           const colorIdx = colorIndices[charIdx];
-          fillStyle = palette[colorIdx] || '#ffffff';
+          fillStyle = palette[colorIdx] || "#ffffff";
         }
 
         if (opacity < 1.0) {
@@ -150,9 +192,12 @@ function renderAsciiInComponent(
     }
 
     // 更新狀態
-    if (options.animationType === 'typewriter') {
-      typewriterIndex = Math.min(totalChars, typewriterIndex + Math.ceil(totalChars / 150));
-    } else if (options.animationType === 'matrix') {
+    if (options.animationType === "typewriter") {
+      typewriterIndex = Math.min(
+        totalChars,
+        typewriterIndex + Math.ceil(totalChars / 150),
+      );
+    } else if (options.animationType === "matrix") {
       for (let x = 0; x < result.width; x++) {
         matrixProgress[x] += 0.5;
         if (matrixProgress[x] - 15 > result.height) {
@@ -163,7 +208,7 @@ function renderAsciiInComponent(
 
     // 繪製 CRT 掃描線
     if (options.scanlines) {
-      safeCtx.fillStyle = 'rgba(63, 224, 197, 0.05)';
+      safeCtx.fillStyle = "rgba(63, 224, 197, 0.05)";
       for (let y = 0; y < displayHeight; y += 4) {
         safeCtx.fillRect(0, y, displayWidth, 1.5);
       }
@@ -171,31 +216,31 @@ function renderAsciiInComponent(
 
     // 繪製 CRT 閃爍
     if (options.flicker && Math.random() < 0.15) {
-      safeCtx.fillStyle = 'rgba(63, 224, 197, 0.02)';
+      safeCtx.fillStyle = "rgba(63, 224, 197, 0.02)";
       safeCtx.fillRect(0, 0, displayWidth, displayHeight);
     }
   }
 
-  animationId = requestAnimationFrame(draw);
+  if (isAnimated) animationId = requestAnimationFrame(draw);
+  else draw(0);
 
   return {
     destroy: () => {
       isDestroyed = true;
-      cancelAnimationFrame(animationId);
-    }
+      if (animationId !== undefined) cancelAnimationFrame(animationId);
+    },
   };
 }
 
 @Component({
   selector: "app-image-to-ascii",
   imports: [
-    CommonModule,
     ToolSlider,
     ToolRadioGroup,
     ToolAlert,
     ToolBreadcrumb,
     ToolHeader,
-    ToolPanel
+    ToolPanel,
   ],
   templateUrl: "./image-to-ascii.html",
   styleUrl: "./image-to-ascii.css",
@@ -203,88 +248,111 @@ function renderAsciiInComponent(
     class: "d:block font-family:var(--font-mono) color:var(--ink)",
   },
 })
-export class ImageToAscii {
+export class ImageToAscii implements OnDestroy {
   // UI DOM 引用
-  private readonly previewCanvas = viewChild<ElementRef<HTMLCanvasElement>>("previewCanvas");
-  protected readonly charsetScrollContainer = viewChild<ElementRef<HTMLDivElement>>("charsetScrollContainer");
-  protected readonly colorScrollContainer = viewChild<ElementRef<HTMLDivElement>>("colorScrollContainer");
-  protected readonly animScrollContainer = viewChild<ElementRef<HTMLDivElement>>("animScrollContainer");
+  private readonly previewCanvas =
+    viewChild<ElementRef<HTMLCanvasElement>>("previewCanvas");
+  protected readonly charsetScrollContainer = viewChild<
+    ElementRef<HTMLDivElement>
+  >("charsetScrollContainer");
+  protected readonly colorScrollContainer = viewChild<
+    ElementRef<HTMLDivElement>
+  >("colorScrollContainer");
+  protected readonly animScrollContainer = viewChild<
+    ElementRef<HTMLDivElement>
+  >("animScrollContainer");
 
   // 滾動狀態控制
-  protected readonly charsetScroll = signal({ showLeft: false, showRight: false, hasScroll: false });
-  protected readonly colorScroll = signal({ showLeft: false, showRight: false, hasScroll: false });
-  protected readonly animScroll = signal({ showLeft: false, showRight: false, hasScroll: false });
+  protected readonly charsetScroll = signal({
+    showLeft: false,
+    showRight: false,
+    hasScroll: false,
+  });
+  protected readonly colorScroll = signal({
+    showLeft: false,
+    showRight: false,
+    hasScroll: false,
+  });
+  protected readonly animScroll = signal({
+    showLeft: false,
+    showRight: false,
+    hasScroll: false,
+  });
 
   // 使用者上傳與狀態控制
   protected readonly uploadedImage = signal<string | null>(null);
   protected readonly isDragging = signal<boolean>(false);
   protected readonly errorMessage = signal<string>("");
   protected readonly successMessage = signal<string>("");
-  protected readonly activeTab = signal<'preview' | 'code'>('preview');
-  protected readonly showSettings = signal<boolean>(true);
+  protected readonly activeTab = signal<"preview" | "code">("preview");
+  protected readonly showSettings = signal(true);
 
   // 控制參數 (Signals)
-  protected readonly charWidth = signal<number>(80);
-  protected readonly selectedCharSetType = signal<string>('standard');
-  protected readonly customCharSet = signal<string>('@#W$9876543210?!abc;:+=-,._ ');
-  protected readonly dither = signal<boolean>(true);
-  protected readonly contrast = signal<number>(0);
-  protected readonly brightness = signal<number>(0);
+  protected readonly charWidth = signal(80);
+  protected readonly selectedCharSetType = signal<CharSetType>("standard");
+  protected readonly customCharSet = signal("@#W$9876543210?!abc;:+=-,._ ");
+  protected readonly dither = signal(true);
+  protected readonly contrast = signal(0);
+  protected readonly brightness = signal(0);
 
   // 色彩與動畫預覽參數 (Signals)
-  protected readonly colorMode = signal<'monochrome' | 'retro-green' | 'retro-amber' | 'original'>('retro-green');
-  protected readonly animationType = signal<'none' | 'typewriter' | 'matrix' | 'jitter'>('none');
-  protected readonly scanlines = signal<boolean>(true);
-  protected readonly flicker = signal<boolean>(false);
+  protected readonly colorMode = signal<AsciiColorMode>("retro-green");
+  protected readonly animationType = signal<AsciiAnimationType>("none");
+  protected readonly scanlines = signal(true);
+  protected readonly flicker = signal(false);
 
   // 內部圖片快取，當上傳後在隱屏建立 Canvas 繪圖
   private readonly sourceCanvasSignal = signal<HTMLCanvasElement | null>(null);
   private activePlayer: { destroy: () => void } | null = null;
+  private conversionTimer: ReturnType<typeof setTimeout> | undefined;
+  private conversionGeneration = 0;
+  private fileGeneration = 0;
+  private scrollCheckTimer: ReturnType<typeof setTimeout> | undefined;
+  private statusTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly pendingDownloadUrls = new Map<
+    ReturnType<typeof setTimeout>,
+    string
+  >();
+  private destroyed = false;
+  protected readonly isConverting = signal(false);
 
   // 預設字元集
   protected readonly charSetOptions = [
-    { id: 'standard', label: '標準', value: '@#W$9876543210?!abc;:+=-,._ ' },
-    { id: 'minimal', label: '極簡', value: '#+- ' },
-    { id: 'binary', label: '二進位', value: '01 ' },
-    { id: 'chinese', label: '漢字', value: '█田口甲十卜人一 ' },
-    { id: 'blocks', label: '區塊', value: '█▓▒░ ' },
-    { id: 'custom', label: '自定義', value: '' }
+    { id: "standard", label: "標準", value: "@#W$9876543210?!abc;:+=-,._ " },
+    { id: "minimal", label: "極簡", value: "#+- " },
+    { id: "binary", label: "二進位", value: "01 " },
+    { id: "chinese", label: "漢字", value: "█田口甲十卜人一 " },
+    { id: "blocks", label: "區塊", value: "█▓▒░ " },
+    { id: "custom", label: "自定義", value: "" },
   ];
 
   protected readonly charSetRadioOptions: RadioOption[] = [
-    { value: 'standard', label: '標準' },
-    { value: 'minimal', label: '極簡' },
-    { value: 'binary', label: '二進位' },
-    { value: 'chinese', label: '漢字' },
-    { value: 'blocks', label: '區塊' },
-    { value: 'custom', label: '自定義' }
+    { value: "standard", label: "標準" },
+    { value: "minimal", label: "極簡" },
+    { value: "binary", label: "二進位" },
+    { value: "chinese", label: "漢字" },
+    { value: "blocks", label: "區塊" },
+    { value: "custom", label: "自定義" },
   ];
 
   protected readonly colorModeOptions: RadioOption[] = [
-    { value: 'monochrome', label: '黑白' },
-    { value: 'retro-green', label: '綠色' },
-    { value: 'retro-amber', label: '琥珀色' },
-    { value: 'original', label: '原色' }
+    { value: "monochrome", label: "黑白" },
+    { value: "retro-green", label: "綠色" },
+    { value: "retro-amber", label: "琥珀色" },
+    { value: "original", label: "原色" },
   ];
 
   protected readonly animationOptions: RadioOption[] = [
-    { value: 'none', label: '無動畫' },
-    { value: 'typewriter', label: '打字機' },
-    { value: 'matrix', label: '矩陣雨' },
-    { value: 'jitter', label: '微幅抖動' }
+    { value: "none", label: "無動畫" },
+    { value: "typewriter", label: "打字機" },
+    { value: "matrix", label: "矩陣雨" },
+    { value: "jitter", label: "微幅抖動" },
   ];
 
   constructor() {
-    // 預覽重繪的響應式 Effect
-    effect(() => {
+    effect((onCleanup) => {
       const result = this.asciiResult();
       const canvas = this.previewCanvas()?.nativeElement;
-
-      if (this.activePlayer) {
-        this.activePlayer.destroy();
-        this.activePlayer = null;
-      }
-
       if (!result || !canvas) return;
 
       const player = renderAsciiInComponent(canvas, result, {
@@ -296,19 +364,72 @@ export class ImageToAscii {
 
       if (player) {
         this.activePlayer = player;
+        onCleanup(() => {
+          player.destroy();
+          if (this.activePlayer === player) this.activePlayer = null;
+        });
       }
     });
 
-    // 當選單參數、選項或顯示狀態變更時，初始偵測滾動遮罩狀態
-    effect(() => {
-      // 訂閱可能會改變 DOM 選項長度的訊號
+    effect((onCleanup) => {
       this.selectedCharSetType();
       this.colorMode();
       this.animationType();
 
       if (this.showSettings()) {
-        setTimeout(() => this.checkAllScrolls(), 150);
+        this.scrollCheckTimer = setTimeout(() => {
+          this.scrollCheckTimer = undefined;
+          this.checkAllScrolls();
+        }, 150);
+        onCleanup(() => {
+          if (this.scrollCheckTimer !== undefined)
+            clearTimeout(this.scrollCheckTimer);
+          this.scrollCheckTimer = undefined;
+        });
       }
+    });
+
+    effect((onCleanup) => {
+      const sourceCanvas = this.sourceCanvasSignal();
+      const options = {
+        width: this.charWidth(),
+        charSet: this.getCharSetString(),
+        dither: this.dither(),
+        contrast: this.contrast(),
+        brightness: this.brightness(),
+        colorMode: this.colorMode(),
+        charAspectRatio: 0.55,
+      };
+      const generation = ++this.conversionGeneration;
+
+      if (!sourceCanvas) {
+        this.isConverting.set(false);
+        this.asciiResult.set(null);
+        return;
+      }
+
+      this.isConverting.set(true);
+      this.conversionTimer = setTimeout(() => {
+        this.conversionTimer = undefined;
+        if (generation !== this.conversionGeneration || this.destroyed) return;
+        try {
+          this.asciiResult.set(convertImageToAscii(sourceCanvas, options));
+          this.errorMessage.set("");
+        } catch (error: unknown) {
+          this.asciiResult.set(null);
+          this.errorMessage.set(
+            error instanceof Error ? error.message : "圖片轉換失敗",
+          );
+        } finally {
+          this.isConverting.set(false);
+        }
+      }, 0);
+
+      onCleanup(() => {
+        if (this.conversionTimer !== undefined)
+          clearTimeout(this.conversionTimer);
+        this.conversionTimer = undefined;
+      });
     });
   }
 
@@ -318,21 +439,25 @@ export class ImageToAscii {
   }
 
   // 檢測橫向滾動容器狀態並更新遮罩 Signal
-  protected updateScrollState(el: HTMLDivElement, type: 'charset' | 'color' | 'anim'): void {
+  protected updateScrollState(
+    el: HTMLDivElement,
+    type: "charset" | "color" | "anim",
+  ): void {
     const hasScroll = el.scrollWidth > el.clientWidth;
     // 捲軸大於 2px 表示已向右滾動，此時需要顯示左邊漸隱遮罩
     const showLeft = hasScroll && el.scrollLeft > 2;
     // 捲軸加上可視寬度若小於總寬度 2px 表示未達最右邊，此時需要顯示右邊漸隱遮罩
-    const showRight = hasScroll && (el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    const showRight =
+      hasScroll && el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
 
     const state = { showLeft, showRight, hasScroll };
-    if (type === 'charset') this.charsetScroll.set(state);
-    if (type === 'color') this.colorScroll.set(state);
-    if (type === 'anim') this.animScroll.set(state);
+    if (type === "charset") this.charsetScroll.set(state);
+    if (type === "color") this.colorScroll.set(state);
+    if (type === "anim") this.animScroll.set(state);
   }
 
   // 處理滾動事件
-  protected onScroll(event: Event, type: 'charset' | 'color' | 'anim'): void {
+  protected onScroll(event: Event, type: "charset" | "color" | "anim"): void {
     const el = event.target as HTMLDivElement;
     this.updateScrollState(el, type);
   }
@@ -343,45 +468,30 @@ export class ImageToAscii {
     const colorEl = this.colorScrollContainer()?.nativeElement;
     const animEl = this.animScrollContainer()?.nativeElement;
 
-    if (charsetEl) this.updateScrollState(charsetEl, 'charset');
-    if (colorEl) this.updateScrollState(colorEl, 'color');
-    if (animEl) this.updateScrollState(animEl, 'anim');
+    if (charsetEl) this.updateScrollState(charsetEl, "charset");
+    if (colorEl) this.updateScrollState(colorEl, "color");
+    if (animEl) this.updateScrollState(animEl, "anim");
   }
 
   protected onColorModeChange(mode: string): void {
-    this.colorMode.set(mode as 'monochrome' | 'retro-green' | 'retro-amber' | 'original');
+    if (isAsciiColorMode(mode)) this.colorMode.set(mode);
   }
 
   protected onAnimationTypeChange(type: string): void {
-    this.animationType.set(type as 'none' | 'typewriter' | 'matrix' | 'jitter');
+    if (isAsciiAnimationType(type)) this.animationType.set(type);
   }
 
   // 取得當前有效的字元集字串
   protected getCharSetString(): string {
     const type = this.selectedCharSetType();
-    if (type === 'custom') {
-      return this.customCharSet() || ' ';
+    if (type === "custom") {
+      return this.customCharSet() || " ";
     }
-    const option = this.charSetOptions.find(o => o.id === type);
-    return option ? option.value : '@#W$9876543210?!abc;:+=-,._ ';
+    const option = this.charSetOptions.find((o) => o.id === type);
+    return option?.value ?? "@#W$9876543210?!abc;:+=-,._ ";
   }
 
-  // 計算轉換後的 ASCII 結果
-  protected readonly asciiResult = computed<ConvertResult | null>(() => {
-    const sourceCanvas = this.sourceCanvasSignal();
-    if (!sourceCanvas) return null;
-
-    const charSet = this.getCharSetString();
-    return convertImageToAscii(sourceCanvas, {
-      width: this.charWidth(),
-      charSet: charSet,
-      dither: this.dither(),
-      contrast: this.contrast(),
-      brightness: this.brightness(),
-      colorMode: this.colorMode(),
-      charAspectRatio: 0.55
-    });
-  });
+  protected readonly asciiResult = signal<ConvertResult | null>(null);
 
   // 計算生成的 TS 導出代碼
   protected readonly generatedTsCode = computed<string>(() => {
@@ -398,9 +508,10 @@ export class ImageToAscii {
 
   // 選擇預設字元集
   protected selectCharSetType(typeId: string): void {
+    if (!isCharSetType(typeId)) return;
     this.selectedCharSetType.set(typeId);
-    if (typeId !== 'custom') {
-      const option = this.charSetOptions.find(o => o.id === typeId);
+    if (typeId !== "custom") {
+      const option = this.charSetOptions.find((o) => o.id === typeId);
       if (option) {
         this.customCharSet.set(option.value);
       }
@@ -441,26 +552,50 @@ export class ImageToAscii {
     const files = input.files;
     if (files && files.length > 0) {
       this.handleFile(files[0]);
+      input.value = "";
     }
   }
 
   private handleFile(file: File): void {
-    if (!file.type.startsWith("image/")) {
-      this.errorMessage.set("不支援的檔案格式，請上傳 PNG 或 JPG 圖片檔案。");
+    if (
+      !["image/png", "image/jpeg", "image/webp", "image/avif"].includes(
+        file.type.toLowerCase(),
+      )
+    ) {
+      this.errorMessage.set("只支援 PNG、JPEG、WebP、AVIF 圖片。");
       return;
     }
 
+    const generation = ++this.fileGeneration;
+    this.sourceCanvasSignal.set(null);
+    this.asciiResult.set(null);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
+      if (generation !== this.fileGeneration || this.destroyed) return;
+      const result = e.target?.result;
+      if (typeof result !== "string") {
+        this.errorMessage.set("圖片檔案讀取失敗。");
+        return;
+      }
+      const dataUrl = result;
       this.uploadedImage.set(dataUrl);
 
-      // 加載圖片並轉為 Canvas ImageData
       const img = new Image();
       img.onload = () => {
+        if (generation !== this.fileGeneration || this.destroyed) return;
+        if (
+          !img.naturalWidth ||
+          !img.naturalHeight ||
+          img.naturalWidth * img.naturalHeight > MAX_SOURCE_PIXELS
+        ) {
+          this.errorMessage.set(
+            `圖片過大，最多支援 ${MAX_SOURCE_PIXELS.toLocaleString()} pixels。`,
+          );
+          return;
+        }
         const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = img.width;
-        tempCanvas.height = img.height;
+        tempCanvas.width = img.naturalWidth;
+        tempCanvas.height = img.naturalHeight;
         const ctx = tempCanvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0);
@@ -470,9 +605,14 @@ export class ImageToAscii {
         }
       };
       img.onerror = () => {
+        if (generation !== this.fileGeneration || this.destroyed) return;
         this.errorMessage.set("圖片載入失敗。");
       };
       img.src = dataUrl;
+    };
+    reader.onerror = () => {
+      if (generation === this.fileGeneration && !this.destroyed)
+        this.errorMessage.set("圖片檔案讀取失敗。");
     };
     reader.readAsDataURL(file);
   }
@@ -483,15 +623,22 @@ export class ImageToAscii {
     if (!code) return;
 
     try {
-      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+      if (
+        !navigator.clipboard ||
+        typeof navigator.clipboard.writeText !== "function"
+      ) {
         throw new Error("Clipboard API not supported");
       }
       await navigator.clipboard.writeText(code);
-      this.successMessage.set("TS 代碼已成功複製到剪貼簿！");
-      setTimeout(() => this.successMessage.set(""), 3000);
-    } catch (err) {
-      this.errorMessage.set("複製失敗，請手動複製右方文字框內容。");
-      setTimeout(() => this.errorMessage.set(""), 3000);
+      this.setTemporaryMessage(
+        this.successMessage,
+        "TS 代碼已成功複製到剪貼簿！",
+      );
+    } catch {
+      this.setTemporaryMessage(
+        this.errorMessage,
+        "複製失敗，請手動複製右方文字框內容。",
+      );
     }
   }
 
@@ -508,19 +655,61 @@ export class ImageToAscii {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const timer = setTimeout(() => {
+      this.pendingDownloadUrls.delete(timer);
+      URL.revokeObjectURL(url);
+    }, 1000);
+    this.pendingDownloadUrls.set(timer, url);
   }
 
   // 清除當前上傳的圖片
   protected clearImage(): void {
+    this.fileGeneration += 1;
+    this.conversionGeneration += 1;
+    if (this.conversionTimer !== undefined) clearTimeout(this.conversionTimer);
+    this.conversionTimer = undefined;
     this.uploadedImage.set(null);
     this.sourceCanvasSignal.set(null);
+    this.asciiResult.set(null);
+    this.isConverting.set(false);
     this.errorMessage.set("");
     this.successMessage.set("");
+    if (this.statusTimer !== undefined) clearTimeout(this.statusTimer);
+    this.statusTimer = undefined;
     this.showSettings.set(true);
     if (this.activePlayer) {
       this.activePlayer.destroy();
       this.activePlayer = null;
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.fileGeneration += 1;
+    this.conversionGeneration += 1;
+    if (this.conversionTimer !== undefined) clearTimeout(this.conversionTimer);
+    if (this.scrollCheckTimer !== undefined)
+      clearTimeout(this.scrollCheckTimer);
+    if (this.statusTimer !== undefined) clearTimeout(this.statusTimer);
+    this.activePlayer?.destroy();
+    for (const [timer, url] of this.pendingDownloadUrls) {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+    }
+    this.pendingDownloadUrls.clear();
+  }
+
+  private setTemporaryMessage(
+    target: typeof this.successMessage,
+    message: string,
+  ): void {
+    if (this.statusTimer !== undefined) clearTimeout(this.statusTimer);
+    this.successMessage.set("");
+    this.errorMessage.set("");
+    target.set(message);
+    this.statusTimer = setTimeout(() => {
+      target.set("");
+      this.statusTimer = undefined;
+    }, 3000);
   }
 }

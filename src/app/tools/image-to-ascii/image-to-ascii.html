@@ -10,9 +10,7 @@
 
     @if (errorMessage()) {
     <app-tool-alert [message]="errorMessage()" variant="error" />
-    }
-
-    @if (successMessage()) {
+    } @if (successMessage()) {
     <app-tool-alert [message]="successMessage()" variant="success" />
     }
 
@@ -28,21 +26,27 @@
       <input
         type="file"
         id="image-file-input"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/webp,image/avif"
         (change)="onFileSelected($event)"
         class="position:absolute inset:0 opacity:0 w:100% h:100% cursor:pointer"
       />
       <div class="f:48 mb:16 color:var(--primary)">⎘</div>
-      <p class="f:16 color:var(--ink-bright) mb:8 font-weight:600">將圖片拖放到此處，或點擊進行上傳</p>
-      <p class="f:12 color:var(--ink-muted)">支援 PNG, JPG 格式。轉換將完全在您的瀏覽器端安全地進行。</p>
+      <p class="f:16 color:var(--ink-bright) mb:8 font-weight:600">
+        將圖片拖放到此處，或點擊進行上傳
+      </p>
+      <p class="f:12 color:var(--ink-muted)">
+        僅支援 PNG、JPEG、WebP、AVIF。轉換完全在瀏覽器端進行。
+      </p>
     </div>
     } @else {
     <!-- 主工作區：上方導覽列 + 下方沉浸式工作面板 -->
-    <div class="d:flex flex:col border:2px|solid|var(--border-muted) bg:var(--canvas-elevated) h:650 position:relative overflow:hidden mb:24">
-      
+    <div
+      class="d:flex flex:col border:2px|solid|var(--border-muted) bg:var(--canvas-elevated) h:650 position:relative overflow:hidden mb:24"
+    >
       <!-- 頂部控制列 (Tab 切換 + 工具操作按鈕) -->
-      <div class="d:flex justify-content:space-between align-items:center border-bottom:2px|solid|var(--border-muted) bg:var(--canvas-deep) px:16 py:4 h:48 select:none">
-        
+      <div
+        class="d:flex justify-content:space-between align-items:center border-bottom:2px|solid|var(--border-muted) bg:var(--canvas-deep) px:16 py:4 h:48 select:none"
+      >
         <!-- Tab 按鈕 -->
         <div class="d:flex gap:4 h:100%">
           <button
@@ -104,20 +108,23 @@
             清除圖片
           </button>
         </div>
-
       </div>
 
       <!-- 下方面板主體 (Tab 內容 + 右側抽屜) -->
       <div class="flex:1 d:flex position:relative overflow:hidden">
-        
         <!-- Tab 1: 預覽畫面 (完全佔滿) -->
         @if (activeTab() === 'preview') {
         <div
           [class.pr:340]="showSettings()"
           class="flex:1 d:flex align-items:center justify-content:center bg:#050e1c p:16 overflow:auto transition:padding-right|0.25s|ease-in-out"
         >
-          <div class="max-w:100% max-h:100% d:flex justify-content:center align-items:center">
-            <canvas #previewCanvas class="display:block max-w:100% max-h:500"></canvas>
+          <div
+            class="max-w:100% max-h:100% d:flex justify-content:center align-items:center"
+          >
+            <canvas
+              #previewCanvas
+              class="display:block max-w:100% max-h:500"
+            ></canvas>
           </div>
         </div>
         }
@@ -128,9 +135,12 @@
           [class.pr:340]="showSettings()"
           class="flex:1 d:flex flex:col p:16 bg:#050e1c gap:12 overflow-y:auto transition:padding-right|0.25s|ease-in-out"
         >
-          <div class="d:flex justify-content:space-between align-items:center flex:wrap gap:8">
+          <div
+            class="d:flex justify-content:space-between align-items:center flex:wrap gap:8"
+          >
             <span class="f:12 color:var(--ink-bright)">
-              產生的代碼已根據當前設定打包 (尺寸: {{ asciiResult()?.width }}x{{ asciiResult()?.height }})
+              產生的代碼已根據當前設定打包 (尺寸: {{ asciiResult()?.width }}x{{
+              asciiResult()?.height }})
             </span>
             <div class="d:flex gap:8">
               <button
@@ -160,12 +170,23 @@
           </div>
 
           <!-- 說明 -->
-          <div class="p:12 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) f:11 font-family:var(--font-mono)">
-            <h4 class="f:12 font-weight:bold color:var(--primary) mb:4">🚀 使用說明：</h4>
-            <p class="color:var(--ink) mb:4">將下載的 <code>ascii-image.ts</code> 放入專案中，在 HTML 建立 Canvas，並引入啟動：</p>
-            <pre class="bg:var(--canvas-input) p:6 border:1px|solid|var(--border-muted) color:var(--ink-bright) m:0 overflow-x:auto">
+          <div
+            class="p:12 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) f:11 font-family:var(--font-mono)"
+          >
+            <h4 class="f:12 font-weight:bold color:var(--primary) mb:4">
+              🚀 使用說明：
+            </h4>
+            <p class="color:var(--ink) mb:4">
+              將下載的 <code>ascii-image.ts</code> 放入專案中，在 HTML 建立
+              Canvas，並引入啟動：
+            </p>
+            <pre
+              class="bg:var(--canvas-input) p:6 border:1px|solid|var(--border-muted) color:var(--ink-bright) m:0 overflow-x:auto"
+            >
 import {{ '{' }} renderAscii {{ '}' }} from './ascii-image';
-const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontSize: 12 {{ '}' }});
+const canvas = document.getElementById('my-canvas');
+if (!(canvas instanceof HTMLCanvasElement)) throw new Error('Canvas not found');
+const player = renderAscii(canvas, {{ '{' }} fontSize: 12 {{ '}' }});
 // player.destroy(); // 釋放動畫</pre>
           </div>
         </div>
@@ -176,10 +197,13 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
           [style.transform]="showSettings() ? 'none' : 'translateX(100%)'"
           class="position:absolute top:0 right:0 bottom:0 z:30 w:340 max-w:85% bg:var(--canvas-elevated) border-left:2px|solid|var(--border-default) d:flex flex:col transition:transform|0.25s|ease-in-out select:none"
         >
-          
           <!-- 抽屜標頭 -->
-          <div class="d:flex justify-content:space-between align-items:center border-bottom:1px|solid|var(--border-muted) px:16 py:12 bg:var(--canvas-deep)">
-            <span class="f:14 font-weight:bold color:var(--primary)">⚙️ 轉換參數設定</span>
+          <div
+            class="d:flex justify-content:space-between align-items:center border-bottom:1px|solid|var(--border-muted) px:16 py:12 bg:var(--canvas-deep)"
+          >
+            <span class="f:14 font-weight:bold color:var(--primary)"
+              >⚙️ 轉換參數設定</span
+            >
             <button
               type="button"
               (click)="showSettings.set(false)"
@@ -191,7 +215,6 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
 
           <!-- 抽屜內容 (可滾動) -->
           <div class="flex:1 overflow-y:auto p:16 d:flex flex:col gap:16">
-            
             <!-- 解析度 -->
             <div>
               <app-tool-slider
@@ -231,12 +254,18 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
               />
             </div>
 
-
             <!-- 誤差擴散抖動 (Dithering) -->
-            <div class="d:flex align-items:center justify-content:space-between p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">
+            <div
+              class="d:flex align-items:center justify-content:space-between p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)"
+            >
               <div>
-                <span class="d:block f:12 color:var(--ink-bright) font-weight:600">誤差擴散抖動 (Dither)</span>
-                <span class="d:block f:11 color:var(--ink-muted) mt:2">點化漸層，增加細節感</span>
+                <span
+                  class="d:block f:12 color:var(--ink-bright) font-weight:600"
+                  >誤差擴散抖動 (Dither)</span
+                >
+                <span class="d:block f:11 color:var(--ink-muted) mt:2"
+                  >點化漸層，增加細節感</span
+                >
               </div>
               <label class="d:inline-flex align-items:center cursor:pointer">
                 <input
@@ -250,9 +279,14 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
 
             <!-- 字元集 -->
             <div>
-              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">選擇字元集</label>
-              
-              <div class="position:relative w:100% max-w:100% mb:6 overflow:hidden">
+              <label
+                class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6"
+                >選擇字元集</label
+              >
+
+              <div
+                class="position:relative w:100% max-w:100% mb:6 overflow:hidden"
+              >
                 <!-- 滾動內盒 -->
                 <div
                   #charsetScrollContainer
@@ -268,17 +302,23 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 </div>
                 <!-- 左側物理漸隱遮罩 -->
                 @if (charsetScroll().showLeft) {
-                <div class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"></div>
+                <div
+                  class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"
+                ></div>
                 }
                 <!-- 右側物理漸隱遮罩 -->
                 @if (charsetScroll().showRight) {
-                <div class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"></div>
+                <div
+                  class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"
+                ></div>
                 }
               </div>
 
               <!-- 註解風格滾動示意 -->
               @if (charsetScroll().hasScroll) {
-              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+              <div
+                class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none"
+              >
                 /* 左右滾動檢視更多 */
               </div>
               }
@@ -300,8 +340,11 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
 
             <!-- 色彩模式 -->
             <div>
-              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">色彩風格</label>
-              
+              <label
+                class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6"
+                >色彩風格</label
+              >
+
               <div class="position:relative w:100% max-w:100% overflow:hidden">
                 <!-- 滾動內盒 -->
                 <div
@@ -318,17 +361,23 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 </div>
                 <!-- 左側物理漸隱遮罩 -->
                 @if (colorScroll().showLeft) {
-                <div class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"></div>
+                <div
+                  class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"
+                ></div>
                 }
                 <!-- 右側物理漸隱遮罩 -->
                 @if (colorScroll().showRight) {
-                <div class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"></div>
+                <div
+                  class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"
+                ></div>
                 }
               </div>
 
               <!-- 註解風格滾動示意 -->
               @if (colorScroll().hasScroll) {
-              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+              <div
+                class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none"
+              >
                 /* 左右滾動檢視更多 */
               </div>
               }
@@ -336,8 +385,11 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
 
             <!-- 動畫特效 -->
             <div>
-              <label class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6">動畫特效</label>
-              
+              <label
+                class="d:block f:12 color:var(--ink-bright) font-weight:600 mb:6"
+                >動畫特效</label
+              >
+
               <div class="position:relative w:100% max-w:100% overflow:hidden">
                 <!-- 滾動內盒 -->
                 <div
@@ -354,25 +406,35 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 </div>
                 <!-- 左側物理漸隱遮罩 -->
                 @if (animScroll().showLeft) {
-                <div class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"></div>
+                <div
+                  class="position:absolute left:0 top:0 z:10 w:32 h:42 pointer-events:none mask-left-svg"
+                ></div>
                 }
                 <!-- 右側物理漸隱遮罩 -->
                 @if (animScroll().showRight) {
-                <div class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"></div>
+                <div
+                  class="position:absolute right:0 top:0 z:10 w:32 h:42 pointer-events:none mask-right-svg"
+                ></div>
                 }
               </div>
 
               <!-- 註解風格滾動示意 -->
               @if (animScroll().hasScroll) {
-              <div class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none">
+              <div
+                class="f:10 color:var(--ink-muted) mt:4 text:center select:none pointer-events:none"
+              >
                 /* 左右滾動檢視更多 */
               </div>
               }
             </div>
 
             <!-- CRT 效果 -->
-            <div class="d:flex flex:col gap:8 p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">
-              <label class="d:flex align-items:center justify-content:space-between cursor:pointer">
+            <div
+              class="d:flex flex:col gap:8 p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)"
+            >
+              <label
+                class="d:flex align-items:center justify-content:space-between cursor:pointer"
+              >
                 <span class="f:12 color:var(--ink-bright)">CRT 模擬掃描線</span>
                 <input
                   type="checkbox"
@@ -381,7 +443,9 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                   class="w:16 h:16 accent-color:var(--primary) cursor:pointer"
                 />
               </label>
-              <label class="d:flex align-items:center justify-content:space-between cursor:pointer">
+              <label
+                class="d:flex align-items:center justify-content:space-between cursor:pointer"
+              >
                 <span class="f:12 color:var(--ink-bright)">CRT 畫面微閃爍</span>
                 <input
                   type="checkbox"
@@ -391,13 +455,9 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 />
               </label>
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </div>
     }
   </app-tool-panel>
