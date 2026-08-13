@@ -10,7 +10,6 @@ declare module 'imagetracerjs' {
     rightangleenhance?: boolean;
     blurradius?: number;
     blurdelta?: number;
-    [key: string]: unknown;
   }
 
   interface ImageDataLike {
