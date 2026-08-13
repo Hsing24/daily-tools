@@ -82,6 +82,19 @@ export class Layout {
           available: true,
           keywords: ["image-to-ascii", "image", "ascii"],
         },
+        {
+          label: "圖片轉深度圖",
+          route: "depth-estimator",
+          available: true,
+          keywords: [
+            "depth-estimator",
+            "depth",
+            "depth-map",
+            "3d",
+            "ai",
+            "深度圖",
+          ],
+        },
       ],
     },
     {

@@ -11,7 +11,7 @@ export interface RadioOption {
   templateUrl: "./tool-radio-group.html",
   styleUrl: "./tool-radio-group.css",
   host: {
-    class: "d:inline-block",
+    class: "d:inline-block max-w:100%",
   },
 })
 export class ToolRadioGroup {

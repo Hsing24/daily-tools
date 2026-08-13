@@ -201,8 +201,8 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 [value]="charWidth()"
                 (valueChange)="charWidth.set($event)"
                 [ticks]="[30, 60, 90, 120, 150]"
+                unit=" chars"
               />
-              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定寬度：{{ charWidth() }} 字元 (高約 {{ asciiResult()?.height }} 行)</span>
             </div>
 
             <!-- 對比度 -->
@@ -214,8 +214,8 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 [value]="contrast()"
                 (valueChange)="contrast.set($event)"
                 [ticks]="[-50, -25, 0, 25, 50]"
+                unit="%"
               />
-              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定：{{ contrast() > 0 ? '+' : '' }}{{ contrast() }}%</span>
             </div>
 
             <!-- 亮度 -->
@@ -227,9 +227,10 @@ const player = renderAscii(document.getElementById('my-canvas'), {{ '{' }} fontS
                 [value]="brightness()"
                 (valueChange)="brightness.set($event)"
                 [ticks]="[-50, -25, 0, 25, 50]"
+                unit="%"
               />
-              <span class="f:11 color:var(--ink-muted) mt:4 d:block">設定：{{ brightness() > 0 ? '+' : '' }}{{ brightness() }}%</span>
             </div>
+
 
             <!-- 誤差擴散抖動 (Dithering) -->
             <div class="d:flex align-items:center justify-content:space-between p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">

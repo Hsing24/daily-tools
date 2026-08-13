@@ -71,29 +71,39 @@ Component 規範：
 編輯 [src/app/layout/layout.ts](../../../src/app/layout/layout.ts) 的 `toolGroups`：
 
 - 把新工具加進既有分類（例如「文字工具」），沒有合適分類時先跟使用者確認是否要新增分類。
-- 設定 `{ label: "顯示名稱", route: "<tool-name>", available: true }`。
+- 設定 `{ label: "顯示名稱", route: "<tool-name>", available: true, keywords: [...] }`。
 - `label` 使用繁體中文（zh-Hant），語氣簡潔、可帶一點玩味，符合既有工具命名風格。
 
-### 5. 樣式：Master CSS，不是 Tailwind
+### 5. 同步更新首頁目錄（`home.html`，每次新增必做）
+
+編輯 [src/app/home/home.html](../../../src/app/home/home.html) 的目錄樹結構（`project-structure.tree`）：
+
+- 在對應分類下新增工具連結與簡述，格式如下：
+  ```html
+  ├─ ✅ <a routerLink="/<tool-name>" class="color:var(--primary) text-decoration:none font-weight:600 color:var(--primary-bright):hover text-decoration:underline:hover">顯示名稱</a> (<tool-name>) — 一句話工具功能描述。
+  ```
+- 確保 [src/app/home/home.spec.ts](../../../src/app/home/home.spec.ts) 中包含該工具 routerLink 的測試斷言。
+
+### 6. 樣式：Master CSS，不是 Tailwind
 
 - Template class 用 Master CSS 語法（`bg:`、`color:`、`p:`/`px:`/`py:`、`f:14`、`d:flex`/`d:grid`、`border:2px|solid|#hex` 等），`p-4` 這類 Tailwind 寫法不會生效。
 - `.css` 檔盡量留空，只在 Master CSS 無法表達的選擇器（如 `clip-path`）才寫 scoped CSS。
 - 遵守 DESIGN.md：無圓角、無陰影、無漸層（唯一既有例外是 light theme `data-theme="solarized"`）。
 
-### 6. 無障礙（WCAG 2.2 AA）
+### 7. 無障礙（WCAG 2.2 AA）
 
 - 所有互動元素鍵盤可操作、有可見 focus indicator。
 - `<label>`/`aria-label` 對應每個輸入欄位；動態狀態訊息用 `app-tool-alert` 或 `aria-live`，不要只靠顏色傳達狀態。
 - 圖示按鈕需 `aria-label`。
 
-### 7. 補齊 spec
+### 8. 補齊 spec
 
 - 元件 spec 用 Vitest globals（`describe`/`it`/`expect`，`tsconfig.spec.json` 已設定），搭配 `TestBed.configureTestingModule` + `provideRouter([])`。
 - 涉及瀏覽器 API（clipboard、matchMedia、ResizeObserver…）要 mock，參考 word-count.spec.ts 的 clipboard mock 寫法。
 - 抽出的邏輯檔（如 `-stats.ts`）要有獨立 spec，覆蓋邊界案例（空字串、極端輸入等）。
 - 涉及非同步 DOM 更新時，先 `await fixture.whenStable()` 再讀 `nativeElement`。
 
-### 8. 驗證
+### 9. 驗證
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 26
@@ -105,8 +115,10 @@ pnpm run build
 
 - [ ] `app.routes.ts` 已加入新工具的 lazy route
 - [ ] `layout.ts` 的 `toolGroups` 已加入該工具，且 `available: true`
+- [ ] `src/app/home/home.html` 已同步加入該工具連結與描述，且 `home.spec.ts` 包含該路由斷言
 - [ ] 已重用 `shared/ui` 的 breadcrumb/panel/header/alert 等元件，沒有重造 chrome
 - [ ] 元件與抽出的邏輯檔都有對應 `.spec.ts`
 - [ ] 樣式使用 Master CSS class，符合 DESIGN.md（無圓角/陰影/漸層）
 - [ ] 鍵盤操作、label、live region 等無障礙要求已檢查
 - [ ] `pnpm exec ng test --watch=false` 與 `pnpm run build` 皆通過
+

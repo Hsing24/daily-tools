@@ -48,6 +48,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "depth-estimator",
+        loadComponent: () =>
+          import("./tools/depth-estimator/depth-estimator").then(
+            (m) => m.DepthEstimator
+          ),
+      },
+      {
         path: "password-generator",
         loadComponent: () =>
           import("./tools/password-generator/password-generator").then(

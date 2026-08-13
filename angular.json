@@ -54,6 +54,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 8888
+          },
           "configurations": {
             "production": {
               "buildTarget": "daily-tools:build:production"

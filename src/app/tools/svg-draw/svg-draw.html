@@ -70,8 +70,8 @@
             <app-stat-row label="檔案大小" [value]="formatFileSize(sourceFile()?.size ?? 0)" />
           </div>
 
-          <div class="d:flex flex:col gap:8">
-            <label class="f:12 font-weight:600 color:var(--ink-muted) letter-spacing:0.5 text-transform:uppercase">描圖精度</label>
+          <div class="d:flex flex:col gap:6">
+            <label class="f:12 font-family:var(--font-mono) font-weight:600 color:var(--ink-bright) letter-spacing:0.5">&gt; 描圖精度</label>
             <app-tool-radio-group
               [options]="presetOptions"
               [value]="tracePreset()"
@@ -79,6 +79,7 @@
               name="trace-preset"
             />
           </div>
+
 
           <div
             class="d:flex flex:col gap:4 p:12|16 bg:var(--canvas-input) f:14 color:var(--ink)"

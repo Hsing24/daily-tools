@@ -1,7 +1,7 @@
-<div class="d:inline-flex border:2px|solid|var(--primary) bg:var(--canvas-input) box:border-box" role="radiogroup">
+<div class="d:inline-flex flex-wrap:wrap border:1px|solid|var(--primary) bg:var(--canvas-input) box:border-box max-w:100%" role="radiogroup">
   @for (option of options(); track option.value) {
     <label
-      [class]="'radio-option d:inline-flex ai:center jc:center p:8|16 cursor:pointer font-family:var(--font-mono) f:14 font-weight:600 transition:background-color|0.1s|ease,color|0.1s|ease user-select:none outline:2px|dashed|var(--primary-bright):focus-within outline-offset:-4:focus-within br:2px|solid|var(--primary):not(:last-child) ' + (value() === option.value ? 'is-active bg:var(--primary) color:var(--on-primary)' : 'bg:transparent color:var(--primary) bg:rgba(63,224,197,0.1):hover color:var(--primary-bright):hover')"
+      [class]="'radio-option d:inline-flex ai:center jc:center p:6|12 cursor:pointer font-family:var(--font-mono) f:13 font-weight:600 transition:background-color|0.1s|ease,color|0.1s|ease user-select:none outline:2px|dashed|var(--primary-bright):focus-within outline-offset:-4:focus-within border-r:1px|solid|var(--primary) border-b:1px|solid|var(--primary) ' + (value() === option.value ? 'is-active bg:var(--primary) color:var(--on-primary)' : 'bg:transparent color:var(--primary) bg:rgba(63,224,197,0.1):hover color:var(--primary-bright):hover')"
     >
       <input
         type="radio"
@@ -11,7 +11,8 @@
         (change)="select(option.value)"
         class="radio-input pos:absolute w:1 h:1 p:0 m:-1 overflow:hidden clip:rect(0,0,0,0) white-space:nowrap border:0"
       />
-      <span class="radio-label-text">{{ option.label }}</span>
+      <span class="radio-label-text white-space:nowrap">{{ option.label }}</span>
     </label>
   }
 </div>
+

@@ -26,7 +26,9 @@
 - **Routes** live in [`src/app/app.routes.ts`](src/app/app.routes.ts). The root route renders [`src/app/layout/layout.ts`](src/app/layout/layout.ts), with child lazy routes for `home`, `word-count`, and `design`. Add new tools as lazy child routes: `{ path: 'json-formatter', loadComponent: () => import('./tools/json-formatter/json-formatter').then(m => m.JsonFormatter) }`.
 - **Component selector prefix is `app`** (set in `angular.json`). New components: `app-<tool-name>`.
 - **Tool catalogue** is the `toolGroups` array in [`src/app/layout/layout.ts`](src/app/layout/layout.ts). When you add a real tool route, register it in that list and mark it active.
+- **Home catalogue synchronization.** Whenever a new tool is added, you MUST also add its link and brief description into the directory tree in [`src/app/home/home.html`](src/app/home/home.html) and verify with [`src/app/home/home.spec.ts`](src/app/home/home.spec.ts).
 - **Shared tool UI** lives under [`src/app/shared/ui/`](src/app/shared/ui/). Check these components before rebuilding chrome such as headers, breadcrumbs, panels, alerts, stat rows, and terminal output.
+
 
 ## Styling: Master CSS, not Tailwind
 

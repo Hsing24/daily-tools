@@ -102,10 +102,10 @@
 
     <!-- ═══ Image Cards ═══ -->
     @for (item of items(); track item.id) {
-      <div class="d:grid grid-cols:200px|1fr|200px gap:24 p:24 mb:16 bg:var(--canvas) border:2px|solid|var(--border-muted) transition:border-color|.1s|ease border-color:var(--primary-dim):hover grid-cols:1fr@<768 gap:16@<768" [attr.data-testid]="'card-' + item.id">
+      <div class="d:grid grid-cols:180px|1fr|180px grid-cols:1fr@<900 gap:20 gap:16@<900 p:20 mb:16 bg:var(--canvas) border:2px|solid|var(--border-muted) transition:border-color|.1s|ease border-color:var(--primary-dim):hover" [attr.data-testid]="'card-' + item.id">
         <!-- 左側：原圖預覽 -->
         <div class="d:flex flex-direction:column gap:12">
-          <div class="rel d:flex ai:center jc:center w:100% h:150 bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden h:120@<768">
+          <div class="rel d:flex ai:center jc:center w:100% h:150 bg:var(--canvas-input) border:1px|solid|var(--border-muted) overflow:hidden h:120@<900">
             <img
               [src]="item.previewUrl"
               [alt]="item.file.name"
@@ -125,8 +125,8 @@
 
         <!-- 中間：控制區 -->
         <div class="d:flex flex-direction:column gap:16 jc:center">
-          <div>
-            <label class="d:block mb:8 f:12 font-weight:600 color:var(--ink-bright) ls:0.5">輸出格式</label>
+          <div class="d:flex flex:col gap:6">
+            <label class="d:block f:12 font-family:var(--font-mono) font-weight:600 color:var(--ink-bright) ls:0.5">&gt; 輸出格式</label>
             <app-tool-radio-group
               [options]="formatOptions"
               [value]="item.outputFormat"
@@ -136,23 +136,23 @@
           </div>
 
           @if (isLossyFormat(item.outputFormat)) {
-            <div>
-              <label class="d:block mb:8 f:12 font-weight:600 color:var(--ink-bright) ls:0.5">
-                品質：{{ item.quality }}%
-                <span class="ml:8 color:var(--ink-muted) font-weight:400">
-                  {{ estimatedRatio(item.outputFormat, item.quality) }}
-                </span>
-              </label>
+            <div class="d:flex flex:col gap:4">
               <app-tool-slider
                 [min]="5"
                 [max]="100"
                 [value]="item.quality"
                 (valueChange)="updateQuality(item.id, $event)"
                 [ticks]="[5, 25, 50, 75, 100]"
+                label="品質設定"
+                unit="%"
                 [ariaLabel]="'品質滑桿 ' + item.file.name"
               />
+              <span class="f:11 font-family:var(--font-mono) color:var(--ink-muted)">
+                預估節省空間：{{ estimatedRatio(item.outputFormat, item.quality) }}
+              </span>
             </div>
           }
+
 
           <div class="d:flex gap:12 flex:wrap">
             <button

@@ -19,6 +19,7 @@
     "@angular/forms": "^22.0.4",
     "@angular/platform-browser": "^22.0.4",
     "@angular/router": "^22.0.4",
+    "@huggingface/transformers": "^4.2.0",
     "@master/css": "^1.37.8",
     "imagetracerjs": "^1.2.6",
     "rxjs": "~7.8.0",

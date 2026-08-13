@@ -1,0 +1,325 @@
+<div class="p:16|24 max-w:1200 mx:auto">
+  <app-tool-breadcrumb category="格式化 / 轉換" current="圖片轉深度圖" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="AI DEPTH ESTIMATION // WEBGPU POWERED"
+      title="圖片轉深度圖 (Depth Estimator)"
+      description="在純瀏覽器本地端運用深度神經網絡 (Depth Anything V2)，將 2D 平面照片轉換為立體深度圖、2.5D 視差效果與 3D 空間網格。"
+    />
+
+    @if (alertState()) {
+      <app-tool-alert
+        [message]="alertState()!.message"
+        [variant]="alertState()!.type"
+      />
+    }
+
+    <!-- 圖片上傳 / 拖曳區域 -->
+    <div
+      class="border:2px|dashed|$(border-muted) p:24 text:center mb:20 bg:var(--canvas-elevated) cursor:pointer transition:border-color|0.15s"
+      [class.border-color:var(--primary)]="isDragging()"
+      (click)="triggerFileInput()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+      (paste)="onPaste($event)"
+      tabindex="0"
+      role="button"
+      aria-label="上傳圖片區域，點擊或拖曳上傳圖片"
+    >
+      <input
+        #fileInput
+        type="file"
+        accept="image/png, image/jpeg, image/webp"
+        class="d:none"
+        (change)="onFileSelected($event)"
+      />
+
+      <div class="f:14 font:mono color:var(--primary) mb:8">
+        [ 點擊選擇圖片 / 拖曳至此 / Ctrl+V 貼上剪貼簿 ]
+      </div>
+      <div class="f:12 font:mono color:var(--ink-muted)">
+        支援 PNG, JPG, WEBP • 100% 瀏覽器本地端處理，無需上傳伺服器
+      </div>
+    </div>
+
+    <!-- 下載進度條 (Progress Bar) -->
+    @if (isLoading() && progressInfo()) {
+      <div class="p:16 mb:20 bg:var(--canvas-input) border:2px|solid|var(--primary)">
+        <div class="d:flex justify-content:space-between mb:8 f:12 font:mono color:var(--primary)">
+          <span>&gt; {{ progressInfo()?.message || '模型權重載入中...' }}</span>
+          <span>{{ progressInfo()?.progress ? progressInfo()?.progress + '%' : '處理中' }}</span>
+        </div>
+
+        @if (progressInfo()?.progress !== undefined) {
+          <div class="w:100% h:12 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)">
+            <div
+              class="h:100% bg:var(--primary)"
+              [style.width.%]="progressInfo()?.progress || 0"
+            ></div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (inputImageUrl() || depthResult()) {
+      <div class="d:flex justify-content:space-between align-items:center mb:16 p:8|12 bg:var(--canvas-deep) border:1px|solid|var(--border-muted)">
+        <span class="f:12 font-family:var(--font-mono) color:var(--ink-bright)">
+          已載入圖片：{{ imageDimensions()?.width }} × {{ imageDimensions()?.height }} px
+        </span>
+        <div class="d:flex gap:8">
+          <button
+            type="button"
+            class="dt-button dt-button--ghost py:4 px:8 f:11 font-weight:600"
+            (click)="triggerFileInput()"
+          >
+            更換圖片
+          </button>
+          <button
+            type="button"
+            class="dt-button dt-button--warning py:4 px:8 f:11 font-weight:600"
+            (click)="clearImage()"
+          >
+            清除圖片
+          </button>
+        </div>
+      </div>
+
+
+    <!-- 控制面板 -->
+    <div class="p:16 mb:20 bg:var(--canvas-elevated) border:2px|solid|var(--border-muted)">
+      <div class="d:grid grid-cols:1 grid-cols:2@md gap:20 mb:16">
+        <!-- 深度模型選擇 -->
+        <div class="d:flex flex:col gap:6">
+          <label class="d:block f:12 font-family:var(--font-mono) color:var(--primary) font-weight:600">
+            &gt; 神經網絡模型 (MODEL)
+          </label>
+          <app-tool-radio-group
+            [options]="modelOptions"
+            [value]="selectedModel()"
+            (valueChange)="onModelChange($event)"
+          />
+        </div>
+
+        <!-- 運算設備加速 -->
+        <div class="d:flex flex:col gap:6">
+          <label class="d:block f:12 font-family:var(--font-mono) color:var(--primary) font-weight:600">
+            &gt; 運算加速核心 (ACCELERATION)
+          </label>
+          <app-tool-radio-group
+            [options]="deviceOptions"
+            [value]="preferredDevice()"
+            (valueChange)="onDeviceChange($event)"
+          />
+        </div>
+      </div>
+
+      <div class="border-t:1px|solid|var(--border-muted) pt:16 mb:16">
+        <div class="d:grid grid-cols:1 grid-cols:2@md gap:20">
+          <!-- 檢視模式切換 -->
+          <div class="d:flex flex:col gap:6">
+            <label class="d:block f:12 font-family:var(--font-mono) color:var(--gold) font-weight:600">
+              &gt; 預覽模式 (VIEW MODE)
+            </label>
+            <app-tool-radio-group
+              [options]="previewModeOptions"
+              [value]="previewMode()"
+              (valueChange)="onPreviewModeChange($event)"
+            />
+          </div>
+
+          <!-- 調色盤選擇 -->
+          <div class="d:flex flex:col gap:6">
+            <label class="d:block f:12 font-family:var(--font-mono) color:var(--gold) font-weight:600">
+              &gt; 深度著色盤 (COLORMAP)
+            </label>
+            <app-tool-radio-group
+              [options]="colorMapOptions"
+              [value]="colorMap()"
+              (valueChange)="onColorMapChange($event)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 參數滑塊調整 -->
+      <div class="border-t:1px|solid|var(--border-muted) pt:16 d:grid grid-cols:1 grid-cols:3@md gap:16 ai:end">
+        <div>
+          <app-tool-slider
+            [min]="50"
+            [max]="150"
+            [value]="contrast()"
+            (valueChange)="onContrastChange($event)"
+            label="深度對比度"
+            unit="%"
+          />
+        </div>
+
+        <div>
+          <app-tool-slider
+            [min]="-50"
+            [max]="50"
+            [value]="brightness()"
+            (valueChange)="onBrightnessChange($event)"
+            label="亮度微調"
+            unit="%"
+          />
+        </div>
+
+        @if (previewMode() === 'mesh3d') {
+          <div>
+            <app-tool-slider
+              [min]="5"
+              [max]="100"
+              [value]="depthScale3D()"
+              (valueChange)="onDepthScale3DChange($event)"
+              label="3D 立體拉伸強度"
+              unit="%"
+            />
+          </div>
+        } @else {
+          <div class="d:flex flex:col gap:6">
+            <span class="f:12 font-family:var(--font-mono) color:var(--ink-bright) font-weight:600">&gt; 深度方向</span>
+            <button
+              type="button"
+              class="w:100% h:36 px:12 font-family:var(--font-mono) f:12 font-weight:600 border:1px|solid|var(--border-muted) bg:var(--canvas-input) color:var(--ink-bright) color:var(--primary):hover border-color:var(--primary):hover cursor:pointer transition:all|0.1s|ease"
+              (click)="onInvertToggle()"
+            >
+              {{ invertDepth() ? '[ ✓ 已反轉 (遠白近黑) ]' : '[ □ 正向 (近白遠黑) ]' }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+
+    <!-- 預覽畫布展示區 -->
+    <div class="p:16 mb:20 bg:var(--canvas-input) border:2px|solid|var(--border-default)">
+      <div class="d:flex justify-content:space-between align-items:center mb:12 pb:8 border-b:1px|solid|var(--border-muted)">
+        <div class="f:12 font:mono color:var(--primary)">
+          &gt; PREVIEW // {{ previewMode().toUpperCase() }}
+        </div>
+        <div class="f:11 font:mono color:var(--ink-muted)">
+          @if (previewMode() === 'split') {
+            滑鼠左右滑動以比對原圖與深度圖
+          } @else if (previewMode() === 'parallax') {
+            在畫布上移動滑鼠體驗 2.5D 浮凸視差
+          } @else if (previewMode() === 'mesh3d') {
+            滑鼠拖曳旋轉 3D 視角 • 滾輪縮放
+          } @else {
+            標準深度灰階/熱力圖呈現
+          }
+        </div>
+      </div>
+
+      <div class="d:flex justify-content:center align-items:center min-h:360 overflow:hidden bg:#050E1C">
+        <!-- 1. 深度圖 Canvas -->
+        <canvas
+          #depthCanvas
+          [class.d:none]="previewMode() !== 'depth'"
+          class="max-w:100% max-h:500 block h:auto"
+        ></canvas>
+
+        <!-- 2. 左右對比 Split Canvas -->
+        <canvas
+          #splitCanvas
+          [class.d:none]="previewMode() !== 'split'"
+          class="max-w:100% max-h:500 block h:auto cursor:ew-resize"
+          (mousemove)="onSplitCanvasPointerMove($event)"
+          (touchmove)="onSplitCanvasPointerMove($event)"
+        ></canvas>
+
+        <!-- 3. 2.5D 視差 Parallax Canvas -->
+        <canvas
+          #parallaxCanvas
+          [class.d:none]="previewMode() !== 'parallax'"
+          class="max-w:100% max-h:500 block h:auto cursor:crosshair"
+          (mousemove)="onParallaxMouseMove($event)"
+        ></canvas>
+
+        <!-- 4. 3D 幾何 WebGL Canvas -->
+        <div
+          [class.d:none]="previewMode() !== 'mesh3d'"
+          class="w:100% h:460 position:relative"
+        >
+          <canvas
+            #glCanvas
+            class="w:100% h:100% block cursor:grab"
+            (mousedown)="on3DMouseDown($event)"
+            (mousemove)="on3DMouseMove($event)"
+            (mouseup)="on3DMouseUp()"
+            (mouseleave)="on3DMouseUp()"
+            (wheel)="on3DWheel($event)"
+          ></canvas>
+
+          <div class="position:absolute top:8 right:8 d:flex gap:8">
+            <button
+              type="button"
+              class="px:8 py:4 bg:var(--canvas-input) color:var(--primary) border:1px|solid|var(--border-default) font:mono f:11 cursor:pointer"
+              (click)="togglePointCloud()"
+            >
+              {{ isPointCloud() ? '切換為網格' : '切換為點雲' }}
+            </button>
+            <button
+              type="button"
+              class="px:8 py:4 bg:var(--canvas-input) color:var(--gold) border:1px|solid|var(--border-gold) font:mono f:11 cursor:pointer"
+              (click)="reset3DCamera()"
+            >
+              重設視角
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 效能與規格指標 -->
+    <div class="mb:20 p:12 bg:var(--canvas-elevated) border:2px|solid|var(--border-muted)">
+      <div class="d:grid grid-cols:1 grid-cols:2@sm grid-cols:4@md gap:12">
+        @for (stat of statData(); track stat.label) {
+          <app-stat-row [label]="stat.label" [value]="stat.value" />
+        }
+      </div>
+    </div>
+
+    <!-- 動作與匯出按鈕列 -->
+    <div class="d:flex flex-wrap:wrap gap:12 pt:12 border-t:2px|solid|var(--border-muted)">
+      <button
+        type="button"
+        class="px:16 py:8 bg:var(--primary) color:var(--on-primary) font:mono f:13 f:bold border:2px|solid|var(--primary) cursor:pointer"
+        (click)="downloadPng()"
+        [disabled]="!depthResult()"
+      >
+        [ 下載 8-bit PNG 深度圖 ]
+      </button>
+
+      <button
+        type="button"
+        class="px:16 py:8 bg:var(--canvas-elevated) color:var(--gold) font:mono f:13 border:2px|solid|var(--border-gold) cursor:pointer"
+        (click)="download16BitPng()"
+        [disabled]="!depthResult()"
+      >
+        [ 下載 16-bit 灰階 (ControlNet/3D) ]
+      </button>
+
+      <button
+        type="button"
+        class="px:16 py:8 bg:var(--canvas-elevated) color:var(--ink-bright) font:mono f:13 border:2px|solid|var(--border-muted) cursor:pointer"
+        (click)="downloadObj()"
+        [disabled]="!depthResult()"
+      >
+        [ 匯出 3D .OBJ 幾何網格 ]
+      </button>
+
+        <button
+          type="button"
+          class="px:16 py:8 bg:var(--canvas-elevated) color:var(--ink) font:mono f:13 border:1px|solid|var(--border-muted) cursor:pointer"
+          (click)="copyToClipboard()"
+          [disabled]="!depthResult()"
+        >
+          [ 複製至剪貼簿 ]
+        </button>
+      </div>
+    }
+  </app-tool-panel>
+</div>

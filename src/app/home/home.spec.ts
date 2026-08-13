@@ -35,5 +35,11 @@ describe('Home', () => {
     expect(links).toContain('/design');
     expect(links).toContain('/text-markdown-html');
     expect(links).toContain('/diff-checker');
+    expect(links).toContain('/image-converter');
+    expect(links).toContain('/svg-draw');
+    expect(links).toContain('/image-to-ascii');
+    expect(links).toContain('/depth-estimator');
+    expect(links).toContain('/password-generator');
   });
 });
+
