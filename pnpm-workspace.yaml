@@ -5,6 +5,6 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
   nx: false
-  onnxruntime-node: set this to true or false
-  protobufjs: set this to true or false
-  sharp: set this to true or false
+  onnxruntime-node: true
+  protobufjs: true
+  sharp: true
