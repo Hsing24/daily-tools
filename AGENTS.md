@@ -1,74 +1,52 @@
 # AGENTS.md
 
-`daily-tools` is an Angular 22 SPA that hosts a collection of web-development utilities (word count, JSON formatter, encoders, regex tester…). UI copy is **Traditional Chinese (zh-Hant)**. The visual identity is a pixel-art / CRT terminal aesthetic defined in [DESIGN.md](DESIGN.md) — treat it as the source of truth for product UI decisions.
+`daily-tools` — Angular 22 SPA hosting web-dev utilities. Pixel-art / CRT terminal aesthetic, all UI copy in zh-Hant.
 
 ## Commands
 
-| Task         | Command                                                                              |
-| ------------ | ------------------------------------------------------------------------------------ |
-| Install      | `pnpm install`                                                                       |
-| Dev server   | `pnpm start` (alias for `ng serve`, dev config)                                      |
-| Build (prod) | `pnpm run build`                                                                     |
-| Unit tests   | `pnpm exec ng test --watch=false` (Vitest via `@angular/build:unit-test`, jsdom env) |
+- Install `pnpm install` — pnpm 11.10.0. Never `npm install` (angular.json says `cli.packageManager: npm`, but the lockfile is pnpm).
+- Dev `pnpm start` → http://localhost:8888 (port is 8888, not 4200).
+- Build + typecheck `pnpm run build` — there is no separate typecheck script.
+- Test once `pnpm exec ng test --watch=false`; single file add `--include src/app/tools/x/x.spec.ts`; single case add `--filter "^WordCount"`.
+- Audits `pnpm run lint` = `audit-styles` (Master CSS compliance) + `audit-tools` (tool-catalogue sync).
+- `pnpm install` runs `prepare`, which points `core.hooksPath` at `.githooks/`. The pre-push hook runs lint + tests; `SKIP_TESTS=1 git push` skips only the tests.
+- CI only runs `build`. Lint and tests are unenforced there — run both yourself before reporting done.
+- Do not run `pnpm exec vitest run`; the jsdom env and Vitest globals come from the Angular builder.
+- Needs Node 26. On an engine error: `source ~/.nvm/nvm.sh && nvm use 26`.
+- `@master/css` emits a "not ESM" build warning. Expected — do not chase it.
 
-> Local dev uses **pnpm 11.10.0** (see `package.json#packageManager`). CI ([`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)) also uses pnpm with `pnpm install --frozen-lockfile`. Do not run `npm install` locally — it will produce a `package-lock.json` that conflicts with `pnpm-lock.yaml`.
+## Adding a tool — all five steps, or `pnpm run audit-tools` blocks the push
 
-## Dev environment
+1. `src/app/tools/<slug>/` — component plus a pure logic module (`-core` / `-engine` / `-logic` / `-stats`), each with its own spec.
+2. Lazy child route in `src/app/app.routes.ts` — this file is the audit's source of truth.
+3. Entry in `toolGroups` in `src/app/layout/layout.ts`, including `keywords` (feeds the ⌘K palette).
+4. ✅ line with `routerLink="/<slug>"` in `src/app/home/home.html`, **and** `/<slug>` added to the link assertion in `src/app/home/home.spec.ts`.
+5. `TODO.md` item ticked `- [x]` and annotated with `(<slug>)` — the audit matches TODO items to routes by that slug.
 
-- Angular 22 requires a recent Node runtime. If `ng test` or `ng build` fails with an engine/version error, run `source ~/.nvm/nvm.sh && nvm use 26` before validating.
-- Use `pnpm exec ng test --watch=false` for one-shot tests. Do not use `pnpm exec vitest run` here; the Angular builder provides the jsdom setup and Vitest globals.
-- `@master/css` can emit a build warning about not being ESM. That warning is currently expected.
+## Styling — enforced by `pnpm run lint`
 
-## Architecture
+- Master CSS atomic classes in templates, not Tailwind: `p:32`, `d:flex`, `grid-cols:2@md`. `p-32` silently does nothing.
+- Pull colors/spacing/fonts from the CSS vars in `src/styles.css`: `color:var(--ink-bright)`, `bg:var(--canvas-elevated)`. Do not hardcode hex.
+- Use full property forms — `color:`, `font-family:`, `font-weight:`, `line-height:`. The shorthands `fg:`, `leading:`, `f:bold` are unused here and misfire.
+- Style a component's root via `host: { class: '...' }` in the decorator, not `:host` in CSS.
+- `src/app/**/*.css`: ≤15 non-blank lines, and no `display|position|flex|grid|justify-content|align-items|margin|padding|background-color|color|font-*|line-height|border|width|height` declarations. Reserve it for keyframes, `clip-path`, media queries, `prefers-reduced-motion`.
+- No `style="..."` anywhere in `src/app/**/*.html`.
+- `src/styles.css` is exempt from the audit — design tokens and the global `.dt-button` / `.dt-button--primary|warning|secondary|ghost` classes live there; reuse those for buttons.
+- Reuse `src/app/shared/ui/*` (tool-header, tool-panel, tool-breadcrumb, tool-alert, stat-row, terminal-output, key-chip, tool-radio-group, tool-slider) before writing new chrome.
+- Read DESIGN.md before any visual change: zero border-radius, zero shadows, zero gradients; `[data-theme="solarized"]` is the one light-theme exception.
 
-- **Standalone-component-first.** Angular 22 components are standalone by default — do **not** add `standalone: true` explicitly, and do **not** introduce `NgModule`.
-- **Providers go in [`src/app/app.config.ts`](src/app/app.config.ts)** via `ApplicationConfig`. Use `provideRouter`, `provideHttpClient`, etc. — never the legacy `*Module.forRoot()` pattern.
-- **Routes** live in [`src/app/app.routes.ts`](src/app/app.routes.ts). The root route renders [`src/app/layout/layout.ts`](src/app/layout/layout.ts), with child lazy routes for `home`, `word-count`, and `design`. Add new tools as lazy child routes: `{ path: 'json-formatter', loadComponent: () => import('./tools/json-formatter/json-formatter').then(m => m.JsonFormatter) }`.
-- **Component selector prefix is `app`** (set in `angular.json`). New components: `app-<tool-name>`.
-- **Tool catalogue** is the `toolGroups` array in [`src/app/layout/layout.ts`](src/app/layout/layout.ts). When you add a real tool route, register it in that list and mark it active.
-- **Home catalogue synchronization.** Whenever a new tool is added, you MUST also add its link and brief description into the directory tree in [`src/app/home/home.html`](src/app/home/home.html) and verify with [`src/app/home/home.spec.ts`](src/app/home/home.spec.ts).
-- **Shared tool UI** lives under [`src/app/shared/ui/`](src/app/shared/ui/). Check these components before rebuilding chrome such as headers, breadcrumbs, panels, alerts, stat rows, and terminal output.
+## Code conventions
 
-
-## Styling: Master CSS, not Tailwind
-
-`@master/css` is initialized in [`src/main.ts`](src/main.ts) with `init()` and applies atomic classes at runtime. Template classes use Master CSS syntax (`property:value`, `|` for shorthand spaces), e.g.:
-
-```html
-<div
-  class="p:32 bg:#111827 color:#e2e8f0 min-h:100vh border:1px|solid|#334155"
-></div>
-```
-
-- These are **not** Tailwind utilities — `p-32` will silently do nothing.
-- Known-good shorthands include `bg:`, `color:`, `p:`/`px:`/`py:`, `f:14`, `f:bold`, `w:`/`h:`, `border:2px|solid|#hex`, `d:flex`, `d:grid`, `grid-cols:4`, and responsive suffixes like `grid-cols:4@md`.
-- Component `*.css` files are mostly empty by design; prefer Master CSS classes in the template, fall back to scoped CSS only for selectors Master CSS can't express.
-- **Automated Style Audit**: All layout, spacing, typography, borders, and colors MUST be handled by Master CSS in templates. The project runs `pnpm run audit-styles` (integrated into `pnpm run lint` / `pnpm run test` workflows) to enforce this. Scoped `*.css` files must not contain layout, color, typography, border, or spacing properties and must be empty or less than 15 lines. Inline `style="..."` in HTML templates is strictly prohibited.
-- When implementing the design system, derive class values from the tokens in [DESIGN.md](DESIGN.md) (colors, spacing, typography). No rounded corners, no soft shadows, no gradients. The only accepted project exception so far is the retained light theme (`data-theme="solarized"`).
-
-## TypeScript strictness
-
-`tsconfig.json` enables `noPropertyAccessFromIndexSignature`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, plus Angular's `strictInputAccessModifiers`. Common consequences:
-
-- Access dynamic object fields with bracket notation: `obj['foo']`, not `obj.foo`.
-- Override lifecycle hooks with the explicit `override` keyword.
-- Signal-based `input()` / `model()` and `computed()` are preferred for component state. Use `viewChild()` / `viewChildren()` instead of decorator queries in new code.
-
-## Testing
-
-- Runner is **Vitest** (not Karma/Jasmine), but `describe` / `it` / `expect` work as globals via `tsconfig.spec.json` → `types: ["vitest/globals"]`.
-- Environment is **jsdom**. Browser-only APIs (`ResizeObserver`, `matchMedia`, animations) need a stub.
-- Async DOM assertions: `await fixture.whenStable()` before reading `nativeElement` (see [`src/app/app.spec.ts`](src/app/app.spec.ts)). Avoid `fixture.detectChanges()` in zoneless-style tests unless you've explicitly opted into zone change detection.
-- Place specs next to the file under test: `foo.ts` + `foo.spec.ts`.
+- Angular 22 standalone: never add `standalone: true`, never introduce an NgModule. Providers go in `src/app/app.config.ts`.
+- Signals only for state: `signal` / `computed` / `input()` / `viewChild()`. Template-facing members are `protected readonly`.
+- `@if` / `@for` / `@switch` blocks; no `*ngIf` / `*ngFor` imports.
+- `noPropertyAccessFromIndexSignature` is on — index-signature fields need `obj['foo']`.
+- Workers: `new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' })`.
+- Specs sit next to the file under test. Use `await fixture.whenStable()` rather than `detectChanges()`; stub browser-only APIs (`ResizeObserver`, `matchMedia`) under jsdom.
+- Lint cannot catch accessibility: keep visible `:focus-visible` states, accessible names on icon-only buttons, and live regions for async status (WCAG 2.2 AA).
+- Prettier runs on its defaults; there is no `.prettierrc` and one must not be added without discussion.
+- All user-facing copy is zh-Hant, concise and slightly playful. Reply to the user in zh-Hant, keeping technical terms in English.
 
 ## Deployment
 
-Push to `main` triggers [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml). The workflow builds with `--base-href "/daily-tools/"` and copies `index.html` to `404.html` for SPA fallback. Any new top-level asset path or router base assumption must respect this base href.
-
-## Conventions worth knowing
-
-- **Language.** All user-facing strings are zh-Hant. Match the existing tone (concise, slightly playful).
-- **Agent response language.** 所有的對話、描述、解釋與回覆皆必須使用繁體中文 (zh-Hant / zh-tw) 撰寫。若是專有名詞、程式碼符號或技術用語（例如 Standalone Component、Master CSS、RxJS、Signals 等），請維持英文原文。
-- **Control flow.** Use the built-in `@if` / `@for` / `@switch` block syntax (already used in `app.html`) — do not import `*ngIf` / `*ngFor` directives.
-- **Accessibility.** UI is interactive-tool-heavy; keep keyboard support, semantic controls, labels, focus return, live regions for dynamic status, and contrast in line with WCAG 2.2 AA. The terminal aesthetic in DESIGN.md must not sacrifice focus indicators.
-- **Prettier** is installed with default config. No project-specific `.prettierrc`; do not introduce one without discussion.
+- Push to `main` builds with `--base-href "/daily-tools/"` and copies `index.html` → `404.html`. Never assume root-relative asset paths.
