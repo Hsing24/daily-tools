@@ -230,7 +230,7 @@
           <p
             class="mt:6 mb:0 f:11 line-height:1.4 font-family:var(--font-mono) color:var(--ink-muted)"
           >
-            僅套用至 2D 預覽與 PNG；3D 網格維持銳利。
+            會套用至 2D 預覽、PNG 與 3D 幾何輸出。
           </p>
         </div>
       </div>
@@ -328,8 +328,8 @@
       <p
         class="mt:8 mb:0 f:11 line-height:1.4 font-family:var(--font-mono) color:var(--ink-muted)"
       >
-        深度範圍是模型原始相對 disparity，沒有公尺單位。PNG 會正規化為
-        0～1，原始 min/max 保存在 PNG metadata。
+        深度範圍是模型原始相對 disparity，沒有公尺單位。PNG 是 0～1 normalized
+        integer sample；原始 min/max 與處理設定保存在 PNG metadata。
       </p>
     </div>
 
@@ -338,7 +338,7 @@
       <p
         class="mt:0 mb:10 f:12 line-height:1.5 font-family:var(--font-mono) color:var(--ink-muted)"
       >
-        一般用途請用 8-bit；只有拿深度值產生幾何時才需要 16-bit。
+        一般預覽請用 8-bit；需要較細緻 normalized 深度階調時才使用 16-bit。
       </p>
       <div class="d:flex flex-wrap:wrap gap:12">
         <button
@@ -356,7 +356,7 @@
           (click)="download16BitPng()"
           [disabled]="!depthResult()"
         >
-          [ 下載 16-bit 灰階（Blender 置換／Unity 地形）]
+          [ 下載 16-bit normalized 灰階（Blender／Unity）]
         </button>
 
         <button

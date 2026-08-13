@@ -7,7 +7,6 @@ import {
   signal,
   viewChild,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
@@ -29,19 +28,53 @@ import {
   WorkerResponse,
 } from "./depth-estimator-types";
 import {
-  adjustDepthArray,
   depthArrayToImageData,
   encodeGrayscalePng,
+  detectGlbImageMimeType,
   exportDepthToGlb,
   exportDepthToObj,
   generateSampleDepthMap,
+  getSafePreviewGrid,
+  GlbImageMimeType,
+  MAX_DEPTH_IMAGE_PIXELS,
   prepareDepthForExport,
 } from "./depth-estimator-core";
+
+function isDepthModelId(value: string): value is DepthModelId {
+  return (
+    value === "onnx-community/depth-anything-v2-small" ||
+    value === "onnx-community/depth-anything-v2-tiny"
+  );
+}
+
+function isDeviceType(value: string): value is DeviceType {
+  return value === "webgpu" || value === "wasm";
+}
+
+function isPreviewMode(value: string): value is PreviewMode {
+  return (
+    value === "depth" ||
+    value === "split" ||
+    value === "parallax" ||
+    value === "mesh3d"
+  );
+}
+
+function isColorMapType(value: string): value is ColorMapType {
+  return (
+    value === "grayscale" ||
+    value === "viridis" ||
+    value === "inferno" ||
+    value === "turbo" ||
+    value === "plasma" ||
+    value === "magma" ||
+    value === "coolwarm"
+  );
+}
 
 @Component({
   selector: "app-depth-estimator",
   imports: [
-    CommonModule,
     ToolBreadcrumb,
     ToolPanel,
     ToolHeader,
@@ -82,6 +115,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
   readonly inputImageUrl = signal<string | null>(null);
   readonly sourceImageUrl = signal<string | null>(null);
+  readonly sourceImageMimeType = signal<GlbImageMimeType | null>(null);
   readonly inputImageElement = signal<HTMLImageElement | null>(null);
   readonly imageDimensions = signal<{ width: number; height: number } | null>(
     null,
@@ -99,6 +133,8 @@ export class DepthEstimator implements OnInit, OnDestroy {
   private isMouseDragging3D = false;
   private lastMousePos = { x: 0, y: 0 };
   private animationFrameId: number | null = null;
+  private renderTimerId: number | null = null;
+  private readonly downloadRevokeTimers = new Set<number>();
 
   // 2.5D 視差滑鼠座標
   private parallaxOffset = { x: 0, y: 0 };
@@ -120,11 +156,18 @@ export class DepthEstimator implements OnInit, OnDestroy {
   private glProgram: WebGLProgram | null = null;
   private glPositionBuffer: WebGLBuffer | null = null;
   private glTexCoordBuffer: WebGLBuffer | null = null;
+  private glIndexBuffer: WebGLBuffer | null = null;
   private glTexture: WebGLTexture | null = null;
   private glIndexCount = 0;
 
   // Web Worker 實例
   private worker: Worker | null = null;
+  private nextRequestId = 0;
+  private activeRequestId = 0;
+  private fileGeneration = 0;
+  private isDestroyed = false;
+  private pendingFileReader: FileReader | null = null;
+  private pendingImage: HTMLImageElement | null = null;
 
   // Radio 選項定義
   readonly modelOptions: RadioOption[] = [
@@ -210,12 +253,20 @@ export class DepthEstimator implements OnInit, OnDestroy {
   }
 
   clearImage(): void {
+    this.fileGeneration += 1;
+    this.cancelPendingImageLoad();
+    this.invalidateActiveRequest();
+    this.clearRenderTimer();
     this.inputImageUrl.set(null);
     this.sourceImageUrl.set(null);
+    this.sourceImageMimeType.set(null);
     this.inputImageElement.set(null);
     this.imageDimensions.set(null);
     this.sourceDimensions.set(null);
     this.depthResult.set(null);
+    this.isLoading.set(false);
+    this.progressInfo.set(null);
+    this.activeDevice.set(null);
     this.alertState.set(null);
     if (this.fileInputRef()?.nativeElement) {
       this.fileInputRef()!.nativeElement.value = "";
@@ -223,12 +274,58 @@ export class DepthEstimator implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.isDestroyed = true;
+    this.fileGeneration += 1;
+    this.cancelPendingImageLoad();
+    this.invalidateActiveRequest();
+    this.clearRenderTimer();
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
+    for (const timerId of this.downloadRevokeTimers) {
+      clearTimeout(timerId);
+    }
+    this.downloadRevokeTimers.clear();
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
+    }
+    this.releaseGlResources();
+  }
+
+  private invalidateActiveRequest(): number {
+    this.nextRequestId = Math.max(this.nextRequestId, this.activeRequestId) + 1;
+    this.activeRequestId = this.nextRequestId;
+    return this.activeRequestId;
+  }
+
+  private clearRenderTimer(): void {
+    if (this.renderTimerId !== null) {
+      clearTimeout(this.renderTimerId);
+      this.renderTimerId = null;
+    }
+  }
+
+  private scheduleRender(delay = 0): void {
+    if (this.isDestroyed) return;
+    this.clearRenderTimer();
+    this.renderTimerId = window.setTimeout(() => {
+      this.renderTimerId = null;
+      this.renderCurrentView();
+    }, delay);
+  }
+
+  private cancelPendingImageLoad(): void {
+    if (this.pendingFileReader) {
+      this.pendingFileReader.abort();
+      this.pendingFileReader = null;
+    }
+    if (this.pendingImage) {
+      this.pendingImage.onload = null;
+      this.pendingImage.onerror = null;
+      this.pendingImage.src = "";
+      this.pendingImage = null;
     }
   }
 
@@ -247,6 +344,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
         this.worker.onerror = (err) => {
           console.error("Worker error:", err);
           this.isLoading.set(false);
+          this.progressInfo.set(null);
           this.alertState.set({
             type: "error",
             message: "深度估計背景任務發生錯誤，請重新整理重試",
@@ -259,6 +357,8 @@ export class DepthEstimator implements OnInit, OnDestroy {
   }
 
   private handleWorkerMessage(msg: WorkerResponse): void {
+    if (msg.requestId !== this.activeRequestId) return;
+
     switch (msg.type) {
       case "progress":
         this.progressInfo.set(msg.progress);
@@ -288,7 +388,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
           type: "success",
           message: `深度轉換完成！耗時 ${msg.inferenceTimeMs}ms (${msg.device.toUpperCase()})`,
         });
-        setTimeout(() => this.renderCurrentView(), 50);
+        this.scheduleRender(50);
         break;
       case "error":
         this.isLoading.set(false);
@@ -305,14 +405,22 @@ export class DepthEstimator implements OnInit, OnDestroy {
    * 載入預設幾何範例
    */
   protected loadPresetSample(): void {
+    const generation = ++this.fileGeneration;
+    this.cancelPendingImageLoad();
+    this.invalidateActiveRequest();
+    this.clearRenderTimer();
     const sample = generateSampleDepthMap(384, 384);
     const dataUrl = sample.imageCanvas.toDataURL("image/png");
 
     const img = new Image();
+    this.pendingImage = img;
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      if (this.pendingImage === img) this.pendingImage = null;
+      if (generation !== this.fileGeneration) return;
       this.inputImageUrl.set(dataUrl);
       this.sourceImageUrl.set(dataUrl);
+      this.sourceImageMimeType.set("image/png");
       this.inputImageElement.set(img);
       this.imageDimensions.set({ width: 384, height: 384 });
       this.sourceDimensions.set({ width: 384, height: 384 });
@@ -332,7 +440,15 @@ export class DepthEstimator implements OnInit, OnDestroy {
         message: "已載入 3D 幾何測試範例，可立即切換視差或 3D 檢視！",
       });
 
-      setTimeout(() => this.renderCurrentView(), 60);
+      this.scheduleRender(60);
+    };
+    img.onerror = () => {
+      if (this.pendingImage === img) this.pendingImage = null;
+      if (generation !== this.fileGeneration) return;
+      this.alertState.set({
+        type: "error",
+        message: "測試圖片載入失敗，請重新整理後再試",
+      });
     };
     img.src = dataUrl;
   }
@@ -379,7 +495,11 @@ export class DepthEstimator implements OnInit, OnDestroy {
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item && item.type.startsWith("image/")) {
+      if (item?.type.startsWith("image/") && !this.isSupportedImageMime(item.type)) {
+        this.showImageError("剪貼簿圖片必須是 PNG、JPG 或 WEBP");
+        return;
+      }
+      if (item && this.isSupportedImageMime(item.type)) {
         const file = item.getAsFile();
         if (file) {
           this.processUploadedFile(file);
@@ -390,28 +510,63 @@ export class DepthEstimator implements OnInit, OnDestroy {
   }
 
   private processUploadedFile(file: File): void {
-    if (!file.type.startsWith("image/")) {
+    const generation = ++this.fileGeneration;
+    this.cancelPendingImageLoad();
+    this.invalidateActiveRequest();
+    this.clearRenderTimer();
+    this.inputImageUrl.set(null);
+    this.sourceImageUrl.set(null);
+    this.sourceImageMimeType.set(null);
+    this.inputImageElement.set(null);
+    this.imageDimensions.set(null);
+    this.sourceDimensions.set(null);
+    this.depthResult.set(null);
+    this.isLoading.set(false);
+    this.progressInfo.set(null);
+
+    const sourceMimeType = file.type;
+    if (!this.isSupportedImageMime(sourceMimeType)) {
       this.alertState.set({
         type: "error",
-        message: "請上傳標準圖片檔案 (JPG、PNG、WEBP)",
+        message: "請上傳 PNG、JPG 或 WEBP 圖片檔案",
       });
       return;
     }
 
     const reader = new FileReader();
+    this.pendingFileReader = reader;
     reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
+      if (this.pendingFileReader === reader) this.pendingFileReader = null;
+      if (generation !== this.fileGeneration) return;
+      const dataUrl = e.target?.result;
+      if (typeof dataUrl !== "string") {
+        this.showImageError("圖片讀取失敗，請重新選擇檔案");
+        return;
+      }
       this.sourceImageUrl.set(dataUrl);
       const img = new Image();
+      this.pendingImage = img;
       img.onload = () => {
+        if (this.pendingImage === img) this.pendingImage = null;
+        if (generation !== this.fileGeneration) return;
+        const naturalWidth = img.naturalWidth || img.width;
+        const naturalHeight = img.naturalHeight || img.height;
+        if (
+          !naturalWidth ||
+          !naturalHeight ||
+          naturalWidth * naturalHeight > MAX_DEPTH_IMAGE_PIXELS
+        ) {
+          this.showImageError("圖片尺寸過大，請選擇不超過 4,000 萬像素的圖片");
+          return;
+        }
         this.sourceDimensions.set({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
+          width: naturalWidth,
+          height: naturalHeight,
         });
         // 限制最大推論輸入尺寸，兼顧效能與記憶體
         const maxDimension = 640;
-        let w = img.naturalWidth;
-        let h = img.naturalHeight;
+        let w = naturalWidth;
+        let h = naturalHeight;
 
         if (w > maxDimension || h > maxDimension) {
           if (w > h) {
@@ -427,23 +582,65 @@ export class DepthEstimator implements OnInit, OnDestroy {
         resizeCanvas.width = w;
         resizeCanvas.height = h;
         const ctx = resizeCanvas.getContext("2d");
-        if (ctx) {
+        if (!ctx) {
+          this.showImageError("瀏覽器無法建立圖片處理畫布");
+          return;
+        }
+        try {
           ctx.drawImage(img, 0, 0, w, h);
           const scaledUrl = resizeCanvas.toDataURL("image/png");
 
           const scaledImg = new Image();
+          this.pendingImage = scaledImg;
           scaledImg.onload = () => {
+            if (this.pendingImage === scaledImg) this.pendingImage = null;
+            if (generation !== this.fileGeneration) return;
             this.inputImageUrl.set(scaledUrl);
             this.inputImageElement.set(scaledImg);
+            this.sourceImageMimeType.set(sourceMimeType);
             this.imageDimensions.set({ width: w, height: h });
             this.startDepthEstimation(scaledImg, w, h);
           };
+          scaledImg.onerror = () => {
+            if (this.pendingImage === scaledImg) this.pendingImage = null;
+            if (generation === this.fileGeneration) {
+              this.showImageError("圖片縮放失敗，請重新選擇檔案");
+            }
+          };
           scaledImg.src = scaledUrl;
+        } catch {
+          this.showImageError("圖片處理失敗，請改用較小的圖片");
+        }
+      };
+      img.onerror = () => {
+        if (this.pendingImage === img) this.pendingImage = null;
+        if (generation === this.fileGeneration) {
+          this.showImageError("圖片格式無法解碼，請改用 PNG、JPG 或 WEBP");
         }
       };
       img.src = dataUrl;
     };
+    reader.onerror = () => {
+      if (this.pendingFileReader === reader) this.pendingFileReader = null;
+      if (generation === this.fileGeneration) {
+        this.showImageError("圖片讀取失敗，請重新選擇檔案");
+      }
+    };
     reader.readAsDataURL(file);
+  }
+
+  private isSupportedImageMime(mimeType: string): mimeType is GlbImageMimeType {
+    return (
+      mimeType === "image/png" ||
+      mimeType === "image/jpeg" ||
+      mimeType === "image/webp"
+    );
+  }
+
+  private showImageError(message: string): void {
+    this.isLoading.set(false);
+    this.progressInfo.set(null);
+    this.alertState.set({ type: "error", message });
   }
 
   /**
@@ -467,6 +664,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       return;
     }
 
+    const requestId = this.invalidateActiveRequest();
     this.isLoading.set(true);
     this.alertState.set(null);
     this.progressInfo.set({
@@ -475,21 +673,48 @@ export class DepthEstimator implements OnInit, OnDestroy {
     });
 
     if (this.worker) {
-      createImageBitmap(img).then((bitmap) => {
-        const req: WorkerRequest = {
-          type: "estimate",
-          model: this.selectedModel(),
-          device: this.preferredDevice(),
-          imageBitmap: bitmap,
-        };
-        this.worker?.postMessage(req, [bitmap]);
-      });
+      void this.sendEstimateRequest(img, requestId);
     } else {
       // 若無 Worker 則提示
       this.isLoading.set(false);
       this.alertState.set({
         type: "error",
         message: "瀏覽器不支援 Web Worker，無法啟動背景推論",
+      });
+    }
+  }
+
+  private async sendEstimateRequest(
+    img: HTMLImageElement,
+    requestId: number,
+  ): Promise<void> {
+    let bitmap: ImageBitmap | null = null;
+    try {
+      if (typeof createImageBitmap !== "function") {
+        throw new Error("瀏覽器不支援 ImageBitmap");
+      }
+      bitmap = await createImageBitmap(img);
+      if (requestId !== this.activeRequestId || !this.worker) {
+        bitmap.close();
+        return;
+      }
+      const req: WorkerRequest = {
+        type: "estimate",
+        requestId,
+        model: this.selectedModel(),
+        device: this.preferredDevice(),
+        imageBitmap: bitmap,
+      };
+      this.worker.postMessage(req, [bitmap]);
+      bitmap = null;
+    } catch (error) {
+      bitmap?.close();
+      if (requestId !== this.activeRequestId) return;
+      this.isLoading.set(false);
+      this.progressInfo.set(null);
+      this.alertState.set({
+        type: "error",
+        message: `圖片無法送入深度模型：${error instanceof Error ? error.message : "未知錯誤"}`,
       });
     }
   }
@@ -713,10 +938,19 @@ export class DepthEstimator implements OnInit, OnDestroy {
       console.warn("WebGL 不可用");
       return;
     }
+    if (this.gl && this.gl !== gl) {
+      this.releaseGlResources();
+    }
     this.gl = gl;
 
-    canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
-    canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+    canvas.width = Math.max(
+      1,
+      Math.round((canvas.clientWidth || 1) * (window.devicePixelRatio || 1)),
+    );
+    canvas.height = Math.max(
+      1,
+      Math.round((canvas.clientHeight || 1) * (window.devicePixelRatio || 1)),
+    );
     gl.viewport(0, 0, canvas.width, canvas.height);
 
     gl.enable(gl.DEPTH_TEST);
@@ -756,27 +990,46 @@ export class DepthEstimator implements OnInit, OnDestroy {
       const vs = gl.createShader(gl.VERTEX_SHADER)!;
       gl.shaderSource(vs, vsSource);
       gl.compileShader(vs);
+      if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+        const info = gl.getShaderInfoLog(vs) || "vertex shader 編譯失敗";
+        gl.deleteShader(vs);
+        this.showImageError(`3D 預覽無法啟動：${info}`);
+        return;
+      }
 
       const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
       gl.shaderSource(fs, fsSource);
       gl.compileShader(fs);
+      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+        const info = gl.getShaderInfoLog(fs) || "fragment shader 編譯失敗";
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+        this.showImageError(`3D 預覽無法啟動：${info}`);
+        return;
+      }
 
       const prog = gl.createProgram()!;
       gl.attachShader(prog, vs);
       gl.attachShader(prog, fs);
       gl.linkProgram(prog);
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        const info = gl.getProgramInfoLog(prog) || "shader link 失敗";
+        gl.deleteProgram(prog);
+        this.showImageError(`3D 預覽無法啟動：${info}`);
+        return;
+      }
       this.glProgram = prog;
     }
 
     gl.useProgram(this.glProgram);
 
-    // 建置網格頂點
-    const step = 2; // 降採樣
-    const cols = Math.floor((res.width - 1) / step) + 1;
-    const rows = Math.floor((res.height - 1) / step) + 1;
+    // 建置網格頂點；Uint16 index 不可超過 65,535 個頂點。
+    const { step, cols, rows } = getSafePreviewGrid(res.width, res.height);
     const aspect = res.width / res.height;
     const scaleZ = (this.depthScale3D() / 100) * 0.8;
-    const invert = this.invertDepth();
+    const processedDepth = this.getProcessedDepth(res.width, res.height);
 
     const positions: number[] = [];
     const texCoords: number[] = [];
@@ -793,8 +1046,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
         const xWorld = (u - 0.5) * 2.0 * aspect;
 
         const idx = yPixel * res.width + xPixel;
-        let d = res.depthArray[idx] ?? 0;
-        if (invert) d = 1.0 - d;
+        const d = processedDepth[idx] ?? 0;
         const zWorld = (d - 0.5) * scaleZ;
 
         positions.push(xWorld, yWorld, zWorld);
@@ -816,6 +1068,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     // 更新頂點 Buffer
     if (!this.glPositionBuffer) this.glPositionBuffer = gl.createBuffer();
+    if (!this.glPositionBuffer) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.glPositionBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -828,6 +1081,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     gl.vertexAttribPointer(aPosLoc, 3, gl.FLOAT, false, 0, 0);
 
     if (!this.glTexCoordBuffer) this.glTexCoordBuffer = gl.createBuffer();
+    if (!this.glTexCoordBuffer) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.glTexCoordBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -841,6 +1095,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     // 紋理貼圖
     if (!this.glTexture) this.glTexture = gl.createTexture();
+    if (!this.glTexture) return;
     gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -858,17 +1113,37 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     // 繪製網格或點雲
     if (this.isPointCloud()) {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
       gl.drawArrays(gl.POINTS, 0, positions.length / 3);
     } else {
-      const idxBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer);
+      if (!this.glIndexBuffer) this.glIndexBuffer = gl.createBuffer();
+      if (!this.glIndexBuffer) return;
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.glIndexBuffer);
       gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
         new Uint16Array(indices),
         gl.DYNAMIC_DRAW,
       );
-      gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+      this.glIndexCount = indices.length;
+      gl.drawElements(gl.TRIANGLES, this.glIndexCount, gl.UNSIGNED_SHORT, 0);
     }
+  }
+
+  private releaseGlResources(): void {
+    const gl = this.gl;
+    if (!gl) return;
+    if (this.glPositionBuffer) gl.deleteBuffer(this.glPositionBuffer);
+    if (this.glTexCoordBuffer) gl.deleteBuffer(this.glTexCoordBuffer);
+    if (this.glIndexBuffer) gl.deleteBuffer(this.glIndexBuffer);
+    if (this.glTexture) gl.deleteTexture(this.glTexture);
+    if (this.glProgram) gl.deleteProgram(this.glProgram);
+    this.glPositionBuffer = null;
+    this.glTexCoordBuffer = null;
+    this.glIndexBuffer = null;
+    this.glTexture = null;
+    this.glProgram = null;
+    this.glIndexCount = 0;
+    this.gl = null;
   }
 
   /**
@@ -976,57 +1251,61 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
   // 控制項變更事件
   protected onModelChange(val: string): void {
-    this.selectedModel.set(val as DepthModelId);
+    if (!isDepthModelId(val)) return;
+    this.selectedModel.set(val);
     if (this.inputImageElement()) {
       this.startDepthEstimation();
     }
   }
 
   protected onDeviceChange(val: string): void {
-    this.preferredDevice.set(val as DeviceType);
+    if (!isDeviceType(val)) return;
+    this.preferredDevice.set(val);
     if (this.inputImageElement()) {
       this.startDepthEstimation();
     }
   }
 
   protected onPreviewModeChange(val: string): void {
-    this.previewMode.set(val as PreviewMode);
-    setTimeout(() => this.renderCurrentView(), 30);
+    if (!isPreviewMode(val)) return;
+    this.previewMode.set(val);
+    this.scheduleRender(30);
   }
 
   protected onColorMapChange(val: string): void {
-    this.colorMap.set(val as ColorMapType);
-    this.renderCurrentView();
+    if (!isColorMapType(val)) return;
+    this.colorMap.set(val);
+    this.scheduleRender();
   }
 
   protected onInvertToggle(): void {
     this.invertDepth.set(!this.invertDepth());
-    this.renderCurrentView();
+    this.scheduleRender();
   }
 
   protected onContrastChange(val: number): void {
     this.contrast.set(val);
-    this.renderCurrentView();
+    this.scheduleRender();
   }
 
   protected onBrightnessChange(val: number): void {
     this.brightness.set(val);
-    this.renderCurrentView();
+    this.scheduleRender();
   }
 
   protected onEdgeSofteningChange(val: number): void {
     this.edgeSoftening.set(val);
-    this.renderCurrentView();
+    this.scheduleRender();
   }
 
   protected onDepthScale3DChange(val: number): void {
     this.depthScale3D.set(val);
-    this.render3DMeshCanvas();
+    this.scheduleRender();
   }
 
   protected togglePointCloud(): void {
     this.isPointCloud.set(!this.isPointCloud());
-    this.render3DMeshCanvas();
+    this.scheduleRender();
   }
 
   private getProcessedDepth(
@@ -1066,16 +1345,28 @@ export class DepthEstimator implements OnInit, OnDestroy {
   }
 
   private triggerDownload(href: string, filename: string): void {
+    if (this.isDestroyed) {
+      if (href.startsWith("blob:")) URL.revokeObjectURL(href);
+      return;
+    }
     const a = document.createElement("a");
     a.href = href;
     a.download = filename;
     a.click();
+    if (href.startsWith("blob:")) {
+      const timerId = window.setTimeout(() => {
+        URL.revokeObjectURL(href);
+        this.downloadRevokeTimers.delete(timerId);
+      }, 1_000);
+      this.downloadRevokeTimers.add(timerId);
+    }
   }
 
   private async downloadDepthPng(bitDepth: 8 | 16): Promise<void> {
     const res = this.depthResult();
     const dimensions = this.sourceDimensions() ?? this.imageDimensions();
     if (!res || !dimensions) return;
+    const generation = this.fileGeneration;
 
     try {
       const processedDepth = this.getProcessedDepth(
@@ -1087,14 +1378,22 @@ export class DepthEstimator implements OnInit, OnDestroy {
         dimensions.width,
         dimensions.height,
         bitDepth,
-        { minDepth: res.minDepth, maxDepth: res.maxDepth },
+        {
+          minDepth: res.minDepth,
+          maxDepth: res.maxDepth,
+          invert: this.invertDepth(),
+          contrast: this.contrast() / 100,
+          brightness: this.brightness() / 100,
+          blurPercent: this.edgeSoftening(),
+        },
       );
       const href = await this.pngBytesToDataUrl(bytes);
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.triggerDownload(href, `depth-map-${bitDepth}bit-${Date.now()}.png`);
     } catch {
       this.alertState.set({
         type: "error",
-        message: "PNG 編碼失敗，請確認瀏覽器支援 CompressionStream",
+        message: "PNG 編碼失敗，請改用較小的圖片後再試",
       });
     }
   }
@@ -1104,7 +1403,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     await this.downloadDepthPng(8);
   }
 
-  /** 匯出保留 float 深度階調的單通道 16-bit 灰階 PNG。 */
+  /** 匯出保留 normalized 深度階調的單通道 16-bit 灰階 PNG。 */
   protected async download16BitPng(): Promise<void> {
     await this.downloadDepthPng(16);
   }
@@ -1147,11 +1446,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       width: res.width,
       height: res.height,
     };
-    const adjustedDepth = adjustDepthArray(res.depthArray, {
-      invert: this.invertDepth(),
-      contrast: this.contrast() / 100,
-      brightness: this.brightness() / 100,
-    });
+    const adjustedDepth = this.getProcessedDepth(res.width, res.height);
     const objContent = exportDepthToObj(adjustedDepth, res.width, res.height, {
       depthScale: (this.depthScale3D() / 100) * 0.8,
       maxGridDimension: 192,
@@ -1160,11 +1455,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
     const blob = new Blob([objContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `depth-mesh-${Date.now()}.obj`;
-    a.click();
-    URL.revokeObjectURL(url);
+    this.triggerDownload(url, `depth-mesh-${Date.now()}.obj`);
   }
 
   /** 匯出含來源圖片貼圖的 glTF 2.0 binary。 */
@@ -1172,29 +1463,28 @@ export class DepthEstimator implements OnInit, OnDestroy {
     const res = this.depthResult();
     const sourceImageUrl = this.sourceImageUrl();
     if (!res || !sourceImageUrl) return;
+    const generation = this.fileGeneration;
+    const dimensions = this.sourceDimensions() ?? {
+      width: res.width,
+      height: res.height,
+    };
+    const imageMimeType = this.sourceImageMimeType();
+    const processedDepth = this.getProcessedDepth(res.width, res.height);
+    if (!imageMimeType) return;
 
     try {
-      const dimensions = this.sourceDimensions() ?? {
-        width: res.width,
-        height: res.height,
-      };
-      const adjustedDepth = adjustDepthArray(res.depthArray, {
-        invert: this.invertDepth(),
-        contrast: this.contrast() / 100,
-        brightness: this.brightness() / 100,
-      });
-      const imageBytes = new Uint8Array(
-        await (await fetch(sourceImageUrl)).arrayBuffer(),
-      );
-      const rawMimeType = sourceImageUrl.slice(5, sourceImageUrl.indexOf(";"));
-      const imageMimeType =
-        rawMimeType === "image/jpeg" ||
-        rawMimeType === "image/png" ||
-        rawMimeType === "image/webp"
-          ? rawMimeType
-          : "image/png";
+      const response = await fetch(sourceImageUrl);
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
+      if (!response.ok) {
+        throw new Error("無法讀取原始圖片");
+      }
+      const imageBytes = new Uint8Array(await response.arrayBuffer());
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
+      if (detectGlbImageMimeType(imageBytes) !== imageMimeType) {
+        throw new Error("原始圖片格式與內容不一致");
+      }
       const glb = exportDepthToGlb(
-        adjustedDepth,
+        processedDepth,
         res.width,
         res.height,
         imageBytes,
@@ -1210,11 +1500,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
       });
       const url = URL.createObjectURL(blob);
       this.triggerDownload(url, `depth-scene-${Date.now()}.glb`);
-      URL.revokeObjectURL(url);
     } catch {
       this.alertState.set({
         type: "error",
-        message: "GLB 匯出失敗，請重新載入圖片後再試",
+        message: "GLB 匯出失敗：原始貼圖必須是有效的 PNG、JPEG 或 WebP",
       });
     }
   }
@@ -1225,6 +1514,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
   protected async copyToClipboard(): Promise<void> {
     const res = this.depthResult();
     if (!res) return;
+    const generation = this.fileGeneration;
 
     try {
       const tempCanvas = document.createElement("canvas");
@@ -1243,17 +1533,28 @@ export class DepthEstimator implements OnInit, OnDestroy {
       );
       ctx.putImageData(imgData, 0, 0);
 
-      tempCanvas.toBlob(async (blob) => {
-        if (blob && navigator.clipboard && navigator.clipboard.write) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
-          this.alertState.set({
-            type: "success",
-            message: "深度圖已成功複製至剪貼簿！",
-          });
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+        throw new Error("瀏覽器不支援圖片剪貼簿");
+      }
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        try {
+          tempCanvas.toBlob(
+            (value) =>
+              value ? resolve(value) : reject(new Error("PNG 產生失敗")),
+            "image/png",
+          );
+        } catch (error) {
+          reject(error);
         }
-      }, "image/png");
+      });
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      this.alertState.set({
+        type: "success",
+        message: "深度圖已成功複製至剪貼簿！",
+      });
     } catch (e) {
       this.alertState.set({
         type: "error",

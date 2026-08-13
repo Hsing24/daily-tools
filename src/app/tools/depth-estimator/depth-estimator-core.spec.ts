@@ -4,10 +4,12 @@ import {
   getDepthColor,
   depthArrayToImageData,
   encodeGrayscalePng,
+  detectGlbImageMimeType,
   exportDepthToGlb,
   exportDepthToObj,
   gaussianBlurDepthArray,
   generateSampleDepthMap,
+  getSafePreviewGrid,
   prepareDepthForExport,
   resizeDepthArray,
 } from "./depth-estimator-core";
@@ -241,7 +243,7 @@ describe("depth-estimator-core", () => {
       const depth = new Float32Array(384 * 384).map(
         (_, index) => index / (384 * 384 - 1),
       );
-      const imageBytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3, 4]);
+      const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
       const glb = exportDepthToGlb(depth, 384, 384, imageBytes, "image/png", {
         maxGridDimension: 192,
         sourceDimensions: { width: 1600, height: 1000 },
@@ -265,6 +267,48 @@ describe("depth-estimator-core", () => {
         sourceDimensions: { width: 1600, height: 1000 },
       });
       expect(glb.length).toBeLessThan(new TextEncoder().encode(obj).length);
+    });
+
+    it("should reject a texture whose MIME does not match its signature", () => {
+      expect(() =>
+        exportDepthToGlb(
+          new Float32Array(4).fill(0.5),
+          2,
+          2,
+          new Uint8Array([1, 2, 3]),
+          "image/png",
+        ),
+      ).toThrow("格式與檔案內容不一致");
+      expect(
+        detectGlbImageMimeType(
+          new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        ),
+      ).toBe("image/png");
+    });
+
+    it("should cap large export grids below the Uint16 vertex limit", () => {
+      const glb = exportDepthToGlb(
+        new Float32Array(4).fill(0.5),
+        2,
+        2,
+        new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        "image/png",
+        { maxGridDimension: 1000 },
+      );
+      const jsonLength = new DataView(glb.buffer).getUint32(12, true);
+      const json = JSON.parse(
+        new TextDecoder().decode(glb.subarray(20, 20 + jsonLength)).trim(),
+      );
+      expect(json.accessors[0].count).toBeLessThanOrEqual(65_535);
+    });
+  });
+
+  describe("preview mesh budget", () => {
+    it("should keep a 640px preview within the Uint16 vertex budget", () => {
+      const grid = getSafePreviewGrid(640, 640);
+      expect(grid.step).toBeGreaterThan(2);
+      expect(grid.vertices).toBeLessThanOrEqual(65_535);
+      expect(grid.cols * grid.rows).toBe(grid.vertices);
     });
   });
 

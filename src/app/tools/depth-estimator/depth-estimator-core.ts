@@ -1,4 +1,138 @@
 import { ColorMapType } from "./depth-estimator-types";
+import { zlibSync } from "fflate";
+
+export const MAX_DEPTH_IMAGE_PIXELS = 40_000_000;
+export const MAX_UINT16_VERTICES = 65_535;
+
+export type GlbImageMimeType = "image/jpeg" | "image/png" | "image/webp";
+
+const GLB_IMAGE_MIME_TYPES: readonly GlbImageMimeType[] = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+function assertPositiveDimensions(
+  width: number,
+  height: number,
+  label: string,
+): void {
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 1 ||
+    height < 1
+  ) {
+    throw new Error(`${label} 尺寸必須是正整數`);
+  }
+}
+
+function assertDepthDimensions(
+  depthArray: Float32Array,
+  width: number,
+  height: number,
+): void {
+  assertPositiveDimensions(width, height, "深度資料");
+  if (width * height !== depthArray.length) {
+    throw new Error("深度資料尺寸與影像尺寸不符");
+  }
+}
+
+function clampDepth(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function hasPrefix(bytes: Uint8Array, prefix: readonly number[]): boolean {
+  return prefix.every((value, index) => bytes[index] === value);
+}
+
+/** 依檔頭辨識 GLB 可內嵌的圖片格式。 */
+export function detectGlbImageMimeType(
+  imageBytes: Uint8Array,
+): GlbImageMimeType | null {
+  if (hasPrefix(imageBytes, [137, 80, 78, 71, 13, 10, 26, 10])) {
+    return "image/png";
+  }
+  if (hasPrefix(imageBytes, [255, 216])) {
+    return "image/jpeg";
+  }
+  if (
+    imageBytes.length >= 12 &&
+    hasPrefix(imageBytes, [82, 73, 70, 70]) &&
+    hasPrefix(imageBytes.subarray(8), [87, 69, 66, 80])
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+function assertGlbImage(
+  imageBytes: Uint8Array,
+  imageMimeType: GlbImageMimeType,
+): void {
+  if (!GLB_IMAGE_MIME_TYPES.includes(imageMimeType)) {
+    throw new Error("GLB 貼圖只支援 JPEG、PNG 或 WebP");
+  }
+  const detectedMimeType = detectGlbImageMimeType(imageBytes);
+  if (detectedMimeType !== imageMimeType) {
+    throw new Error("GLB 貼圖格式與檔案內容不一致");
+  }
+}
+
+export interface MeshGridDimensions {
+  readonly cols: number;
+  readonly rows: number;
+  readonly vertices: number;
+}
+
+/** 以 Uint16 index 可表達的頂點數上限，找出安全的預覽降採樣網格。 */
+export function getSafePreviewGrid(
+  width: number,
+  height: number,
+  initialStep = 2,
+): MeshGridDimensions & { readonly step: number } {
+  assertPositiveDimensions(width, height, "預覽網格");
+  let step = Number.isFinite(initialStep)
+    ? Math.max(1, Math.floor(initialStep))
+    : 2;
+  let cols = Math.floor((width - 1) / step) + 1;
+  let rows = Math.floor((height - 1) / step) + 1;
+
+  while (cols * rows > MAX_UINT16_VERTICES && step < Math.max(width, height)) {
+    step += 1;
+    cols = Math.floor((width - 1) / step) + 1;
+    rows = Math.floor((height - 1) / step) + 1;
+  }
+
+  return { step, cols, rows, vertices: cols * rows };
+}
+
+function getBoundedExportGrid(
+  width: number,
+  height: number,
+  maxGridDimension: number,
+): MeshGridDimensions {
+  const aspect = width / height;
+  let cols = Math.max(2, Math.round(maxGridDimension * Math.min(1, aspect)));
+  let rows = Math.max(
+    2,
+    Math.round(maxGridDimension * Math.min(1, 1 / aspect)),
+  );
+  const vertexCount = cols * rows;
+
+  if (vertexCount > MAX_UINT16_VERTICES) {
+    const scale = Math.sqrt(MAX_UINT16_VERTICES / vertexCount);
+    cols = Math.max(2, Math.floor(cols * scale));
+    rows = Math.max(2, Math.floor(rows * scale));
+    while (cols * rows > MAX_UINT16_VERTICES) {
+      if (cols >= rows) cols--;
+      else rows--;
+    }
+  }
+
+  return { cols, rows, vertices: cols * rows };
+}
 
 /**
  * 顏色 RGB 三元組 [r, g, b] (0~255)
@@ -122,7 +256,7 @@ export function getDepthColor(
   colorMap: ColorMapType,
   invert = false,
 ): RGB {
-  let val = Math.max(0, Math.min(1, depth));
+  let val = clampDepth(depth);
   if (invert) {
     val = 1 - val;
   }
@@ -155,6 +289,7 @@ export function createCompatibleImageData(
   width: number,
   height: number,
 ): ImageData {
+  assertPositiveDimensions(width, height, "ImageData");
   if (typeof ImageData !== "undefined") {
     return new ImageData(width, height);
   }
@@ -180,6 +315,7 @@ export function depthArrayToImageData(
     brightness?: number; // -0.5 ~ 0.5, default 0
   },
 ): ImageData {
+  assertDepthDimensions(depthArray, width, height);
   const {
     colorMap,
     invert = false,
@@ -191,7 +327,7 @@ export function depthArrayToImageData(
   const total = width * height;
 
   for (let i = 0; i < total; i++) {
-    const rawVal = depthArray[i] ?? 0;
+    const rawVal = clampDepth(depthArray[i]);
     // 調整對比度與亮度: (val - 0.5) * contrast + 0.5 + brightness
     let adj = (rawVal - 0.5) * contrast + 0.5 + brightness;
     adj = Math.max(0, Math.min(1, adj));
@@ -218,13 +354,14 @@ export function adjustDepthArray(
   depthArray: Float32Array,
   options: DepthAdjustments = {},
 ): Float32Array {
+  if (depthArray.length === 0) return new Float32Array();
   const contrast = options.contrast ?? 1;
   const brightness = options.brightness ?? 0;
   const invert = options.invert ?? false;
   const output = new Float32Array(depthArray.length);
 
   for (let i = 0; i < depthArray.length; i++) {
-    const raw = depthArray[i] ?? 0;
+    const raw = clampDepth(depthArray[i]);
     const adjusted = Math.max(
       0,
       Math.min(1, (raw - 0.5) * contrast + 0.5 + brightness),
@@ -243,6 +380,8 @@ export function resizeDepthArray(
   targetWidth: number,
   targetHeight: number,
 ): Float32Array {
+  assertDepthDimensions(depthArray, sourceWidth, sourceHeight);
+  assertPositiveDimensions(targetWidth, targetHeight, "目標深度圖");
   if (sourceWidth === targetWidth && sourceHeight === targetHeight) {
     return depthArray.slice();
   }
@@ -269,11 +408,11 @@ export function resizeDepthArray(
       const x1 = Math.min(sourceWidth - 1, x0 + 1);
       const fx = sourceX - x0;
       const top =
-        (depthArray[y0 * sourceWidth + x0] ?? 0) * (1 - fx) +
-        (depthArray[y0 * sourceWidth + x1] ?? 0) * fx;
+        clampDepth(depthArray[y0 * sourceWidth + x0]) * (1 - fx) +
+        clampDepth(depthArray[y0 * sourceWidth + x1]) * fx;
       const bottom =
-        (depthArray[y1 * sourceWidth + x0] ?? 0) * (1 - fx) +
-        (depthArray[y1 * sourceWidth + x1] ?? 0) * fx;
+        clampDepth(depthArray[y1 * sourceWidth + x0]) * (1 - fx) +
+        clampDepth(depthArray[y1 * sourceWidth + x1]) * fx;
       output[y * targetWidth + x] = top * (1 - fy) + bottom * fy;
     }
   }
@@ -341,6 +480,7 @@ export function gaussianBlurDepthArray(
   height: number,
   radius: number,
 ): Float32Array {
+  assertDepthDimensions(depthArray, width, height);
   if (radius <= 0) return depthArray.slice();
 
   const sigma = Math.max(0.01, radius / 2);
@@ -384,6 +524,8 @@ export function prepareDepthForExport(
   targetHeight: number,
   options: DepthAdjustments & { readonly blurPercent?: number },
 ): Float32Array {
+  assertDepthDimensions(depthArray, sourceWidth, sourceHeight);
+  assertPositiveDimensions(targetWidth, targetHeight, "目標深度圖");
   const resized = resizeDepthArray(
     depthArray,
     sourceWidth,
@@ -471,11 +613,16 @@ export async function encodeGrayscalePng(
   width: number,
   height: number,
   bitDepth: 8 | 16,
-  metadata?: { readonly minDepth: number; readonly maxDepth: number },
+  metadata?: {
+    readonly minDepth: number;
+    readonly maxDepth: number;
+    readonly invert?: boolean;
+    readonly contrast?: number;
+    readonly brightness?: number;
+    readonly blurPercent?: number;
+  },
 ): Promise<Uint8Array> {
-  if (depthArray.length !== width * height) {
-    throw new Error("深度資料尺寸與 PNG 尺寸不符");
-  }
+  assertDepthDimensions(depthArray, width, height);
 
   const bytesPerSample = bitDepth / 8;
   const stride = width * bytesPerSample + 1;
@@ -486,7 +633,7 @@ export async function encodeGrayscalePng(
     const rowOffset = y * stride;
     scanlines[rowOffset] = 0;
     for (let x = 0; x < width; x++) {
-      const value = Math.max(0, Math.min(1, depthArray[y * width + x] ?? 0));
+      const value = clampDepth(depthArray[y * width + x]);
       const sample = Math.round(value * maxSample);
       const offset = rowOffset + 1 + x * bytesPerSample;
       if (bitDepth === 16) {
@@ -498,13 +645,7 @@ export async function encodeGrayscalePng(
     }
   }
 
-  const compressed = new Uint8Array(
-    await new Response(
-      new Response(scanlines.buffer as ArrayBuffer).body!.pipeThrough(
-        new CompressionStream("deflate"),
-      ),
-    ).arrayBuffer(),
-  );
+  const compressed = zlibSync(scanlines);
 
   const ihdr = new Uint8Array(13);
   writeUint32(ihdr, 0, width);
@@ -517,7 +658,15 @@ export async function encodeGrayscalePng(
     chunks.push(
       createTextChunk("DepthMin", String(metadata.minDepth)),
       createTextChunk("DepthMax", String(metadata.maxDepth)),
-      createTextChunk("DepthUnits", "relative disparity (not metres)"),
+      createTextChunk(
+        "DepthUnits",
+        "normalized relative disparity (0..1; not metres)",
+      ),
+      createTextChunk("DepthBitDepth", `${bitDepth}-bit unsigned integer`),
+      createTextChunk("DepthInvert", String(metadata.invert ?? false)),
+      createTextChunk("DepthContrast", String(metadata.contrast ?? 1)),
+      createTextChunk("DepthBrightness", String(metadata.brightness ?? 0)),
+      createTextChunk("DepthBlurPercent", String(metadata.blurPercent ?? 0)),
     );
   }
   chunks.push(
@@ -543,6 +692,7 @@ export function exportDepthToObj(
     sourceDimensions?: { readonly width: number; readonly height: number };
   },
 ): string {
+  assertDepthDimensions(depthArray, width, height);
   const step = Math.max(1, Math.floor(options?.step ?? 2));
   const depthScale = options?.depthScale ?? 0.25;
   const invert = options?.invert ?? false;
@@ -578,7 +728,7 @@ export function exportDepthToObj(
       const xWorld = (uCoord - 0.5) * 2.0 * aspect;
 
       const idx = yPixel * width + xPixel;
-      let d = depthArray[idx] ?? 0;
+      let d = clampDepth(depthArray[idx]);
       if (invert) d = 1.0 - d;
       const zWorld = d * depthScale;
 
@@ -618,7 +768,7 @@ export function exportDepthToGlb(
   width: number,
   height: number,
   imageBytes: Uint8Array,
-  imageMimeType: "image/jpeg" | "image/png" | "image/webp",
+  imageMimeType: GlbImageMimeType,
   options?: {
     readonly maxGridDimension?: number;
     readonly depthScale?: number;
@@ -628,19 +778,29 @@ export function exportDepthToGlb(
     };
   },
 ): Uint8Array {
+  assertDepthDimensions(depthArray, width, height);
+  assertGlbImage(imageBytes, imageMimeType);
   const dimensions = options?.sourceDimensions ?? { width, height };
-  const maxGridDimension = options?.maxGridDimension ?? 192;
-  const depthScale = options?.depthScale ?? 0.25;
-  const aspect = dimensions.width / dimensions.height;
-  const cols = Math.max(2, Math.round(maxGridDimension * Math.min(1, aspect)));
-  const rows = Math.max(
-    2,
-    Math.round(maxGridDimension * Math.min(1, 1 / aspect)),
-  );
-  const vertexCount = cols * rows;
-  if (vertexCount > 65535) {
-    throw new Error("GLB 網格頂點數超過 Uint16 索引上限");
+  assertPositiveDimensions(dimensions.width, dimensions.height, "原圖");
+  const requestedGridDimension = options?.maxGridDimension ?? 192;
+  if (!Number.isFinite(requestedGridDimension) || requestedGridDimension < 2) {
+    throw new Error("GLB 網格尺寸無效");
   }
+  const maxGridDimension = Math.max(2, Math.floor(requestedGridDimension));
+  const depthScale = options?.depthScale ?? 0.25;
+  if (!Number.isFinite(depthScale)) {
+    throw new Error("GLB 深度比例無效");
+  }
+  const aspect = dimensions.width / dimensions.height;
+  const {
+    cols,
+    rows,
+    vertices: vertexCount,
+  } = getBoundedExportGrid(
+    dimensions.width,
+    dimensions.height,
+    maxGridDimension,
+  );
 
   const positions = new Float32Array(vertexCount * 3);
   const texCoords = new Float32Array(vertexCount * 2);
@@ -654,7 +814,8 @@ export function exportDepthToGlb(
     for (let col = 0; col < cols; col++) {
       const u = col / (cols - 1);
       const sourceX = Math.round(u * (width - 1));
-      const depth = (depthArray[sourceY * width + sourceX] ?? 0) * depthScale;
+      const depth =
+        clampDepth(depthArray[sourceY * width + sourceX]) * depthScale;
       const vertex = row * cols + col;
       positions[vertex * 3] = (u - 0.5) * 2 * aspect;
       positions[vertex * 3 + 1] = (0.5 - v) * 2;

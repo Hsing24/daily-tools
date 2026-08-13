@@ -129,6 +129,47 @@ describe("DepthEstimator 元件", () => {
     expect(panels).toBeFalsy();
   });
 
+  it("只接受目前 request ID 的 Worker 結果", () => {
+    component["activeRequestId"] = 2;
+    component["handleWorkerMessage"]({
+      type: "success",
+      requestId: 1,
+      depthArray: new Float32Array([0.5]),
+      width: 1,
+      height: 1,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 4,
+      device: "wasm",
+    });
+    expect(component.depthResult()).toBeNull();
+
+    component["handleWorkerMessage"]({
+      type: "success",
+      requestId: 2,
+      depthArray: new Float32Array([0.5]),
+      width: 1,
+      height: 1,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 4,
+      device: "wasm",
+    });
+    expect(component.depthResult()?.width).toBe(1);
+  });
+
+  it("清除圖片時應結束 loading 並讓舊 request 失效", () => {
+    component["activeRequestId"] = 7;
+    component.isLoading.set(true);
+    component.progressInfo.set({ status: "processing" });
+
+    component.clearImage();
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.progressInfo()).toBeNull();
+    expect(component["activeRequestId"]).toBeGreaterThan(7);
+  });
+
   it("切換預覽模式應更新 previewMode Signal", () => {
     expect(component.previewMode()).toBe("depth");
 

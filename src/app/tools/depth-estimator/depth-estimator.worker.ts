@@ -10,8 +10,44 @@ import { resizeDepthArray } from "./depth-estimator-core";
 // 關閉本地模型載入限制，使用遠端 Hugging Face Hub / 瀏覽器快取
 env.allowLocalModels = false;
 
+interface PipelineProgressData {
+  readonly file?: string;
+  readonly progress?: number;
+  readonly loaded?: number;
+  readonly total?: number;
+}
+
+function readProgressData(value: unknown): PipelineProgressData {
+  if (typeof value !== "object" || value === null) return {};
+  const data = value as Record<string, unknown>;
+  return {
+    file: typeof data["file"] === "string" ? data["file"] : undefined,
+    progress:
+      typeof data["progress"] === "number" ? data["progress"] : undefined,
+    loaded: typeof data["loaded"] === "number" ? data["loaded"] : undefined,
+    total: typeof data["total"] === "number" ? data["total"] : undefined,
+  };
+}
+
+interface DepthTensorOutput {
+  readonly data?: ArrayLike<number>;
+  readonly dims?: readonly number[];
+}
+
+interface RawDepthOutput {
+  readonly predicted_depth?: DepthTensorOutput;
+  readonly depth?: {
+    readonly data?: ArrayLike<number>;
+    readonly width: number;
+    readonly height: number;
+    readonly channels?: number;
+  };
+}
+
+type DepthPipeline = (image: RawImage) => Promise<RawDepthOutput>;
+
 // 儲存目前已載入之 pipeline 實例與配置
-let currentPipeline: any = null;
+let currentPipeline: DepthPipeline | null = null;
 let loadedModel: DepthModelId | null = null;
 let loadedDevice: DeviceType = "webgpu";
 
@@ -21,7 +57,8 @@ let loadedDevice: DeviceType = "webgpu";
 async function getDepthPipeline(
   model: DepthModelId,
   preferredDevice: DeviceType = "webgpu",
-): Promise<{ pipe: any; device: DeviceType }> {
+  requestId = 0,
+): Promise<{ pipe: DepthPipeline; device: DeviceType }> {
   if (
     currentPipeline &&
     loadedModel === model &&
@@ -35,9 +72,11 @@ async function getDepthPipeline(
   try {
     const pipe = await pipeline("depth-estimation", model, {
       device: chosenDevice,
-      progress_callback: (progressData: any) => {
+      progress_callback: (rawProgressData: unknown) => {
+        const progressData = readProgressData(rawProgressData);
         const msg: WorkerResponse = {
           type: "progress",
+          requestId,
           progress: {
             status: "downloading",
             file: progressData?.file,
@@ -53,10 +92,11 @@ async function getDepthPipeline(
       },
     });
 
-    currentPipeline = pipe;
+    const typedPipe = pipe as unknown as DepthPipeline;
+    currentPipeline = typedPipe;
     loadedModel = model;
     loadedDevice = chosenDevice;
-    return { pipe, device: chosenDevice };
+    return { pipe: typedPipe, device: chosenDevice };
   } catch (gpuError) {
     if (chosenDevice === "webgpu") {
       console.warn(
@@ -67,9 +107,11 @@ async function getDepthPipeline(
 
       const pipe = await pipeline("depth-estimation", model, {
         device: "wasm",
-        progress_callback: (progressData: any) => {
+        progress_callback: (rawProgressData: unknown) => {
+          const progressData = readProgressData(rawProgressData);
           const msg: WorkerResponse = {
             type: "progress",
+            requestId,
             progress: {
               status: "downloading",
               file: progressData?.file,
@@ -85,10 +127,11 @@ async function getDepthPipeline(
         },
       });
 
-      currentPipeline = pipe;
+      const typedPipe = pipe as unknown as DepthPipeline;
+      currentPipeline = typedPipe;
       loadedModel = model;
       loadedDevice = "wasm";
-      return { pipe, device: "wasm" };
+      return { pipe: typedPipe, device: "wasm" };
     }
     throw gpuError;
   }
@@ -105,8 +148,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       const { device } = await getDepthPipeline(
         req.model,
         req.device ?? "webgpu",
+        req.requestId,
       );
-      const readyMsg: WorkerResponse = { type: "ready", device };
+      const readyMsg: WorkerResponse = {
+        type: "ready",
+        requestId: req.requestId,
+        device,
+      };
       self.postMessage(readyMsg);
       return;
     }
@@ -114,12 +162,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     if (req.type === "estimate") {
       self.postMessage({
         type: "progress",
+        requestId: req.requestId,
         progress: { status: "processing", message: "深度模型推論中..." },
       } as WorkerResponse);
 
       const { pipe, device } = await getDepthPipeline(
         req.model,
         req.device ?? "webgpu",
+        req.requestId,
       );
 
       // 將傳入的 ImageBitmap 繪製到 OffscreenCanvas 並轉為 RawImage
@@ -153,8 +203,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       if (output.predicted_depth && output.predicted_depth.data) {
         const tensorData = output.predicted_depth.data;
         const dims = output.predicted_depth.dims; // [1, H, W] 或 [H, W]
-        outHeight = dims[dims.length - 2];
-        outWidth = dims[dims.length - 1];
+        if (!dims || dims.length < 2) {
+          throw new Error("模型深度輸出的尺寸資訊無效");
+        }
+        outHeight = dims[dims.length - 2] ?? 0;
+        outWidth = dims[dims.length - 1] ?? 0;
+        if (!outWidth || !outHeight) {
+          throw new Error("模型深度輸出的尺寸無效");
+        }
 
         const totalPixels = outWidth * outHeight;
         depthFloatArray = new Float32Array(totalPixels);
@@ -182,6 +238,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         );
         const successMsg: WorkerResponse = {
           type: "success",
+          requestId: req.requestId,
           depthArray: resizedDepthArray,
           width,
           height,
@@ -206,6 +263,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
         const successMsg: WorkerResponse = {
           type: "success",
+          requestId: req.requestId,
           depthArray: depthFloatArray,
           width: outWidth,
           height: outHeight,
@@ -220,10 +278,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         throw new Error("未能從模型輸出中解析深度資訊");
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     const errorMsg: WorkerResponse = {
       type: "error",
-      message: err?.message || String(err),
+      requestId: req.requestId,
+      message: err instanceof Error ? err.message : String(err),
     };
     self.postMessage(errorMsg);
   }
