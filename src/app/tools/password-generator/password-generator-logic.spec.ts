@@ -33,6 +33,85 @@ function sequenceRandom(...values: number[]): RandomSource {
 
 describe("PasswordGenerator Logic", () => {
   describe("generatePassword", () => {
+    const numberOnly: PasswordOptions = {
+      ...baseOptions,
+      length: 4,
+      useUppercase: false,
+      useLowercase: false,
+      useSymbols: false,
+    };
+
+    it("單一字元池的熵等於實際可選排列數", () => {
+      const repeated = generatePassword(numberOnly);
+      const unique = generatePassword({ ...numberOnly, uniqueOnly: true });
+      expect(repeated.success && repeated.entropyBits).toBeCloseTo(
+        Math.log2(10 ** 4),
+      );
+      expect(unique.success && unique.entropyBits).toBeCloseTo(
+        Math.log2(10 * 9 * 8 * 7),
+      );
+    });
+
+    it("熵包含強制字元類型與首字限制", () => {
+      const options = { ...numberOnly, useUppercase: true };
+      const any = generatePassword(options);
+      const upper = generatePassword({ ...options, firstCharRule: "upper" });
+      const unique = generatePassword({
+        ...options,
+        firstCharRule: "upper",
+        uniqueOnly: true,
+      });
+      expect(any.success && any.entropyBits).toBeCloseTo(
+        Math.log2(36 ** 4 - 26 ** 4 - 10 ** 4),
+      );
+      expect(upper.success && upper.entropyBits).toBeCloseTo(
+        Math.log2(26 * (36 ** 3 - 26 ** 3)),
+      );
+      expect(unique.success && unique.entropyBits).toBeCloseTo(
+        Math.log2(26 * (35 * 34 * 33 - 25 * 24 * 23)),
+      );
+    });
+
+    it("四種字元的最短密碼只計入每類各一個的排列", () => {
+      const result = generatePassword({ ...baseOptions, length: 4 });
+      const symbols = "!@#$%^&*()_+-=[]{}|;':\",./<>?".length;
+      expect(result.success && result.entropyBits).toBeCloseTo(
+        Math.log2(24 * 26 * 26 * 10 * symbols),
+      );
+    });
+
+    it("以批次 Web Crypto 取得亂數，避免每字元呼叫一次", () => {
+      const random: RandomSource = {
+        getRandomValues: vi.fn((array) => {
+          array.fill(0);
+          return array;
+        }),
+      };
+      const result = generatePassword({ ...numberOnly, length: 64 }, random);
+      expect(result.success && result.password).toBe("0".repeat(64));
+      expect(random.getRandomValues).toHaveBeenCalledTimes(1);
+    });
+
+    it("拒絕缺少類型的完整候選，不插入偏差的強制字元", () => {
+      const random: RandomSource = {
+        getRandomValues: vi.fn((array) => {
+          array.fill(0);
+          array.set([0, 0, 0, 0, 0, 26, 26, 26]);
+          return array;
+        }),
+      };
+      const result = generatePassword(
+        {
+          ...numberOnly,
+          useUppercase: true,
+          useLowercase: true,
+          useNumbers: false,
+        },
+        random,
+      );
+      expect(result.success && result.password).toBe("Aaaa");
+    });
+
     it("長度不合法時回傳具名錯誤", () => {
       const result = generatePassword({ ...baseOptions, length: 3 });
       expect(result).toEqual({ success: false, code: "invalid-length" });

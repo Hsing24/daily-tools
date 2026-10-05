@@ -38,6 +38,54 @@ describe("TextMarkdownHtml 元件", () => {
     expect(component).toBeTruthy();
   });
 
+  it("剪貼簿較晚回傳時不得覆寫新輸入", async () => {
+    let resolveClipboard!: (value: string) => void;
+    mockClipboardReadText.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveClipboard = resolve;
+      }),
+    );
+    const pending = component["paste"]();
+    component["onInput"]("最新文字");
+    resolveClipboard("過期剪貼簿");
+    await pending;
+    expect(component["sourceText"]()).toBe("最新文字");
+  });
+
+  it("富文本剪貼簿拒絕時應 fallback 至純文字", async () => {
+    navigator.clipboard.read = vi.fn().mockRejectedValue(new Error("Denied"));
+    mockClipboardReadText.mockResolvedValue("純文字");
+    await component["paste"]();
+    expect(component["sourceText"]()).toBe("純文字");
+    expect(component["clipboardAlert"]()).toBe("");
+  });
+
+  it("轉換處理中不得複製空白或舊輸出，新輸入應取消旧工作", async () => {
+    component["onInput"]("x".repeat(20001));
+    expect(component["isProcessing"]()).toBe(true);
+    await component["copyMarkdown"]();
+    await component["copyHtml"]();
+    expect(mockClipboardWriteText).not.toHaveBeenCalled();
+    component["onInput"]("最新文字");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(component["conversionResult"]().markdown).toBe("最新文字");
+  });
+
+  it("元件銷毀後完成 clipboard write 不得建立新的 copy timer", async () => {
+    let finishCopy!: () => void;
+    component["onInput"]("內容");
+    mockClipboardWriteText.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishCopy = resolve;
+      }),
+    );
+    const pending = component["copyMarkdown"]();
+    fixture.destroy();
+    finishCopy();
+    await pending;
+    expect(component["copyMarkdownStatus"]()).toBe("");
+  });
+
   describe("初始狀態與即時更新 (T007)", () => {
     it("初始狀態下兩個輸出區塊應為空或不可見，且輸入框為空", () => {
       const textarea = element.querySelector("textarea") as HTMLTextAreaElement;
@@ -45,11 +93,9 @@ describe("TextMarkdownHtml 元件", () => {
 
       // 檢查 outputs 是否不可見或為空
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       );
-      const htmlOutput = element.querySelector(
-        '[data-testid="html-output"]'
-      );
+      const htmlOutput = element.querySelector('[data-testid="html-output"]');
 
       expect(markdownOutput).toBeNull();
       expect(htmlOutput).toBeNull();
@@ -65,10 +111,10 @@ describe("TextMarkdownHtml 元件", () => {
       fixture.detectChanges();
 
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       ) as HTMLElement;
       const htmlOutput = element.querySelector(
-        '[data-testid="html-output"]'
+        '[data-testid="html-output"]',
       ) as HTMLElement;
 
       expect(markdownOutput).toBeTruthy();
@@ -86,7 +132,7 @@ describe("TextMarkdownHtml 元件", () => {
       mockClipboardReadText.mockResolvedValue("貼上的測試內容\n\n第二行測試");
 
       const pasteButton = element.querySelector(
-        '[data-testid="btn-paste"]'
+        '[data-testid="btn-paste"]',
       ) as HTMLButtonElement;
       pasteButton.click();
       fixture.detectChanges();
@@ -101,7 +147,7 @@ describe("TextMarkdownHtml 元件", () => {
       expect(textarea.value).toBe("貼上的測試內容\n\n第二行測試");
 
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       ) as HTMLElement;
       expect(markdownOutput).toBeTruthy();
       expect(markdownOutput.textContent?.trim()).toContain("貼上的測試內容");
@@ -116,7 +162,7 @@ describe("TextMarkdownHtml 元件", () => {
       fixture.detectChanges();
 
       const pasteButton = element.querySelector(
-        '[data-testid="btn-paste"]'
+        '[data-testid="btn-paste"]',
       ) as HTMLButtonElement;
       pasteButton.click();
       fixture.detectChanges();
@@ -129,7 +175,7 @@ describe("TextMarkdownHtml 元件", () => {
       expect(textarea.value).toBe("原本內容");
 
       const alertArea = element.querySelector(
-        '[data-testid="alert-message"]'
+        '[data-testid="alert-message"]',
       ) as HTMLElement;
       expect(alertArea).toBeTruthy();
       expect(alertArea.textContent).toContain("無法讀取剪貼簿");
@@ -151,7 +197,7 @@ describe("TextMarkdownHtml 元件", () => {
       mockClipboardWriteText.mockResolvedValue(undefined);
 
       const copyBtn = element.querySelector(
-        '[data-testid="btn-copy-markdown"]'
+        '[data-testid="btn-copy-markdown"]',
       ) as HTMLButtonElement;
       expect(copyBtn).toBeTruthy();
       copyBtn.click();
@@ -161,9 +207,9 @@ describe("TextMarkdownHtml 元件", () => {
       fixture.detectChanges();
 
       expect(mockClipboardWriteText).toHaveBeenCalledWith("待複製文字");
-      
+
       const copyStatus = element.querySelector(
-        '[data-testid="copy-markdown-status"]'
+        '[data-testid="copy-markdown-status"]',
       ) as HTMLElement;
       expect(copyStatus).toBeTruthy();
       expect(copyStatus.textContent?.trim()).toContain("已複製");
@@ -173,7 +219,7 @@ describe("TextMarkdownHtml 元件", () => {
       mockClipboardWriteText.mockResolvedValue(undefined);
 
       const copyBtn = element.querySelector(
-        '[data-testid="btn-copy-html"]'
+        '[data-testid="btn-copy-html"]',
       ) as HTMLButtonElement;
       expect(copyBtn).toBeTruthy();
       copyBtn.click();
@@ -185,7 +231,7 @@ describe("TextMarkdownHtml 元件", () => {
       expect(mockClipboardWriteText).toHaveBeenCalledWith("<p>待複製文字</p>");
 
       const copyStatus = element.querySelector(
-        '[data-testid="copy-html-status"]'
+        '[data-testid="copy-html-status"]',
       ) as HTMLElement;
       expect(copyStatus).toBeTruthy();
       expect(copyStatus.textContent?.trim()).toContain("已複製");
@@ -195,7 +241,7 @@ describe("TextMarkdownHtml 元件", () => {
       mockClipboardWriteText.mockRejectedValue(new Error("Write error"));
 
       const copyBtn = element.querySelector(
-        '[data-testid="btn-copy-markdown"]'
+        '[data-testid="btn-copy-markdown"]',
       ) as HTMLButtonElement;
       copyBtn.click();
       fixture.detectChanges();
@@ -204,7 +250,7 @@ describe("TextMarkdownHtml 元件", () => {
       fixture.detectChanges();
 
       const copyStatus = element.querySelector(
-        '[data-testid="copy-markdown-status"]'
+        '[data-testid="copy-markdown-status"]',
       ) as HTMLElement;
       expect(copyStatus).toBeTruthy();
       expect(copyStatus.textContent?.trim()).toContain("複製失敗");
@@ -231,7 +277,7 @@ describe("TextMarkdownHtml 元件", () => {
 
       // 2. 點擊清除按鈕
       const clearBtn = element.querySelector(
-        '[data-testid="btn-clear"]'
+        '[data-testid="btn-clear"]',
       ) as HTMLButtonElement;
       expect(clearBtn).toBeTruthy();
       clearBtn.click();
@@ -249,14 +295,14 @@ describe("TextMarkdownHtml 元件", () => {
 
       // 輸出區塊此時應該不存在於 DOM 中
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       );
       expect(markdownOutput).toBeNull();
     });
 
     it("空狀態下點擊「清除」不應報出錯誤", () => {
       const clearBtn = element.querySelector(
-        '[data-testid="btn-clear"]'
+        '[data-testid="btn-clear"]',
       ) as HTMLButtonElement;
       expect(() => {
         clearBtn.click();
@@ -278,10 +324,10 @@ describe("TextMarkdownHtml 元件", () => {
 
     it("預設輸出格式應為 Markdown，且顯示 Markdown 區塊，隱藏 HTML 區塊", () => {
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       ) as HTMLElement;
       const htmlOutput = element.querySelector(
-        '[data-testid="html-output"]'
+        '[data-testid="html-output"]',
       ) as HTMLElement;
 
       expect(markdownOutput).toBeTruthy();
@@ -293,7 +339,7 @@ describe("TextMarkdownHtml 元件", () => {
 
     it("切換 Radio 到 HTML 時，應隱藏 Markdown 區塊，顯示 HTML 區塊", async () => {
       const radioHtml = element.querySelector(
-        'input[value="html"]'
+        'input[value="html"]',
       ) as HTMLInputElement;
       expect(radioHtml).toBeTruthy();
 
@@ -305,10 +351,10 @@ describe("TextMarkdownHtml 元件", () => {
       fixture.detectChanges();
 
       const markdownOutput = element.querySelector(
-        '[data-testid="markdown-output"]'
+        '[data-testid="markdown-output"]',
       ) as HTMLElement;
       const htmlOutput = element.querySelector(
-        '[data-testid="html-output"]'
+        '[data-testid="html-output"]',
       ) as HTMLElement;
 
       expect(markdownOutput.style.display).toBe("none");

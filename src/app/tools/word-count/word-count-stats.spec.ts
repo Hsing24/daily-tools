@@ -90,6 +90,23 @@ describe("computeTextStats", () => {
     expect(stats.words).toBe(0);
   });
 
+  it("普通 # 與 * 不應算成 emoji，keycap emoji 則應計入字數", () => {
+    expect(computeTextStats("# *").words).toBe(0);
+    expect(computeTextStats("#️⃣ *️⃣ 1️⃣").words).toBe(3);
+  });
+
+  it("長文統計應與重複段落的 grapheme / word contract 一致", () => {
+    const paragraph = "你好 world 👨‍👩‍👧‍👦e\u0301\r\n";
+    const single = computeTextStats(paragraph);
+    const repeated = computeTextStats(paragraph.repeat(1000));
+    expect(repeated.charactersWithSpaces).toBe(
+      single.charactersWithSpaces * 1000,
+    );
+    expect(repeated.charactersNoSpaces).toBe(single.charactersNoSpaces * 1000);
+    expect(repeated.words).toBe(single.words * 1000);
+    expect(repeated.lines).toBe(1001);
+  });
+
   it("CRLF 應保留行數語意", () => {
     const stats = computeTextStats("a\r\nb\r\n");
 

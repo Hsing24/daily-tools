@@ -134,5 +134,11 @@ export function isSupportedTraceFile(file: File): boolean {
 
 export function validateSvgOutput(svg: string): boolean {
   const trimmed = svg.trim();
-  return /^<svg(?:\s|>)/i.test(trimmed) && /<\/svg>$/i.test(trimmed);
+  if (!/^<svg(?:\s|>)/i.test(trimmed) || !/<\/svg>$/i.test(trimmed))
+    return false;
+  const document = new DOMParser().parseFromString(trimmed, "image/svg+xml");
+  return (
+    document.documentElement.localName === "svg" &&
+    document.getElementsByTagName("parsererror").length === 0
+  );
 }

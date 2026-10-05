@@ -35,6 +35,7 @@ import {
 export class PasswordGenerator {
   private readonly destroyRef = inject(DestroyRef);
   private successTimer: ReturnType<typeof setTimeout> | undefined;
+  private copyRevision = 0;
 
   // 使用者設定選項
   protected readonly length = signal(16);
@@ -128,22 +129,26 @@ export class PasswordGenerator {
   protected async copyToClipboard(): Promise<void> {
     const password = this.password();
     if (!password) return;
+    const revision = ++this.copyRevision;
     this.alertMessage.set("");
     this.successMessage.set("");
     this.clearSuccessTimer();
     try {
       await navigator.clipboard.writeText(password);
+      if (this.destroyRef.destroyed || revision !== this.copyRevision) return;
       this.successMessage.set("密碼已成功複製到剪貼簿！");
       this.successTimer = setTimeout(() => {
         this.successMessage.set("");
         this.successTimer = undefined;
       }, 3000);
     } catch {
+      if (this.destroyRef.destroyed || revision !== this.copyRevision) return;
       this.alertMessage.set("複製失敗，請手動選取複製。");
     }
   }
 
   private applyGeneration(options: PasswordOptions): void {
+    this.copyRevision += 1;
     this.alertMessage.set("");
     this.successMessage.set("");
     this.clearSuccessTimer();

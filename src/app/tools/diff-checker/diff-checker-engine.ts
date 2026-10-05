@@ -23,12 +23,24 @@ export interface DiffBlock {
 
 export const MAX_DIFF_LINES = 10_000;
 export const MAX_DIFF_CHARACTERS = 200_000;
+export const MAX_DIFF_TIME_MS = 150;
+
+export class DiffBudgetExceededError extends Error {
+  constructor() {
+    super("Diff computation exceeded its time budget");
+    this.name = "DiffBudgetExceededError";
+  }
+}
+
+const wordSegmenter =
+  typeof Intl.Segmenter === "function"
+    ? new Intl.Segmenter(undefined, { granularity: "word" })
+    : undefined;
 
 /** 使用 Unicode-aware word segmentation，保留空白與標點 token。 */
 export function tokenizeLine(line: string): string[] {
-  if (typeof Intl.Segmenter === "function") {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
-    return Array.from(segmenter.segment(line), (part) => part.segment);
+  if (wordSegmenter) {
+    return Array.from(wordSegmenter.segment(line), (part) => part.segment);
   }
 
   return line.match(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu) ?? [];
@@ -39,13 +51,19 @@ export function getLcs<T>(
   a: T[],
   b: T[],
   compareFn: (x: T, y: T) => boolean = (x, y) => x === y,
+  deadline = Date.now() + MAX_DIFF_TIME_MS,
 ): {
   type: "added" | "removed" | "equal";
   item: T;
   indexA?: number;
   indexB?: number;
 }[] {
-  const changes = diffArrays(a, b, { comparator: compareFn });
+  if (Date.now() > deadline) throw new DiffBudgetExceededError();
+  const changes = diffArrays(a, b, {
+    comparator: compareFn,
+    timeout: Math.max(0, deadline - Date.now()),
+  });
+  if (!changes) throw new DiffBudgetExceededError();
   const result: {
     type: "added" | "removed" | "equal";
     item: T;
@@ -74,8 +92,12 @@ export function getLcs<T>(
   return result;
 }
 
-function createAlignedLines(linesA: string[], linesB: string[]): AlignedLine[] {
-  const lcsResult = getLcs(linesA, linesB);
+function createAlignedLines(
+  linesA: string[],
+  linesB: string[],
+  deadline: number,
+): AlignedLine[] {
+  const lcsResult = getLcs(linesA, linesB, undefined, deadline);
   const aligned: AlignedLine[] = [];
   let leftLineNum = 1;
   let rightLineNum = 1;
@@ -113,7 +135,10 @@ function createAlignedLines(linesA: string[], linesB: string[]): AlignedLine[] {
   return aligned;
 }
 
-function pairChangedLines(lines: AlignedLine[]): AlignedLine[] {
+function pairChangedLines(
+  lines: AlignedLine[],
+  deadline: number,
+): AlignedLine[] {
   const merged: AlignedLine[] = [];
   let index = 0;
 
@@ -141,14 +166,15 @@ function pairChangedLines(lines: AlignedLine[]): AlignedLine[] {
     for (let pairIndex = 0; pairIndex < pairCount; pairIndex += 1) {
       const left = removed[pairIndex];
       const right = added[pairIndex];
+      const words = diffWordPair(left.leftText, right.rightText, deadline);
       merged.push({
         type: "modified",
         leftLineNum: left.leftLineNum,
         rightLineNum: right.rightLineNum,
         leftText: left.leftText,
         rightText: right.rightText,
-        leftWords: diffWords(left.leftText, right.rightText, "left"),
-        rightWords: diffWords(left.leftText, right.rightText, "right"),
+        leftWords: words.left,
+        rightWords: words.right,
       });
     }
     merged.push(...removed.slice(pairCount), ...added.slice(pairCount));
@@ -159,7 +185,11 @@ function pairChangedLines(lines: AlignedLine[]): AlignedLine[] {
 
 /** 比對完整行內容，保留空白行、縮排、trailing spaces 與換行差異。 */
 export function diffLines(linesA: string[], linesB: string[]): AlignedLine[] {
-  return pairChangedLines(createAlignedLines(linesA, linesB));
+  const deadline = Date.now() + MAX_DIFF_TIME_MS;
+  return pairChangedLines(
+    createAlignedLines(linesA, linesB, deadline),
+    deadline,
+  );
 }
 
 export function diffWords(
@@ -167,19 +197,35 @@ export function diffWords(
   rightText: string,
   side: "left" | "right",
 ): WordToken[] {
-  const changes = getLcs(tokenizeLine(leftText), tokenizeLine(rightText));
-  const result: WordToken[] = [];
+  return diffWordPair(leftText, rightText, Date.now() + MAX_DIFF_TIME_MS)[side];
+}
+
+function diffWordPair(
+  leftText: string,
+  rightText: string,
+  deadline: number,
+): { left: WordToken[]; right: WordToken[] } {
+  const changes = getLcs(
+    tokenizeLine(leftText),
+    tokenizeLine(rightText),
+    undefined,
+    deadline,
+  );
+  const left: WordToken[] = [];
+  const right: WordToken[] = [];
 
   for (const change of changes) {
-    if (change.type === "equal")
-      result.push({ type: "equal", text: change.item });
-    if (change.type === "removed" && side === "left")
-      result.push({ type: "removed", text: change.item });
-    if (change.type === "added" && side === "right")
-      result.push({ type: "added", text: change.item });
+    if (change.type === "equal") {
+      left.push({ type: "equal", text: change.item });
+      right.push({ type: "equal", text: change.item });
+    } else if (change.type === "removed") {
+      left.push({ type: "removed", text: change.item });
+    } else {
+      right.push({ type: "added", text: change.item });
+    }
   }
 
-  return result;
+  return { left, right };
 }
 
 export function findDiffBlocks(lines: AlignedLine[]): DiffBlock[] {

@@ -41,10 +41,7 @@ import {
 } from "./depth-estimator-core";
 
 function isDepthModelId(value: string): value is DepthModelId {
-  return (
-    value === "onnx-community/depth-anything-v2-small" ||
-    value === "onnx-community/depth-anything-v2-tiny"
-  );
+  return value === "onnx-community/depth-anything-v2-small";
 }
 
 function isDeviceType(value: string): value is DeviceType {
@@ -134,7 +131,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
   private lastMousePos = { x: 0, y: 0 };
   private animationFrameId: number | null = null;
   private renderTimerId: number | null = null;
-  private readonly downloadRevokeTimers = new Set<number>();
+  private readonly downloadRevokeTimers = new Map<number, string>();
 
   // 2.5D 視差滑鼠座標
   private parallaxOffset = { x: 0, y: 0 };
@@ -159,6 +156,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
   private glIndexBuffer: WebGLBuffer | null = null;
   private glTexture: WebGLTexture | null = null;
   private glIndexCount = 0;
+  private glVertexCount = 0;
+  private glGeometryDepth: Float32Array | null = null;
+  private glGeometryScale = 0;
+  private glTextureImage: HTMLImageElement | null = null;
 
   // Web Worker 實例
   private worker: Worker | null = null;
@@ -174,10 +175,6 @@ export class DepthEstimator implements OnInit, OnDestroy {
     {
       value: "onnx-community/depth-anything-v2-small",
       label: "Depth Anything V2 (Small)",
-    },
-    {
-      value: "onnx-community/depth-anything-v2-tiny",
-      label: "Depth Anything V2 (Tiny)",
     },
   ];
 
@@ -283,8 +280,9 @@ export class DepthEstimator implements OnInit, OnDestroy {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    for (const timerId of this.downloadRevokeTimers) {
+    for (const [timerId, href] of this.downloadRevokeTimers) {
       clearTimeout(timerId);
+      URL.revokeObjectURL(href);
     }
     this.downloadRevokeTimers.clear();
     if (this.worker) {
@@ -297,6 +295,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
   private invalidateActiveRequest(): number {
     this.nextRequestId = Math.max(this.nextRequestId, this.activeRequestId) + 1;
     this.activeRequestId = this.nextRequestId;
+    this.worker?.postMessage({
+      type: "cancel",
+      requestId: this.activeRequestId,
+    } satisfies WorkerRequest);
     return this.activeRequestId;
   }
 
@@ -409,6 +411,8 @@ export class DepthEstimator implements OnInit, OnDestroy {
     this.cancelPendingImageLoad();
     this.invalidateActiveRequest();
     this.clearRenderTimer();
+    this.isLoading.set(false);
+    this.progressInfo.set(null);
     const sample = generateSampleDepthMap(384, 384);
     const dataUrl = sample.imageCanvas.toDataURL("image/png");
 
@@ -495,7 +499,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item?.type.startsWith("image/") && !this.isSupportedImageMime(item.type)) {
+      if (
+        item?.type.startsWith("image/") &&
+        !this.isSupportedImageMime(item.type)
+      ) {
         this.showImageError("剪貼簿圖片必須是 PNG、JPG 或 WEBP");
         return;
       }
@@ -570,10 +577,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
 
         if (w > maxDimension || h > maxDimension) {
           if (w > h) {
-            h = Math.round((h * maxDimension) / w);
+            h = Math.max(1, Math.round((h * maxDimension) / w));
             w = maxDimension;
           } else {
-            w = Math.round((w * maxDimension) / h);
+            w = Math.max(1, Math.round((w * maxDimension) / h));
             h = maxDimension;
           }
         }
@@ -677,6 +684,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     } else {
       // 若無 Worker 則提示
       this.isLoading.set(false);
+      this.progressInfo.set(null);
       this.alertState.set({
         type: "error",
         message: "瀏覽器不支援 Web Worker，無法啟動背景推論",
@@ -943,14 +951,16 @@ export class DepthEstimator implements OnInit, OnDestroy {
     }
     this.gl = gl;
 
-    canvas.width = Math.max(
+    const displayWidth = Math.max(
       1,
       Math.round((canvas.clientWidth || 1) * (window.devicePixelRatio || 1)),
     );
-    canvas.height = Math.max(
+    const displayHeight = Math.max(
       1,
       Math.round((canvas.clientHeight || 1) * (window.devicePixelRatio || 1)),
     );
+    if (canvas.width !== displayWidth) canvas.width = displayWidth;
+    if (canvas.height !== displayHeight) canvas.height = displayHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
 
     gl.enable(gl.DEPTH_TEST);
@@ -1026,69 +1036,86 @@ export class DepthEstimator implements OnInit, OnDestroy {
     gl.useProgram(this.glProgram);
 
     // 建置網格頂點；Uint16 index 不可超過 65,535 個頂點。
-    const { step, cols, rows } = getSafePreviewGrid(res.width, res.height);
+    const { cols, rows } = getSafePreviewGrid(res.width, res.height);
     const aspect = res.width / res.height;
     const scaleZ = (this.depthScale3D() / 100) * 0.8;
     const processedDepth = this.getProcessedDepth(res.width, res.height);
 
-    const positions: number[] = [];
-    const texCoords: number[] = [];
-    const indices: number[] = [];
+    if (
+      this.glGeometryDepth !== processedDepth ||
+      this.glGeometryScale !== scaleZ
+    ) {
+      const positions = new Float32Array(cols * rows * 3);
+      const texCoords = new Float32Array(cols * rows * 2);
+      const indices = new Uint16Array(Math.max(0, (cols - 1) * (rows - 1) * 6));
+      let indexOffset = 0;
 
-    for (let r = 0; r < rows; r++) {
-      const yPixel = Math.min(r * step, res.height - 1);
-      const v = 1.0 - yPixel / (res.height - 1);
-      const yWorld = (v - 0.5) * 2.0;
+      for (let r = 0; r < rows; r++) {
+        const yPixel =
+          rows > 1 ? Math.round((r * (res.height - 1)) / (rows - 1)) : 0;
+        const v = res.height > 1 ? 1.0 - yPixel / (res.height - 1) : 1;
+        const yWorld = (v - 0.5) * 2.0;
 
-      for (let c = 0; c < cols; c++) {
-        const xPixel = Math.min(c * step, res.width - 1);
-        const u = xPixel / (res.width - 1);
-        const xWorld = (u - 0.5) * 2.0 * aspect;
+        for (let c = 0; c < cols; c++) {
+          const xPixel =
+            cols > 1 ? Math.round((c * (res.width - 1)) / (cols - 1)) : 0;
+          const u = res.width > 1 ? xPixel / (res.width - 1) : 0;
+          const xWorld = (u - 0.5) * 2.0 * aspect;
 
-        const idx = yPixel * res.width + xPixel;
-        const d = processedDepth[idx] ?? 0;
-        const zWorld = (d - 0.5) * scaleZ;
+          const idx = yPixel * res.width + xPixel;
+          const d = processedDepth[idx] ?? 0;
+          const zWorld = d * scaleZ;
 
-        positions.push(xWorld, yWorld, zWorld);
-        texCoords.push(u, 1.0 - v);
+          const vertex = r * cols + c;
+          positions[vertex * 3] = xWorld;
+          positions[vertex * 3 + 1] = yWorld;
+          positions[vertex * 3 + 2] = zWorld;
+          texCoords[vertex * 2] = u;
+          texCoords[vertex * 2 + 1] = 1.0 - v;
+        }
       }
-    }
 
-    for (let r = 0; r < rows - 1; r++) {
-      for (let c = 0; c < cols - 1; c++) {
-        const p1 = r * cols + c;
-        const p2 = r * cols + (c + 1);
-        const p3 = (r + 1) * cols + (c + 1);
-        const p4 = (r + 1) * cols + c;
+      for (let r = 0; r < rows - 1; r++) {
+        for (let c = 0; c < cols - 1; c++) {
+          const p1 = r * cols + c;
+          const p2 = r * cols + (c + 1);
+          const p3 = (r + 1) * cols + (c + 1);
+          const p4 = (r + 1) * cols + c;
 
-        indices.push(p1, p2, p3);
-        indices.push(p1, p3, p4);
+          indices[indexOffset++] = p1;
+          indices[indexOffset++] = p3;
+          indices[indexOffset++] = p2;
+          indices[indexOffset++] = p1;
+          indices[indexOffset++] = p4;
+          indices[indexOffset++] = p3;
+        }
       }
-    }
 
-    // 更新頂點 Buffer
-    if (!this.glPositionBuffer) this.glPositionBuffer = gl.createBuffer();
-    if (!this.glPositionBuffer) return;
+      // 更新頂點 Buffer
+      if (!this.glPositionBuffer) this.glPositionBuffer = gl.createBuffer();
+      if (!this.glPositionBuffer) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.glPositionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+
+      if (!this.glTexCoordBuffer) this.glTexCoordBuffer = gl.createBuffer();
+      if (!this.glTexCoordBuffer) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.glTexCoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.DYNAMIC_DRAW);
+
+      if (!this.glIndexBuffer) this.glIndexBuffer = gl.createBuffer();
+      if (!this.glIndexBuffer) return;
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.glIndexBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+      this.glIndexCount = indices.length;
+      this.glVertexCount = cols * rows;
+      this.glGeometryDepth = processedDepth;
+      this.glGeometryScale = scaleZ;
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.glPositionBuffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array(positions),
-      gl.DYNAMIC_DRAW,
-    );
-
     const aPosLoc = gl.getAttribLocation(this.glProgram, "aPosition");
     gl.enableVertexAttribArray(aPosLoc);
     gl.vertexAttribPointer(aPosLoc, 3, gl.FLOAT, false, 0, 0);
-
-    if (!this.glTexCoordBuffer) this.glTexCoordBuffer = gl.createBuffer();
-    if (!this.glTexCoordBuffer) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.glTexCoordBuffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array(texCoords),
-      gl.DYNAMIC_DRAW,
-    );
-
     const aTexLoc = gl.getAttribLocation(this.glProgram, "aTexCoord");
     gl.enableVertexAttribArray(aTexLoc);
     gl.vertexAttribPointer(aTexLoc, 2, gl.FLOAT, false, 0, 0);
@@ -1101,7 +1128,10 @@ export class DepthEstimator implements OnInit, OnDestroy {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    if (this.glTextureImage !== img) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      this.glTextureImage = img;
+    }
 
     // MVP 矩陣運算
     const mvpMatrix = this.computeMVPMatrix(canvas.width / canvas.height);
@@ -1114,17 +1144,11 @@ export class DepthEstimator implements OnInit, OnDestroy {
     // 繪製網格或點雲
     if (this.isPointCloud()) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-      gl.drawArrays(gl.POINTS, 0, positions.length / 3);
+      gl.drawArrays(gl.POINTS, 0, this.glVertexCount);
     } else {
       if (!this.glIndexBuffer) this.glIndexBuffer = gl.createBuffer();
       if (!this.glIndexBuffer) return;
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.glIndexBuffer);
-      gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(indices),
-        gl.DYNAMIC_DRAW,
-      );
-      this.glIndexCount = indices.length;
       gl.drawElements(gl.TRIANGLES, this.glIndexCount, gl.UNSIGNED_SHORT, 0);
     }
   }
@@ -1143,6 +1167,9 @@ export class DepthEstimator implements OnInit, OnDestroy {
     this.glTexture = null;
     this.glProgram = null;
     this.glIndexCount = 0;
+    this.glVertexCount = 0;
+    this.glGeometryDepth = null;
+    this.glTextureImage = null;
     this.gl = null;
   }
 
@@ -1358,7 +1385,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
         URL.revokeObjectURL(href);
         this.downloadRevokeTimers.delete(timerId);
       }, 1_000);
-      this.downloadRevokeTimers.add(timerId);
+      this.downloadRevokeTimers.set(timerId, href);
     }
   }
 

@@ -40,6 +40,32 @@ describe("DiffChecker 元件", () => {
     expect(component).toBeTruthy();
   });
 
+  it("每個差異區塊應只建立一個 navigation ID", () => {
+    component["alignedLines"].set([
+      { type: "modified", leftText: "old1", rightText: "new1" },
+      { type: "modified", leftText: "old2", rightText: "new2" },
+      { type: "equal", leftText: "same", rightText: "same" },
+      { type: "added", leftText: "", rightText: "new3" },
+    ]);
+    expect(component["getBlockIdForLine"](0)).toBe("diff-block-0");
+    expect(component["getBlockIdForLine"](1)).toBeNull();
+    expect(component["getBlockIdForLine"](3)).toBe("diff-block-1");
+  });
+
+  it("元件銷毀後剪貼簿回傳不得再更新 state", async () => {
+    let resolveClipboard!: (value: string) => void;
+    mockClipboardReadText.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveClipboard = resolve;
+      }),
+    );
+    const pending = component["pasteText"]("A");
+    fixture.destroy();
+    resolveClipboard("過期剪貼簿");
+    await pending;
+    expect(component["textA"]()).toBe("");
+  });
+
   it("初始狀態下輸入框為空，且不顯示比對結果區", () => {
     const textareas = element.querySelectorAll("textarea");
     expect(textareas.length).toBe(2);

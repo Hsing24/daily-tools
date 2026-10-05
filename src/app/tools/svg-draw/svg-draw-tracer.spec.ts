@@ -101,5 +101,7 @@ describe("validateSvgOutput", () => {
   it("拒絕非 SVG 或截斷輸出", () => {
     expect(validateSvgOutput("<div>not svg</div>")).toBe(false);
     expect(validateSvgOutput("<svg><path /></svg")).toBe(false);
+    expect(validateSvgOutput("<svg><path></svg>")).toBe(false);
+    expect(validateSvgOutput("<svg></svg><svg></svg>")).toBe(false);
   });
 });

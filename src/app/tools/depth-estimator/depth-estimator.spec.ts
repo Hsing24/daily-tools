@@ -52,6 +52,14 @@ describe("DepthEstimator 元件", () => {
       createShader: vi.fn().mockReturnValue({}),
       shaderSource: vi.fn(),
       compileShader: vi.fn(),
+      getShaderParameter: vi.fn().mockReturnValue(true),
+      getProgramParameter: vi.fn().mockReturnValue(true),
+      deleteShader: vi.fn(),
+      deleteBuffer: vi.fn(),
+      deleteTexture: vi.fn(),
+      deleteProgram: vi.fn(),
+      COMPILE_STATUS: 35713,
+      LINK_STATUS: 35714,
       createProgram: vi.fn().mockReturnValue({}),
       attachShader: vi.fn(),
       linkProgram: vi.fn(),
@@ -115,7 +123,7 @@ describe("DepthEstimator 元件", () => {
     fixture = TestBed.createComponent(DepthEstimator);
     component = fixture.componentInstance;
     element = fixture.nativeElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it("應顯示圖片拖放上傳區", () => {
@@ -168,6 +176,55 @@ describe("DepthEstimator 元件", () => {
     expect(component.isLoading()).toBe(false);
     expect(component.progressInfo()).toBeNull();
     expect(component["activeRequestId"]).toBeGreaterThan(7);
+  });
+
+  it("camera rotation reuses mesh buffers and source texture", async () => {
+    component.inputImageUrl.set("data:image/png;base64,mock");
+    component.inputImageElement.set(new Image());
+    component.imageDimensions.set({ width: 640, height: 640 });
+    component.depthResult.set({
+      depthArray: new Float32Array(640 * 640).fill(0.5),
+      width: 640,
+      height: 640,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 1,
+      device: "wasm",
+    });
+    component.previewMode.set("mesh3d");
+    await fixture.whenStable();
+    component["renderCurrentView"]();
+    const gl = component["gl"]!;
+    expect(gl.bufferData).toHaveBeenCalledTimes(3);
+    expect(gl.texImage2D).toHaveBeenCalledOnce();
+    component["on3DMouseDown"](
+      new MouseEvent("mousedown", { clientX: 0, clientY: 0 }),
+    );
+    component["on3DMouseMove"](
+      new MouseEvent("mousemove", { clientX: 10, clientY: 10 }),
+    );
+    expect(gl.bufferData).toHaveBeenCalledTimes(3);
+    expect(gl.texImage2D).toHaveBeenCalledOnce();
+    component["onBrightnessChange"](10);
+    component["renderCurrentView"]();
+    expect(gl.bufferData).toHaveBeenCalledTimes(6);
+    expect(gl.texImage2D).toHaveBeenCalledOnce();
+  });
+
+  it("只提供已確認可公開載入的 Small 模型", () => {
+    expect(component.modelOptions.map((option) => option.value)).toEqual([
+      "onnx-community/depth-anything-v2-small",
+    ]);
+    const estimate = vi.spyOn(
+      component as unknown as { startDepthEstimation(): void },
+      "startDepthEstimation",
+    );
+    component.inputImageElement.set(new Image());
+    component["onModelChange"]("onnx-community/depth-anything-v2-tiny");
+    expect(component.selectedModel()).toBe(
+      "onnx-community/depth-anything-v2-small",
+    );
+    expect(estimate).not.toHaveBeenCalled();
   });
 
   it("切換預覽模式應更新 previewMode Signal", () => {

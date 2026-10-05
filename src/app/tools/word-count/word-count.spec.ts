@@ -35,6 +35,34 @@ describe("WordCount 元件", () => {
     expect(component).toBeTruthy();
   });
 
+  it("剪貼簿較晚回傳時不得覆寫新輸入或清除結果", async () => {
+    let resolveClipboard!: (value: string) => void;
+    mockClipboardReadText.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveClipboard = resolve;
+      }),
+    );
+    const pending = component["paste"]();
+    component["onInput"]("最新文字");
+    resolveClipboard("過期剪貼簿");
+    await pending;
+    expect(component["text"]()).toBe("最新文字");
+  });
+
+  it("元件銷毀後剪貼簿回傳不得再更新 state", async () => {
+    let resolveClipboard!: (value: string) => void;
+    mockClipboardReadText.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveClipboard = resolve;
+      }),
+    );
+    const pending = component["paste"]();
+    fixture.destroy();
+    resolveClipboard("過期剪貼簿");
+    await pending;
+    expect(component["text"]()).toBe("");
+  });
+
   describe("初始與輸入即時統計 (T006)", () => {
     it("初始狀態下四項指標應顯示為 0，且輸入框為空", () => {
       const textarea = element.querySelector("textarea") as HTMLTextAreaElement;

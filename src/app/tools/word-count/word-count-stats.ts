@@ -16,33 +16,42 @@ interface WordSegment {
 
 const CJK_PATTERN =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
-const EMOJI_PATTERN = /\p{Emoji}/u;
+// Emoji includes ordinary # and *; only count pictographs, flags and keycaps.
+const EMOJI_PATTERN =
+  /[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3]/u;
+const graphemeSegmenter =
+  typeof Intl.Segmenter === "function"
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : undefined;
+const wordSegmenter =
+  typeof Intl.Segmenter === "function"
+    ? new Intl.Segmenter(undefined, { granularity: "word" })
+    : undefined;
 
-function segmentGraphemes(text: string): string[] {
-  if (typeof Intl.Segmenter === "function") {
-    const segmenter = new Intl.Segmenter(undefined, {
-      granularity: "grapheme",
-    });
-    return Array.from(segmenter.segment(text), (part) => part.segment);
+function* segmentGraphemes(text: string): Iterable<string> {
+  if (graphemeSegmenter) {
+    for (const part of graphemeSegmenter.segment(text)) yield part.segment;
+  } else {
+    yield* text;
   }
-  return Array.from(text);
 }
 
-function segmentWords(text: string): WordSegment[] {
-  if (typeof Intl.Segmenter === "function") {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
-    return Array.from(segmenter.segment(text), (part) => ({
-      segment: part.segment,
-      isWordLike: part.isWordLike ?? false,
-    }));
+function* segmentWords(text: string): Iterable<WordSegment> {
+  if (wordSegmenter) {
+    for (const part of wordSegmenter.segment(text)) {
+      yield { segment: part.segment, isWordLike: part.isWordLike ?? false };
+    }
+    return;
   }
 
-  return (text.match(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu) ?? []).map(
-    (segment) => ({
+  for (const [segment] of text.matchAll(
+    /[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu,
+  )) {
+    yield {
       segment,
       isWordLike: /[\p{L}\p{N}]/u.test(segment),
-    }),
-  );
+    };
+  }
 }
 
 function isWhitespace(grapheme: string): boolean {
@@ -52,19 +61,23 @@ function isWhitespace(grapheme: string): boolean {
 function countWords(text: string): number {
   let count = 0;
   for (const word of segmentWords(text)) {
-    const graphemes = segmentGraphemes(word.segment);
     if (word.isWordLike) {
+      if (!CJK_PATTERN.test(word.segment)) {
+        count += 1;
+        continue;
+      }
       let cjkCount = 0;
       let hasOtherWordContent = false;
-      for (const grapheme of graphemes) {
+      for (const grapheme of segmentGraphemes(word.segment)) {
         if (CJK_PATTERN.test(grapheme)) cjkCount += 1;
         else if (!isWhitespace(grapheme)) hasOtherWordContent = true;
       }
       count += cjkCount + (hasOtherWordContent ? 1 : 0);
     } else {
-      count += graphemes.filter((grapheme) =>
-        EMOJI_PATTERN.test(grapheme),
-      ).length;
+      if (!EMOJI_PATTERN.test(word.segment)) continue;
+      for (const grapheme of segmentGraphemes(word.segment)) {
+        if (EMOJI_PATTERN.test(grapheme)) count += 1;
+      }
     }
   }
   return count;
@@ -80,12 +93,25 @@ export function computeTextStats(text: string): TextStats {
     };
   }
 
-  const graphemes = segmentGraphemes(text);
+  let charactersWithSpaces = 0;
+  let charactersNoSpaces = 0;
+  let lines = 1;
+  let previousGrapheme = "";
+  for (const grapheme of segmentGraphemes(text)) {
+    charactersWithSpaces += 1;
+    if (!isWhitespace(grapheme)) charactersNoSpaces += 1;
+    if (
+      grapheme === "\r\n" ||
+      grapheme === "\r" ||
+      (grapheme === "\n" && previousGrapheme !== "\r")
+    )
+      lines += 1;
+    previousGrapheme = grapheme;
+  }
   return {
-    charactersWithSpaces: graphemes.length,
-    charactersNoSpaces: graphemes.filter((grapheme) => !isWhitespace(grapheme))
-      .length,
+    charactersWithSpaces,
+    charactersNoSpaces,
     words: countWords(text),
-    lines: text.split(/\r\n|\r|\n/).length,
+    lines,
   };
 }

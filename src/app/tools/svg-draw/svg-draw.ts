@@ -228,7 +228,8 @@ export class SvgDraw implements OnDestroy {
   }
 
   protected onPresetChange(value: string): void {
-    if (!isTracePresetName(value)) return;
+    if (!isTracePresetName(value) || value === this.tracePreset()) return;
+    if (this.status() === "tracing") this.cancelTrace();
     this.tracePreset.set(value);
     if (this.status() === "done" || this.status() === "error")
       this.status.set("ready");
@@ -257,10 +258,14 @@ export class SvgDraw implements OnDestroy {
       const imageData = await this.getImageData(file);
       if (!this.isCurrentTrace(generation)) return;
 
-      const buffer = imageData.data.slice().buffer as ArrayBuffer;
-      const worker = new Worker(new URL("./svg-draw.worker", import.meta.url), {
-        type: "module",
-      });
+      // getImageData 已配置獨立 buffer，直接 transfer 避免複製整張 RGBA。
+      const buffer = imageData.data.buffer as ArrayBuffer;
+      const worker = new Worker(
+        new URL("./svg-draw.worker.ts", import.meta.url),
+        {
+          type: "module",
+        },
+      );
       this.worker = worker;
 
       worker.onmessage = (event: MessageEvent<TraceWorkerOutput>) => {

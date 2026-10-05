@@ -87,38 +87,6 @@ function validateOptions(
 }
 
 /**
- * 調整對比度與亮度
- */
-function adjustColor(
-  r: number,
-  g: number,
-  b: number,
-  contrast: number,
-  brightness: number,
-): [number, number, number] {
-  // 1. 調整亮度
-  let nr = r + brightness;
-  let ng = g + brightness;
-  let nb = b + brightness;
-
-  // 2. 調整對比度
-  // 對比度公式: factor = (259 * (C + 255)) / (255 * (259 - C))
-  if (contrast !== 0) {
-    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-    nr = factor * (nr - 128) + 128;
-    ng = factor * (ng - 128) + 128;
-    nb = factor * (nb - 128) + 128;
-  }
-
-  // 限制在 0-255 區間
-  return [
-    Math.min(255, Math.max(0, nr)),
-    Math.min(255, Math.max(0, ng)),
-    Math.min(255, Math.max(0, nb)),
-  ];
-}
-
-/**
  * 將 RGB 轉為灰階亮度 (0-255)
  */
 function getLuminance(r: number, g: number, b: number): number {
@@ -176,37 +144,43 @@ export function convertImageToAscii(
 
   const totalPixels = targetW * targetH;
   if (data.length < totalPixels * 4) throw new Error("圖片像素資料尺寸無效");
-  const rValues = new Float32Array(totalPixels);
-  const gValues = new Float32Array(totalPixels);
-  const bValues = new Float32Array(totalPixels);
-
   const charSetLen = charSet.length;
-  const asciiChars: string[] = [];
-  const asciiColors: string[] = [];
-
+  const asciiChars: string[] = new Array(totalPixels);
+  const asciiColors: string[] | undefined =
+    options.colorMode === "original" ? new Array(totalPixels) : undefined;
+  // 只有 error diffusion 需要暫存亮度；RGB 與原色輸出在同一輪處理。
+  const lums =
+    options.dither && charSetLen > 1
+      ? new Float32Array(totalPixels)
+      : undefined;
+  const factor =
+    (259 * (options.contrast + 255)) / (255 * (259 - options.contrast));
   const background = DEFAULT_ALPHA_BACKGROUND;
-  const getAdjustedRgb = (pixelIndex: number): [number, number, number] => {
-    const idx = pixelIndex * 4;
-    const alpha = data[idx + 3] / 255;
-    const r = data[idx] * alpha + background[0] * (1 - alpha);
-    const g = data[idx + 1] * alpha + background[1] * (1 - alpha);
-    const b = data[idx + 2] * alpha + background[2] * (1 - alpha);
-    return adjustColor(r, g, b, options.contrast, options.brightness);
-  };
+  const adjustChannel = (value: number): number =>
+    Math.fround(
+      Math.min(
+        255,
+        Math.max(0, factor * (value + options.brightness - 128) + 128),
+      ),
+    );
 
   for (let i = 0; i < totalPixels; i++) {
-    const [ar, ag, ab] = getAdjustedRgb(i);
-    rValues[i] = ar;
-    gValues[i] = ag;
-    bValues[i] = ab;
+    const idx = i * 4;
+    const alpha = data[idx + 3] / 255;
+    const r = adjustChannel(data[idx] * alpha + background[0] * (1 - alpha));
+    const g = adjustChannel(
+      data[idx + 1] * alpha + background[1] * (1 - alpha),
+    );
+    const b = adjustChannel(
+      data[idx + 2] * alpha + background[2] * (1 - alpha),
+    );
+    const lum = getLuminance(r, g, b);
+    if (lums) lums[i] = lum;
+    else asciiChars[i] = charSet[Math.round((lum / 255) * (charSetLen - 1))];
+    if (asciiColors) asciiColors[i] = rgbToHex(r, g, b);
   }
 
-  if (options.dither) {
-    const lums = new Float32Array(totalPixels);
-    for (let i = 0; i < totalPixels; i++) {
-      lums[i] = getLuminance(rValues[i], gValues[i], bValues[i]);
-    }
-
+  if (lums) {
     for (let y = 0; y < targetH; y++) {
       for (let x = 0; x < targetW; x++) {
         const idx = y * targetW + x;
@@ -240,26 +214,7 @@ export function convertImageToAscii(
           lums[idx + targetW + 1] += err * (1 / 16);
         }
 
-        asciiChars.push(charSet[charIdx]);
-        if (options.colorMode === "original") {
-          asciiColors.push(rgbToHex(rValues[idx], gValues[idx], bValues[idx]));
-        }
-      }
-    }
-  } else {
-    for (let i = 0; i < totalPixels; i++) {
-      const lum = getLuminance(rValues[i], gValues[i], bValues[i]);
-      const clampedLum = Math.min(255, Math.max(0, lum));
-      const charIdx =
-        charSetLen === 1
-          ? 0
-          : Math.min(
-              charSetLen - 1,
-              Math.round((clampedLum / 255) * (charSetLen - 1)),
-            );
-      asciiChars.push(charSet[charIdx]);
-      if (options.colorMode === "original") {
-        asciiColors.push(rgbToHex(rValues[i], gValues[i], bValues[i]));
+        asciiChars[idx] = charSet[charIdx];
       }
     }
   }
@@ -268,7 +223,7 @@ export function convertImageToAscii(
     width: targetW,
     height: targetH,
     chars: asciiChars,
-    colors: options.colorMode === "original" ? asciiColors : undefined,
+    colors: asciiColors,
   };
 }
 
@@ -404,10 +359,12 @@ export function renderAscii(
     }
   }
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
+  const context = canvas.getContext('2d');
+  if (!context) {
     throw new Error('Canvas 2D context is unavailable');
   }
+  // 明確固定非 null 型別，讓巢狀 draw() 在 strict TypeScript 下可編譯。
+  const ctx: CanvasRenderingContext2D = context;
 
   // 設定 Canvas 解析度（防鋸齒、高 DPI）
   const dpr = window.devicePixelRatio || 1;

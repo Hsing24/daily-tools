@@ -23,7 +23,7 @@
             >base：</label
           >
           <span class="f:12 color:var(--ink-muted)"
-            >列數: {{ textA() ? textA().split('\n').length : 0 }}</span
+            >列數: {{ leftLineNumbers().length }}</span
           >
         </div>
 
@@ -97,7 +97,7 @@
             >compare：</label
           >
           <span class="f:12 color:var(--ink-muted)"
-            >列數: {{ textB() ? textB().split('\n').length : 0 }}</span
+            >列數: {{ rightLineNumbers().length }}</span
           >
         </div>
 

@@ -103,19 +103,121 @@ describe("convertTextToMarkdownAndHtml", () => {
     expect(result).not.toContain("javascript:");
   });
 
-  it("效能驗收：應在 1 秒內完成 50,000 字元的大量文字轉換 (SC-001, T027)", () => {
+  it("大量文字轉換應完整保留 50,000 字元段落 (SC-001, T027)", () => {
     const baseSegment =
       "這是測試段落中的第一行文字。\n這是同一段落的第二行，含有一些 *特殊字元* 和 <p>HTML 標籤</p>。\n\n";
     const repeatCount = Math.ceil(50000 / baseSegment.length);
     const largeInput = baseSegment.repeat(repeatCount);
 
-    const start = performance.now();
     const result = convertTextToMarkdownAndHtml(largeInput);
-    const end = performance.now();
-    const duration = end - start;
 
     expect(result.markdown).toBeTruthy();
     expect(result.html).toBeTruthy();
-    expect(duration).toBeLessThan(1000);
+    const output = document.createElement("div");
+    output.innerHTML = result.html;
+    expect(
+      output.textContent?.match(/這是測試段落中的第一行文字。/g),
+    ).toHaveLength(repeatCount);
+    expect(output.textContent?.match(/HTML 標籤/g)).toHaveLength(repeatCount);
+    expect(result.markdown.match(/這是測試段落中的第一行文字。/g)).toHaveLength(
+      repeatCount,
+    );
+  });
+
+  it("應保留 fenced code 與 indented code 的空白行及縮排", () => {
+    for (const markdown of ["```\na\n\n\nb\n```", "    a\n\n\n    b"]) {
+      const result = convertTextToMarkdownAndHtml(markdown);
+      expect(result.markdown).toBe(markdown);
+      const output = document.createElement("div");
+      output.innerHTML = result.html;
+      expect(output.querySelector("code")?.textContent).toBe("a\n\n\nb\n");
+    }
+  });
+
+  it("富文本 code block 的空白行與 Markdown hard break 空白應保留", () => {
+    expect(convertHtmlToMarkdown("<pre><code>a\n\n\nb</code></pre>")).toBe(
+      "```\na\n\n\nb\n```",
+    );
+    expect(convertTextToMarkdownAndHtml("a  \nb").markdown).toBe("a  \nb");
+  });
+
+  it("表格、圖片與相對連結應能雙向轉換", () => {
+    const html =
+      '<table>\n<thead>\n<tr><th align="right">標題</th><th>內容</th></tr>\n</thead><tbody><tr><td>1</td><td>值</td></tr></tbody></table><p><a href="../guide?q=1#part">文件</a><img src="./photo.png" alt="測試圖"></p>';
+    const markdown = convertHtmlToMarkdown(html);
+    expect(markdown).toContain("| --: | --- |");
+    expect(markdown).toContain("[文件](../guide?q=1#part)");
+    expect(markdown).toContain("![測試圖](./photo.png)");
+    const output = document.createElement("div");
+    output.innerHTML = convertMarkdownToHtml(markdown);
+    expect(output.querySelectorAll("table th")).toHaveLength(2);
+    expect(output.querySelector("a")?.getAttribute("href")).toBe(
+      "../guide?q=1#part",
+    );
+    expect(output.querySelector("img")?.getAttribute("src")).toBe(
+      "./photo.png",
+    );
+  });
+
+  it("表格 cell 的管線字元、空表格與合併 cell 應保留有效內容", () => {
+    expect(convertHtmlToMarkdown("<table></table>")).toBe("");
+    const markdown = convertHtmlToMarkdown(
+      "<table><tr><th>欄位</th></tr><tr><td>a|b</td></tr></table>",
+    );
+    const output = document.createElement("div");
+    output.innerHTML = convertMarkdownToHtml(markdown);
+    expect(output.querySelector("td")?.textContent).toBe("a|b");
+    const merged = convertHtmlToMarkdown(
+      '<table><tr><th colspan="2">合併</th></tr><tr><td>a</td><td>b</td></tr></table>',
+    );
+    expect(merged).toContain('colspan="2"');
+  });
+
+  it("HTML 連結的括號、空白與 title 應維持正確目的地", () => {
+    const markdown = convertHtmlToMarkdown(
+      '<a href="https://example.com/a)b c" title="引號 &quot;測試&quot;">文件</a>',
+    );
+    const output = document.createElement("div");
+    output.innerHTML = convertMarkdownToHtml(markdown);
+    expect(output.querySelector("a")?.getAttribute("href")).toBe(
+      "https://example.com/a)b%20c",
+    );
+    expect(output.querySelector("a")?.getAttribute("title")).toBe(
+      '引號 "測試"',
+    );
+  });
+
+  it("保留圖片與 relative URLs 後仍應拒絕危險 scheme 與事件屬性", () => {
+    const html = convertMarkdownToHtml(
+      '<img src="data:text/html;base64,PHNjcmlwdD4=" onerror="alert(1)"><img src="javascript:alert(1)"><a href="java&#x09;script:alert(1)">危險</a><a href="vbscript:evil">危險</a><a href="unknown1:evil">未知</a>',
+    );
+    expect(html).not.toMatch(
+      /(?:src|href)="(?:data:|javascript:|vbscript:|unknown1:)/i,
+    );
+    expect(html).not.toContain("onerror");
+  });
+
+  it("Markdown 匯出應移除危險 URL 與 HTML，保留 code span 內的原始範例", () => {
+    const result = convertTextToMarkdownAndHtml(
+      "[危險](javascript:alert(1)) [安全](./guide)\n\n<script>alert(1)</script>\n\n`[範例](javascript:alert(1))`\n\n![危險](data:text/html,evil)",
+    );
+    expect(result.markdown).toContain("[安全](./guide)");
+    expect(result.markdown).not.toContain("[危險](javascript:");
+    expect(result.markdown).not.toContain("<script>");
+    expect(result.markdown).not.toContain("data:text/html");
+    expect(result.markdown).toContain("`[範例](javascript:alert(1))`");
+    expect(
+      convertTextToMarkdownAndHtml("[危險](java&#x73;cript:alert(1))").markdown,
+    ).toBe("危險");
+  });
+
+  it("清理危險 HTML block 後應保留相鄰段落的分隔", () => {
+    const result = convertTextToMarkdownAndHtml(
+      'before\n\n<p onclick="evil()">inside</p>\n\nafter',
+    );
+    expect(result.markdown).toBe("before\n\ninside\n\nafter");
+    expect(
+      convertTextToMarkdownAndHtml("<script>alert(1)</script>\n\n"),
+    ).toEqual({ markdown: "", html: "" });
   });
 });

@@ -1,6 +1,4 @@
-export type DepthModelId =
-  | "onnx-community/depth-anything-v2-small"
-  | "onnx-community/depth-anything-v2-tiny";
+export type DepthModelId = "onnx-community/depth-anything-v2-small";
 
 export type ColorMapType =
   | "grayscale"
@@ -50,7 +48,13 @@ export interface WorkerEstimateRequest {
   readonly imageBitmap: ImageBitmap;
 }
 
-export type WorkerRequest = WorkerInitRequest | WorkerEstimateRequest;
+export interface WorkerCancelRequest {
+  readonly type: "cancel";
+  readonly requestId: number;
+}
+
+export type WorkerRequest =
+  WorkerInitRequest | WorkerEstimateRequest | WorkerCancelRequest;
 
 export interface WorkerProgressResponse {
   readonly type: "progress";

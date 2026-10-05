@@ -38,6 +38,33 @@ function assertDepthDimensions(
   }
 }
 
+/** 驗證模型輸出後正規化；不讓 NaN 或截短 tensor 變成可下載的深度圖。 */
+export function normalizeModelDepth(
+  values: ArrayLike<number>,
+  width: number,
+  height: number,
+): { depthArray: Float32Array; minDepth: number; maxDepth: number } {
+  assertPositiveDimensions(width, height, "模型深度輸出");
+  const total = width * height;
+  if (values.length !== total) throw new Error("模型深度輸出長度與尺寸不符");
+  let minDepth = Infinity;
+  let maxDepth = -Infinity;
+  for (let i = 0; i < total; i++) {
+    const value = Number(values[i]);
+    if (!Number.isFinite(value)) throw new Error("模型深度輸出含有無效數值");
+    minDepth = Math.min(minDepth, value);
+    maxDepth = Math.max(maxDepth, value);
+  }
+  const depthArray = new Float32Array(total);
+  const range = maxDepth - minDepth;
+  if (range > 0) {
+    for (let i = 0; i < total; i++) {
+      depthArray[i] = (Number(values[i]) - minDepth) / range;
+    }
+  }
+  return { depthArray, minDepth, maxDepth };
+}
+
 function clampDepth(value: number | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(1, value));
@@ -96,13 +123,13 @@ export function getSafePreviewGrid(
   let step = Number.isFinite(initialStep)
     ? Math.max(1, Math.floor(initialStep))
     : 2;
-  let cols = Math.floor((width - 1) / step) + 1;
-  let rows = Math.floor((height - 1) / step) + 1;
+  let cols = Math.max(Math.min(width, 2), Math.floor((width - 1) / step) + 1);
+  let rows = Math.max(Math.min(height, 2), Math.floor((height - 1) / step) + 1);
 
   while (cols * rows > MAX_UINT16_VERTICES && step < Math.max(width, height)) {
     step += 1;
-    cols = Math.floor((width - 1) / step) + 1;
-    rows = Math.floor((height - 1) / step) + 1;
+    cols = Math.max(Math.min(width, 2), Math.floor((width - 1) / step) + 1);
+    rows = Math.max(Math.min(height, 2), Math.floor((height - 1) / step) + 1);
   }
 
   return { step, cols, rows, vertices: cols * rows };
@@ -526,21 +553,21 @@ export function prepareDepthForExport(
 ): Float32Array {
   assertDepthDimensions(depthArray, sourceWidth, sourceHeight);
   assertPositiveDimensions(targetWidth, targetHeight, "目標深度圖");
-  const resized = resizeDepthArray(
-    depthArray,
-    sourceWidth,
-    sourceHeight,
-    targetWidth,
-    targetHeight,
-  );
+  const resized =
+    sourceWidth === targetWidth && sourceHeight === targetHeight
+      ? depthArray
+      : resizeDepthArray(
+          depthArray,
+          sourceWidth,
+          sourceHeight,
+          targetWidth,
+          targetHeight,
+        );
   const adjusted = adjustDepthArray(resized, options);
   const blurRadius = targetWidth * ((options.blurPercent ?? 0) / 100);
-  return gaussianBlurDepthArray(
-    adjusted,
-    targetWidth,
-    targetHeight,
-    blurRadius,
-  );
+  return blurRadius <= 0
+    ? adjusted
+    : gaussianBlurDepthArray(adjusted, targetWidth, targetHeight, blurRadius);
 }
 
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -645,6 +672,35 @@ export async function encodeGrayscalePng(
     }
   }
 
+  // PNG 的 Sub/Up predictor 可壓縮連續深度階調，樣本仍完全無損。
+  const rowBytes = stride - 1;
+  const sub = new Uint8Array(rowBytes);
+  const up = new Uint8Array(rowBytes);
+  // 由下往上處理，前一列在評分時仍保留原始樣本。
+  for (let y = height - 1; y >= 0; y--) {
+    const offset = y * stride + 1;
+    let noneScore = 0;
+    let subScore = 0;
+    let upScore = 0;
+    for (let x = 0; x < rowBytes; x++) {
+      const value = scanlines[offset + x];
+      const left =
+        x >= bytesPerSample ? scanlines[offset + x - bytesPerSample] : 0;
+      const above = y > 0 ? scanlines[offset + x - stride] : 0;
+      sub[x] = (value - left) & 255;
+      up[x] = (value - above) & 255;
+      noneScore += Math.min(value, 256 - value);
+      subScore += Math.min(sub[x], 256 - sub[x]);
+      upScore += Math.min(up[x], 256 - up[x]);
+    }
+    if (subScore < noneScore && subScore <= upScore) {
+      scanlines[offset - 1] = 1;
+      scanlines.set(sub, offset);
+    } else if (upScore < noneScore) {
+      scanlines[offset - 1] = 2;
+      scanlines.set(up, offset);
+    }
+  }
   const compressed = zlibSync(scanlines);
 
   const ihdr = new Uint8Array(13);
@@ -701,10 +757,10 @@ export function exportDepthToObj(
   const aspect = dimensions.width / dimensions.height;
   const cols = maxGridDimension
     ? Math.max(2, Math.round(maxGridDimension * Math.min(1, aspect)))
-    : Math.floor((width - 1) / step) + 1;
+    : Math.max(Math.min(width, 2), Math.floor((width - 1) / step) + 1);
   const rows = maxGridDimension
     ? Math.max(2, Math.round(maxGridDimension * Math.min(1, 1 / aspect)))
-    : Math.floor((height - 1) / step) + 1;
+    : Math.max(Math.min(height, 2), Math.floor((height - 1) / step) + 1);
 
   const lines: string[] = [
     "# Wavefront OBJ exported from daily-tools Depth Estimator",
@@ -714,17 +770,13 @@ export function exportDepthToObj(
 
   // 頂點 (v) 與 UV (vt)
   for (let r = 0; r < rows; r++) {
-    const yPixel = maxGridDimension
-      ? Math.round((r / (rows - 1)) * (height - 1))
-      : Math.min(r * step, height - 1);
-    const vCoord = 1.0 - r / (rows - 1);
+    const yPixel = rows > 1 ? Math.round((r / (rows - 1)) * (height - 1)) : 0;
+    const vCoord = rows > 1 ? 1.0 - r / (rows - 1) : 1;
     const yWorld = (vCoord - 0.5) * 2.0;
 
     for (let c = 0; c < cols; c++) {
-      const xPixel = maxGridDimension
-        ? Math.round((c / (cols - 1)) * (width - 1))
-        : Math.min(c * step, width - 1);
-      const uCoord = c / (cols - 1);
+      const xPixel = cols > 1 ? Math.round((c / (cols - 1)) * (width - 1)) : 0;
+      const uCoord = cols > 1 ? c / (cols - 1) : 0;
       const xWorld = (uCoord - 0.5) * 2.0 * aspect;
 
       const idx = yPixel * width + xPixel;
@@ -750,8 +802,8 @@ export function exportDepthToObj(
       const p4 = (r + 1) * cols + c + 1;
 
       // 兩個三角形構建一個四邊格網
-      lines.push(`f ${p1}/${p1} ${p2}/${p2} ${p3}/${p3}`);
-      lines.push(`f ${p1}/${p1} ${p3}/${p3} ${p4}/${p4}`);
+      lines.push(`f ${p1}/${p1} ${p3}/${p3} ${p2}/${p2}`);
+      lines.push(`f ${p1}/${p1} ${p4}/${p4} ${p3}/${p3}`);
     }
   }
 
@@ -822,8 +874,8 @@ export function exportDepthToGlb(
       positions[vertex * 3 + 2] = depth;
       texCoords[vertex * 2] = u;
       texCoords[vertex * 2 + 1] = v;
-      minZ = Math.min(minZ, depth);
-      maxZ = Math.max(maxZ, depth);
+      minZ = Math.min(minZ, positions[vertex * 3 + 2]);
+      maxZ = Math.max(maxZ, positions[vertex * 3 + 2]);
     }
   }
 
@@ -864,6 +916,7 @@ export function exportDepthToGlb(
       "KHR_materials_unlit",
       ...(usesWebp ? ["EXT_texture_webp"] : []),
     ],
+    ...(usesWebp ? { extensionsRequired: ["EXT_texture_webp"] } : {}),
     scene: 0,
     scenes: [{ nodes: [0] }],
     nodes: [{ mesh: 0, name: "DepthMesh" }],
@@ -906,8 +959,8 @@ export function exportDepthToGlb(
         componentType: 5126,
         count: vertexCount,
         type: "VEC3",
-        min: [-aspect, -1, minZ],
-        max: [aspect, 1, maxZ],
+        min: [-Math.fround(aspect), -1, minZ],
+        max: [Math.fround(aspect), 1, maxZ],
       },
       {
         bufferView: 1,

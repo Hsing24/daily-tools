@@ -5,7 +5,7 @@
     <app-tool-header
       eyebrow="TEXT UTILITIES v1.1.0"
       title="文字轉 Markdown/HTML (Text to Markdown/HTML)"
-      description="將純文字或富文本轉換為 Markdown 與 HTML 格式。支援直接貼上網頁富文本，並保留連結、粗體等標籤。"
+      description="將純文字或富文本轉換為 Markdown 與 HTML 格式。保留表格、圖片、相對連結與粗體，並清除危險 HTML 與 URL。"
     />
 
     @if (clipboardAlert()) {
@@ -78,6 +78,7 @@
                 type="button"
                 data-testid="btn-copy-markdown"
                 (click)="copyMarkdown()"
+                [disabled]="isProcessing()"
                 class="dt-button dt-button--secondary py:6 px:12 f:12"
               >
                 複製 Markdown
@@ -119,6 +120,7 @@
                 type="button"
                 data-testid="btn-copy-html"
                 (click)="copyHtml()"
+                [disabled]="isProcessing()"
                 class="dt-button dt-button--secondary py:6 px:12 f:12"
               >
                 複製 HTML

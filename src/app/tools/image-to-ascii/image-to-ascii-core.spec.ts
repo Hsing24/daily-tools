@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import ts from "typescript";
 import {
   convertImageToAscii,
   generateTsCode,
@@ -6,6 +7,137 @@ import {
 } from "./image-to-ascii-core";
 
 describe("ImageToAscii Core 核心演算法", () => {
+  it("產出的播放器通過 strict TypeScript 並保留靜態畫面與 destroy 行為", () => {
+    const code = generateTsCode(
+      { width: 2, height: 1, chars: ["👾", "@"] },
+      {
+        colorMode: "monochrome",
+        animationType: "none",
+        scanlines: false,
+        flicker: false,
+      },
+    );
+    const compilerOptions: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+      types: [],
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+    };
+    const host = ts.createCompilerHost(compilerOptions);
+    const getSourceFile = host.getSourceFile.bind(host);
+    host.getSourceFile = (
+      name,
+      languageVersion,
+      onError,
+      shouldCreateNewSourceFile,
+    ) =>
+      name === "/generated-ascii.ts"
+        ? ts.createSourceFile(name, code, languageVersion, true)
+        : getSourceFile(
+            name,
+            languageVersion,
+            onError,
+            shouldCreateNewSourceFile,
+          );
+    const program = ts.createProgram(
+      ["/generated-ascii.ts"],
+      compilerOptions,
+      host,
+    );
+    expect(
+      ts
+        .getPreEmitDiagnostics(program)
+        .map((diagnostic) =>
+          ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+        ),
+    ).toEqual([]);
+
+    const javascript = ts.transpileModule(code, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText;
+    const runtime = {} as {
+      renderAscii: (
+        canvas: HTMLCanvasElement,
+        options?: { animationType: string },
+      ) => { destroy: () => void };
+    };
+    new Function("exports", javascript)(runtime);
+    const context = { scale: vi.fn(), fillRect: vi.fn(), fillText: vi.fn() };
+    const canvas = {
+      style: {},
+      getContext: () => context,
+    } as unknown as HTMLCanvasElement;
+    const raf = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockReturnValue(17);
+    const cancel = vi
+      .spyOn(globalThis, "cancelAnimationFrame")
+      .mockImplementation(() => {});
+    try {
+      const staticPlayer = runtime.renderAscii(canvas);
+      expect(context.fillText.mock.calls.map((call) => call[0])).toEqual([
+        "👾",
+        "@",
+      ]);
+      expect(raf).not.toHaveBeenCalled();
+      staticPlayer.destroy();
+      const animatedPlayer = runtime.renderAscii(canvas, {
+        animationType: "jitter",
+      });
+      expect(raf).toHaveBeenCalledOnce();
+      animatedPlayer.destroy();
+      expect(cancel).toHaveBeenCalledWith(17);
+    } finally {
+      raf.mockRestore();
+      cancel.mockRestore();
+    }
+  });
+
+  it.each([false, true])(
+    "dither=%s 應保留字元、原色與半透明合成品質",
+    (dither) => {
+      const context = vi
+        .spyOn(HTMLCanvasElement.prototype, "getContext")
+        .mockReturnValue({
+          drawImage: vi.fn(),
+          getImageData: () => ({
+            data: new Uint8ClampedArray([
+              0, 0, 0, 255, 128, 128, 128, 255, 255, 255, 255, 255, 255, 0, 0,
+              128,
+            ]),
+          }),
+        } as unknown as CanvasRenderingContext2D);
+      try {
+        const result = convertImageToAscii(
+          { width: 4, height: 1 } as HTMLCanvasElement,
+          {
+            width: 4,
+            charSet: "@. ",
+            dither,
+            contrast: 0,
+            brightness: 0,
+            colorMode: "original",
+            charAspectRatio: 0.55,
+          },
+        );
+        expect(result.chars).toEqual(["@", ".", " ", "."]);
+        expect(result.colors).toEqual([
+          "#000000",
+          "#808080",
+          "#ffffff",
+          "#ff7f7f",
+        ]);
+      } finally {
+        context.mockRestore();
+      }
+    },
+  );
+
   it("應能正確生成包含 ASCII 資料與播放器的 TS 模組代碼", () => {
     const mockResult = {
       width: 4,

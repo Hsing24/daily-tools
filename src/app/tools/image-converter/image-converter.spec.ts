@@ -37,6 +37,93 @@ describe("ImageConverter 元件", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["clear", "destroy"])(
+    "圖片載入期間 %s 不得重新加入清單或建立預覽 URL",
+    async (action) => {
+      await component["formatSupportPromise"];
+      let finishLoad: (() => void) | undefined;
+      class PendingImage {
+        naturalWidth = 10;
+        naturalHeight = 10;
+        onload: (() => void) | null = null;
+        set src(_value: string) {
+          finishLoad = () => this.onload?.();
+        }
+      }
+      vi.stubGlobal("Image", PendingImage);
+      const upload = component["addFiles"]([
+        new File(["image"], "a.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      await Promise.resolve();
+      const urlsBefore = vi.mocked(URL.createObjectURL).mock.calls.length;
+      if (action === "clear") component["clearAll"]();
+      else fixture.destroy();
+      finishLoad?.();
+      await upload;
+
+      expect(component["items"]()).toEqual([]);
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(urlsBefore);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+    },
+  );
+
+  it("同一圖片正在轉換時不得重複啟動編碼", async () => {
+    let finishLoad: (() => void) | undefined;
+    class PendingImage {
+      naturalWidth = 10;
+      naturalHeight = 10;
+      onload: (() => void) | null = null;
+      set src(_value: string) {
+        finishLoad = () => this.onload?.();
+      }
+    }
+    vi.stubGlobal("Image", PendingImage);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
+    component["items"].set([
+      {
+        id: "one-job",
+        file: new File(["image"], "a.png", { type: "image/png" }),
+        previewUrl: "blob:preview",
+        width: 10,
+        height: 10,
+        revision: 0,
+        outputFormat: "webp",
+        quality: 85,
+        status: "pending",
+        resultBlob: null,
+        resultUrl: "",
+        errorMessage: "",
+      },
+    ]);
+    await component["formatSupportPromise"];
+    vi.mocked(HTMLCanvasElement.prototype.toBlob).mockClear();
+    const conversion = component["convertSingle"]("one-job");
+    await component["convertSingle"]("one-job");
+    finishLoad?.();
+    await conversion;
+    expect(HTMLCanvasElement.prototype.toBlob).toHaveBeenCalledOnce();
+    expect(component["items"]()[0].status).toBe("done");
+  });
+
+  it("全部圖片 decode 失敗時不得顯示成功加入訊息", async () => {
+    class InvalidImage {
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        this.onerror?.();
+      }
+    }
+    vi.stubGlobal("Image", InvalidImage);
+    await component["addFiles"]([
+      new File(["invalid"], "broken.png", { type: "image/png" }),
+    ] as unknown as FileList);
+    expect(component["items"]()).toEqual([]);
+    expect(component["alertVariant"]()).toBe("error");
+    expect(component["alertMessage"]()).toContain("沒有可加入的圖片");
   });
 
   it("應正確建立元件", () => {

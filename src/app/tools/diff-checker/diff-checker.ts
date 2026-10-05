@@ -7,6 +7,7 @@ import { TerminalOutput } from "../../shared/ui/terminal-output/terminal-output"
 import {
   AlignedLine,
   diffLines,
+  DiffBudgetExceededError,
   findDiffBlocks,
   MAX_DIFF_CHARACTERS,
   MAX_DIFF_LINES,
@@ -32,6 +33,10 @@ export class DiffChecker implements OnDestroy {
   protected readonly diffBlocks = computed(() =>
     findDiffBlocks(this.alignedLines()),
   );
+  private readonly blockIds = computed(
+    () =>
+      new Map(this.diffBlocks().map((block) => [block.startIndex, block.id])),
+  );
   protected readonly currentBlockIndex = signal(-1);
   protected readonly leftLineNumbers = computed(() =>
     this.getLineNumbers(this.textA()),
@@ -47,6 +52,7 @@ export class DiffChecker implements OnDestroy {
   private inputGeneration = 0;
 
   ngOnDestroy(): void {
+    this.inputGeneration += 1;
     this.compareGeneration += 1;
     this.cancelCompareTimer();
     this.clearHighlight();
@@ -67,6 +73,7 @@ export class DiffChecker implements OnDestroy {
   private invalidateResult(): void {
     this.compareGeneration += 1;
     this.cancelCompareTimer();
+    this.clearHighlight();
     this.isComparing.set(false);
     this.hasResult.set(false);
     this.alignedLines.set([]);
@@ -149,20 +156,20 @@ export class DiffChecker implements OnDestroy {
         this.currentBlockIndex.set(-1);
         this.isComparing.set(false);
         this.hasResult.set(true);
-      } catch {
+      } catch (error) {
         if (generation !== this.compareGeneration) return;
         this.isComparing.set(false);
-        this.alertMessage.set("比對過程中發生錯誤。");
+        this.alertMessage.set(
+          error instanceof DiffBudgetExceededError
+            ? "差異過於複雜，請縮小文字範圍後再比較。"
+            : "比對過程中發生錯誤。",
+        );
       }
     }, 0);
   }
 
   protected getBlockIdForLine(lineIndex: number): string | null {
-    const block = this.diffBlocks().find(
-      (candidate) =>
-        lineIndex >= candidate.startIndex && lineIndex <= candidate.endIndex,
-    );
-    return block?.id ?? null;
+    return this.blockIds().get(lineIndex) ?? null;
   }
 
   protected scrollToBlock(direction: "prev" | "next"): void {

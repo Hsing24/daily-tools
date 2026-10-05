@@ -28,50 +28,60 @@ describe("PasswordGenerator 元件", () => {
     fixture = TestBed.createComponent(PasswordGenerator);
     component = fixture.componentInstance;
     element = fixture.nativeElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
-  it("應正確建立元件", () => {
+  it("應正確建立元件", async () => {
     expect(component).toBeTruthy();
   });
 
-  it("初始狀態下應已預設生成一組密碼", () => {
-    const input = element.querySelector('input[aria-label="產生的密碼"]') as HTMLInputElement;
+  it("初始狀態下應已預設生成一組密碼", async () => {
+    const input = element.querySelector(
+      'input[aria-label="產生的密碼"]',
+    ) as HTMLInputElement;
     expect(input.value).toBeTruthy();
     expect(input.value.length).toBe(16);
     expect(input.type).toBe("password"); // 預設應隱藏密碼
   });
 
-  it("點選「顯示密碼」後應切換輸入框 type，再點選應復原", () => {
-    const toggleBtn = element.querySelector('[data-testid="btn-toggle-visibility"]') as HTMLButtonElement;
-    const input = element.querySelector('input[aria-label="產生的密碼"]') as HTMLInputElement;
+  it("點選「顯示密碼」後應切換輸入框 type，再點選應復原", async () => {
+    const toggleBtn = element.querySelector(
+      '[data-testid="btn-toggle-visibility"]',
+    ) as HTMLButtonElement;
+    const input = element.querySelector(
+      'input[aria-label="產生的密碼"]',
+    ) as HTMLInputElement;
 
     expect(input.type).toBe("password");
-    
+
     toggleBtn.click();
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(input.type).toBe("text");
     expect(toggleBtn.textContent?.trim()).toBe("[ 隱藏密碼 ]");
 
     toggleBtn.click();
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(input.type).toBe("password");
     expect(toggleBtn.textContent?.trim()).toBe("[ 顯示密碼 ]");
   });
 
-  it("當未勾選任何規則時，產生密碼應提示錯誤訊息", () => {
+  it("當未勾選任何規則時，產生密碼應提示錯誤訊息", async () => {
     // 取消勾選所有規則
     component["useUppercase"].set(false);
     component["useLowercase"].set(false);
     component["useNumbers"].set(false);
     component["useSymbols"].set(false);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
-    const generateBtn = element.querySelector("button.dt-button--primary") as HTMLButtonElement;
+    const generateBtn = element.querySelector(
+      "button.dt-button--primary",
+    ) as HTMLButtonElement;
     generateBtn.click();
-    fixture.detectChanges();
+    await fixture.whenStable();
 
-    const alertEl = element.querySelector('[data-testid="alert-message"]') as HTMLElement;
+    const alertEl = element.querySelector(
+      '[data-testid="alert-message"]',
+    ) as HTMLElement;
     expect(alertEl).toBeTruthy();
     expect(alertEl.textContent).toContain("請至少選擇一種字元類型！");
   });
@@ -80,31 +90,63 @@ describe("PasswordGenerator 元件", () => {
     mockClipboardWriteText.mockResolvedValue(undefined);
 
     // 取得複製按鈕
-    const copyBtn = element.querySelector("button.dt-button--secondary") as HTMLButtonElement;
+    const copyBtn = element.querySelector(
+      "button.dt-button--secondary",
+    ) as HTMLButtonElement;
     copyBtn.click();
-    fixture.detectChanges();
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(mockClipboardWriteText).toHaveBeenCalledWith(component["password"]());
-    
+    await fixture.whenStable();
+
+    expect(mockClipboardWriteText).toHaveBeenCalledWith(
+      component["password"](),
+    );
+
     // 檢查是否有成功複製的提示
-    const alertEl = element.querySelector('[data-testid="alert-message"]') as HTMLElement;
+    const alertEl = element.querySelector(
+      '[data-testid="alert-message"]',
+    ) as HTMLElement;
     expect(alertEl).toBeTruthy();
     expect(alertEl.textContent).toContain("密碼已成功複製到剪貼簿！");
   });
 
-  it("當點選隨機產生時，長度與規則應發生隨機更新", () => {
-    const originalLen = component["length"]();
-    
+  it("新密碼產生後，舊複製完成不得顯示成功", async () => {
+    let finish!: () => void;
+    mockClipboardWriteText.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const copying = component["copyToClipboard"]();
+    component["generate"]();
+    finish();
+    await copying;
+    await fixture.whenStable();
+    expect(component["successMessage"]()).toBe("");
+  });
+
+  it("元件銷毀後，複製完成不得建立提示 timer", async () => {
+    let finish!: () => void;
+    mockClipboardWriteText.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const copying = component["copyToClipboard"]();
+    fixture.destroy();
+    finish();
+    await copying;
+    expect(component["successMessage"]()).toBe("");
+    expect(component["successTimer"]).toBeUndefined();
+  });
+
+  it("當點選隨機產生時，長度與規則應發生隨機更新", async () => {
     // 取得隨機產生按鈕。在此範本中，我們有三個按鈕：
     // dt-button--primary (依設定產生), dt-button--ghost (隨機產生), dt-button--secondary (複製密碼)
     // 尋找包含「隨機產生」文字的按鈕
     const btns = element.querySelectorAll("button");
     let randomBtn: HTMLButtonElement | null = null;
-    btns.forEach(btn => {
+    btns.forEach((btn) => {
       if (btn.textContent?.includes("隨機產生")) {
         randomBtn = btn;
       }
@@ -112,7 +154,7 @@ describe("PasswordGenerator 元件", () => {
 
     expect(randomBtn).toBeTruthy();
     randomBtn!.click();
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     // 密碼長度可能隨機變更，或者規則被重新指派
     const newPass = component["password"]();

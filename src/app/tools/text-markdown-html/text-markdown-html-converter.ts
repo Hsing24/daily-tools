@@ -1,6 +1,7 @@
-import { marked } from "marked";
+import { marked, type Token, type Tokens } from "marked";
 import DOMPurify from "dompurify";
 import TurndownService from "turndown";
+import { tables } from "turndown-plugin-gfm";
 
 export interface TextConversionResult {
   /** Markdown 格式輸出 */
@@ -9,18 +10,55 @@ export interface TextConversionResult {
   readonly html: string;
 }
 
-const ALLOWED_URI_PATTERN = /^(?:https?:|mailto:|tel:)/i;
+// Allow relative destinations, while rejecting executable/unknown schemes.
+const ALLOWED_URI_PATTERN =
+  /^(?:(?:https?|mailto|tel):|(?![a-z][a-z\d+.-]*:))/i;
 const MARKDOWN_OPTIONS = {
   async: false,
   breaks: true,
   gfm: true,
-  headerIds: false,
-  mangle: false,
 } as const;
 
+function isSafeDestination(destination: string, image = false): boolean {
+  let decoded = destination;
+  if (destination.includes("&")) {
+    const decoder = document.createElement("textarea");
+    decoder.innerHTML = destination;
+    decoded = decoder.value;
+  }
+  const source = decoded.replace(/[\u0000-\u0020\u007f-\u009f]/g, "");
+  const scheme = source.match(/^[a-z][a-z\d+.-]*:/i)?.[0].toLowerCase();
+  return (
+    !scheme ||
+    scheme === "http:" ||
+    scheme === "https:" ||
+    (!image && (scheme === "mailto:" || scheme === "tel:"))
+  );
+}
+
+const sanitizer = DOMPurify(window);
+sanitizer.addHook("uponSanitizeAttribute", (node, data) => {
+  if (
+    node.nodeName === "IMG" &&
+    data.attrName === "src" &&
+    !isSafeDestination(data.attrValue, true)
+  ) {
+    data.keepAttr = false;
+  }
+});
+
 function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_ATTR: ["href", "title", "start", "checked", "disabled"],
+  return sanitizer.sanitize(html, {
+    ALLOWED_ATTR: [
+      "href",
+      "src",
+      "alt",
+      "title",
+      "start",
+      "align",
+      "colspan",
+      "rowspan",
+    ],
     ALLOWED_TAGS: [
       "a",
       "blockquote",
@@ -35,24 +73,77 @@ function sanitizeHtml(html: string): string {
       "h5",
       "h6",
       "li",
+      "img",
       "ol",
       "p",
       "pre",
       "strong",
+      "table",
+      "thead",
+      "tbody",
+      "tfoot",
+      "tr",
+      "th",
+      "td",
       "ul",
     ],
     ALLOW_DATA_ATTR: false,
     FORBID_ATTR: ["style", "class", "id", "target"],
-    FORBID_TAGS: ["form", "iframe", "img", "input", "script", "style", "svg"],
+    FORBID_TAGS: ["form", "iframe", "input", "script", "style", "svg"],
     ALLOWED_URI_REGEXP: ALLOWED_URI_PATTERN,
   });
 }
 
 function normalizeMarkdown(markdown: string): string {
-  return markdown
-    .replace(/\r\n?/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const normalized = markdown.replace(/\r\n?/g, "\n");
+  if (!normalized.trim()) return "";
+  // Only normalize block separators. Global trimming/collapsing corrupts
+  // indented and fenced code, and the spaces used by Markdown hard breaks.
+  const tokens = marked.lexer(normalized, MARKDOWN_OPTIONS);
+  let start = 0;
+  let end = tokens.length;
+  while (tokens[start]?.type === "space") start += 1;
+  while (end > start && tokens[end - 1].type === "space") end -= 1;
+  const htmlCache = new Map<string, boolean>();
+  const normalizeToken = (token: Token): string => {
+    let needsSanitizing = false;
+    marked.walkTokens([token], (child) => {
+      if (
+        child.type === "link" ||
+        child.type === "image" ||
+        child.type === "def"
+      ) {
+        const destination = (child as Tokens.Link | Tokens.Image | Tokens.Def)
+          .href;
+        if (!isSafeDestination(destination, child.type === "image"))
+          needsSanitizing = true;
+      } else if (child.type === "html") {
+        // A standalone closing tag cannot carry a URL or executable content.
+        // DOMPurify and fragment parsing repair </p> differently.
+        if (/^<\/[a-z][a-z\d]*\s*>$/i.test(child.raw.trim())) return;
+        let changed = htmlCache.get(child.raw);
+        if (changed === undefined) {
+          const original = document.createElement("div");
+          original.innerHTML = child.raw;
+          changed =
+            sanitizeHtml(child.raw).trim() !== original.innerHTML.trim();
+          htmlCache.set(child.raw, changed);
+        }
+        if (changed) needsSanitizing = true;
+      }
+    });
+    if (needsSanitizing) {
+      const clean = convertHtmlToMarkdown(
+        marked.parser([token], MARKDOWN_OPTIONS),
+      );
+      return clean + (token.raw.match(/\n+$/)?.[0] ?? "");
+    }
+    return token.type === "space"
+      ? token.raw.replace(/\n{3,}/g, "\n\n")
+      : token.raw;
+  };
+  const result = tokens.slice(start, end).map(normalizeToken).join("");
+  return result.trim() ? result : "";
 }
 
 function createTurndown(): TurndownService {
@@ -63,16 +154,25 @@ function createTurndown(): TurndownService {
     headingStyle: "atx",
   });
 
-  service.addRule("safeLinks", {
-    filter: "a",
+  service.use(tables);
+  service.addRule("strikethrough", {
+    filter: "del",
+    replacement: (content) => `~~${content}~~`,
+  });
+  service.addRule("tableCellContent", {
+    filter: ["th", "td"],
     replacement(content, node) {
-      const anchor = node as HTMLAnchorElement;
-      const href = anchor.getAttribute("href") ?? "";
-      if (!ALLOWED_URI_PATTERN.test(href)) return content;
-      const title = anchor.getAttribute("title");
-      const titlePart = title ? ` \"${title.replace(/\"/g, '\\\"')}\"` : "";
-      return `[${content}](${href}${titlePart})`;
+      const cell = node as HTMLTableCellElement;
+      const prefix = cell.cellIndex === 0 ? "| " : " ";
+      return `${prefix}${content.replace(/\|/g, "\\|").replace(/\n/g, "<br>")} |`;
     },
+  });
+  service.addRule("mergedTableCells", {
+    filter: (node) =>
+      node.nodeName === "TABLE" &&
+      !!(node as HTMLElement).querySelector("[colspan],[rowspan]"),
+    replacement: (_content, node) =>
+      `\n\n${(node as HTMLElement).outerHTML}\n\n`,
   });
 
   return service;
@@ -82,15 +182,29 @@ export function convertHtmlToMarkdown(html: string): string {
   if (!html) return "";
 
   const cleanHtml = sanitizeHtml(html);
-  const markdown = createTurndown().turndown(cleanHtml);
+  const container = document.createElement("div");
+  container.innerHTML = cleanHtml;
+  // The GFM plugin expects table structure without whitespace text nodes
+  // and cannot inspect empty tables. Keep cell content untouched.
+  for (const table of container.querySelectorAll("table")) {
+    if (!table.rows.length) table.remove();
+  }
+  for (const structure of container.querySelectorAll(
+    "table,thead,tbody,tfoot,tr",
+  )) {
+    for (const child of Array.from(structure.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE && !child.textContent?.trim())
+        child.remove();
+    }
+  }
+  const markdown = createTurndown().turndown(container);
   return normalizeMarkdown(markdown);
 }
 
 export function convertMarkdownToHtml(markdown: string): string {
   if (!markdown) return "";
 
-  const normalized = normalizeMarkdown(markdown);
-  const html = marked.parse(normalized, MARKDOWN_OPTIONS);
+  const html = marked.parse(markdown, MARKDOWN_OPTIONS);
   if (typeof html !== "string") {
     throw new Error("Markdown conversion unexpectedly became asynchronous");
   }

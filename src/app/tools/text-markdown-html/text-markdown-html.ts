@@ -47,6 +47,7 @@ export class TextMarkdownHtml {
 
   private pendingTimeoutId: ReturnType<typeof setTimeout> | undefined;
   private revision = 0;
+  private pasteRequest = 0;
   private markdownCopyTimer: ReturnType<typeof setTimeout> | undefined;
   private htmlCopyTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -77,6 +78,10 @@ export class TextMarkdownHtml {
   protected updateResult(value: string): void {
     const currentRevision = ++this.revision;
     this.cancelPendingConversion();
+    this.clearCopyTimer("markdown");
+    this.clearCopyTimer("html");
+    this.copyMarkdownStatus.set("");
+    this.copyHtmlStatus.set("");
     this.conversionResultSignal.set({ markdown: "", html: "" });
 
     if (value.length > 20000) {
@@ -98,6 +103,12 @@ export class TextMarkdownHtml {
 
   protected async paste(): Promise<void> {
     this.clipboardAlert.set("");
+    const revision = this.revision;
+    const request = ++this.pasteRequest;
+    const isCurrent = () =>
+      revision === this.revision &&
+      request === this.pasteRequest &&
+      !this.destroyRef.destroyed;
     try {
       // 嘗試讀取富文本 HTML
       if (
@@ -106,10 +117,12 @@ export class TextMarkdownHtml {
       ) {
         try {
           const clipboardItems = await navigator.clipboard.read();
+          if (!isCurrent()) return;
           for (const item of clipboardItems) {
             if (item.types.includes("text/html")) {
               const blob = await item.getType("text/html");
               const htmlText = await blob.text();
+              if (!isCurrent()) return;
               const markdown = convertHtmlToMarkdown(htmlText);
               this.sourceText.set(markdown);
               this.updateResult(markdown);
@@ -121,6 +134,8 @@ export class TextMarkdownHtml {
         }
       }
 
+      if (!isCurrent()) return;
+
       // 如果不支援或沒有 HTML 格式， fallback 至 readText 讀取純文字
       if (
         !navigator.clipboard ||
@@ -129,9 +144,11 @@ export class TextMarkdownHtml {
         throw new Error("Clipboard API not supported");
       }
       const clipboardText = await navigator.clipboard.readText();
+      if (!isCurrent()) return;
       this.sourceText.set(clipboardText);
       this.updateResult(clipboardText);
     } catch (err) {
+      if (!isCurrent()) return;
       this.clipboardAlert.set(
         "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。",
       );
@@ -151,6 +168,7 @@ export class TextMarkdownHtml {
   }
 
   protected async copyMarkdown(): Promise<void> {
+    if (this.isProcessing()) return;
     const revision = this.revision;
     const markdown = this.conversionResult().markdown;
     this.copyMarkdownStatus.set("");
@@ -163,18 +181,20 @@ export class TextMarkdownHtml {
         throw new Error("Clipboard API not supported");
       }
       await navigator.clipboard.writeText(markdown);
-      if (revision !== this.revision) return;
+      if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyMarkdownStatus.set("已複製！");
       this.markdownCopyTimer = setTimeout(() => {
         this.copyMarkdownStatus.set("");
         this.markdownCopyTimer = undefined;
       }, 2000);
     } catch (err) {
+      if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyMarkdownStatus.set("複製失敗");
     }
   }
 
   protected async copyHtml(): Promise<void> {
+    if (this.isProcessing()) return;
     const revision = this.revision;
     const html = this.conversionResult().html;
     this.copyHtmlStatus.set("");
@@ -187,13 +207,14 @@ export class TextMarkdownHtml {
         throw new Error("Clipboard API not supported");
       }
       await navigator.clipboard.writeText(html);
-      if (revision !== this.revision) return;
+      if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyHtmlStatus.set("已複製！");
       this.htmlCopyTimer = setTimeout(() => {
         this.copyHtmlStatus.set("");
         this.htmlCopyTimer = undefined;
       }, 2000);
     } catch (err) {
+      if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyHtmlStatus.set("複製失敗");
     }
   }

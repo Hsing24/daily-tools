@@ -125,18 +125,6 @@ function getRandomChar(chars: string, random: RandomSource): string {
   return chars[secureRandomInt(chars.length, random)] ?? "";
 }
 
-function shuffleArray(array: string[], random: RandomSource): string[] {
-  const shuffled = [...array];
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = secureRandomInt(index + 1, random);
-    [shuffled[index], shuffled[swapIndex]] = [
-      shuffled[swapIndex],
-      shuffled[index],
-    ];
-  }
-  return shuffled;
-}
-
 function getCharacterPool(options: PasswordOptions): {
   upper: string;
   lower: string;
@@ -247,18 +235,70 @@ function getPoolName(
   return model.activePools.find((pool) => pool.chars.includes(char))?.name;
 }
 
-function estimateGenerationEntropy(
+function countSequences(
+  size: number,
   length: number,
-  poolSize: number,
   uniqueOnly: boolean,
-): number {
-  if (!uniqueOnly) return length * Math.log2(poolSize);
-
-  let entropy = 0;
+): bigint {
+  if (uniqueOnly && size < length) return 0n;
+  if (!uniqueOnly) return BigInt(size) ** BigInt(length);
+  let count = 1n;
   for (let index = 0; index < length; index += 1) {
-    entropy += Math.log2(poolSize - index);
+    count *= BigInt(size - index);
   }
-  return entropy;
+  return count;
+}
+
+// Inclusion–exclusion counts only passwords satisfying every enabled pool.
+function estimateGenerationEntropy(
+  options: PasswordOptions,
+  model: PasswordPoolModel,
+): number {
+  let count = 0n;
+  for (const firstPool of model.activePools) {
+    const firstCount = Array.from(firstPool.chars).filter((char) =>
+      model.firstCharacters.includes(char),
+    ).length;
+    if (firstCount === 0) continue;
+    const missingPools = model.activePools.filter((pool) => pool !== firstPool);
+    let completions = 0n;
+    for (let mask = 0; mask < 1 << missingPools.length; mask += 1) {
+      let size = model.poolSize - (options.uniqueOnly ? 1 : 0);
+      let excluded = 0;
+      for (let index = 0; index < missingPools.length; index += 1) {
+        if (mask & (1 << index)) {
+          size -= missingPools[index]!.chars.length;
+          excluded += 1;
+        }
+      }
+      const sequences = countSequences(
+        size,
+        options.length - 1,
+        options.uniqueOnly,
+      );
+      completions += excluded % 2 === 0 ? sequences : -sequences;
+    }
+    count += BigInt(firstCount) * completions;
+  }
+  // All supported password spaces fit safely within Number's finite range.
+  return Math.log2(Number(count));
+}
+
+function bufferedRandomSource(random: RandomSource): RandomSource {
+  const buffer = new Uint32Array(128);
+  let offset = buffer.length;
+  return {
+    getRandomValues(array) {
+      for (let index = 0; index < array.length; index += 1) {
+        if (offset === buffer.length) {
+          random.getRandomValues(buffer);
+          offset = 0;
+        }
+        array[index] = buffer[offset++]!;
+      }
+      return array;
+    },
+  };
 }
 
 export function generatePassword(
@@ -269,51 +309,39 @@ export function generatePassword(
   if (!validation.valid) return { success: false, code: validation.code };
 
   const { model } = validation;
-  const firstChar = getRandomChar(model.firstCharacters, random);
-  const firstCharType = getPoolName(firstChar, model);
-  const remainingLength = options.length - 1;
-  const mandatoryPools = model.activePools.filter(
-    (pool) => pool.name !== firstCharType,
-  );
-  const resultChars: string[] = [];
-  const usedChars = new Set<string>(options.uniqueOnly ? [firstChar] : []);
-
-  for (const pool of mandatoryPools) {
+  const entropyBits = estimateGenerationEntropy(options, model);
+  const source = bufferedRandomSource(random);
+  let password: string;
+  // Drawing uniformly then rejecting missing pools preserves a uniform
+  // distribution over valid passwords. Reserving mandatory characters does not.
+  for (;;) {
+    const firstChar = getRandomChar(model.firstCharacters, source);
+    const resultChars = [firstChar];
+    const presentPools = new Set([getPoolName(firstChar, model)]);
     const available = options.uniqueOnly
-      ? Array.from(pool.chars)
-          .filter((char) => !usedChars.has(char))
-          .join("")
-      : pool.chars;
-    if (available.length === 0) {
-      return { success: false, code: "unique-character-unavailable" };
+      ? Array.from(model.allCharacters).filter((char) => char !== firstChar)
+      : [];
+    for (let index = 1; index < options.length; index += 1) {
+      let char: string;
+      if (options.uniqueOnly) {
+        const choice = secureRandomInt(available.length, source);
+        char = available[choice]!;
+        available[choice] = available[available.length - 1]!;
+        available.pop();
+      } else {
+        char = getRandomChar(model.allCharacters, source);
+      }
+      resultChars.push(char);
+      presentPools.add(getPoolName(char, model));
     }
-    const char = getRandomChar(available, random);
-    resultChars.push(char);
-    if (options.uniqueOnly) usedChars.add(char);
-  }
-
-  while (resultChars.length < remainingLength) {
-    const available = options.uniqueOnly
-      ? Array.from(model.allCharacters)
-          .filter((char) => !usedChars.has(char))
-          .join("")
-      : model.allCharacters;
-    if (available.length === 0) {
-      return { success: false, code: "unique-character-unavailable" };
+    if (presentPools.size === model.activePools.length) {
+      password = resultChars.join("");
+      break;
     }
-    const char = getRandomChar(available, random);
-    resultChars.push(char);
-    if (options.uniqueOnly) usedChars.add(char);
   }
-
-  const entropyBits = estimateGenerationEntropy(
-    options.length,
-    model.poolSize,
-    options.uniqueOnly,
-  );
   return {
     success: true,
-    password: firstChar + shuffleArray(resultChars, random).join(""),
+    password,
     effectiveLength: options.length,
     poolSize: model.poolSize,
     entropyBits,

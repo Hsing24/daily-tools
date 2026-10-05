@@ -5,37 +5,21 @@ import {
   DepthModelId,
   DeviceType,
 } from "./depth-estimator-types";
-import { resizeDepthArray } from "./depth-estimator-core";
+import { normalizeModelDepth, resizeDepthArray } from "./depth-estimator-core";
 
-// 關閉本地模型載入限制，使用遠端 Hugging Face Hub / 瀏覽器快取
+const workerScope = self as unknown as {
+  onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null;
+  postMessage(message: WorkerResponse, transfer: Transferable[]): void;
+};
+
+// 使用遠端 Hugging Face Hub 與瀏覽器快取，圖片仍只在本機推論。
 env.allowLocalModels = false;
 
-interface PipelineProgressData {
-  readonly file?: string;
-  readonly progress?: number;
-  readonly loaded?: number;
-  readonly total?: number;
-}
-
-function readProgressData(value: unknown): PipelineProgressData {
-  if (typeof value !== "object" || value === null) return {};
-  const data = value as Record<string, unknown>;
-  return {
-    file: typeof data["file"] === "string" ? data["file"] : undefined,
-    progress:
-      typeof data["progress"] === "number" ? data["progress"] : undefined,
-    loaded: typeof data["loaded"] === "number" ? data["loaded"] : undefined,
-    total: typeof data["total"] === "number" ? data["total"] : undefined,
-  };
-}
-
-interface DepthTensorOutput {
-  readonly data?: ArrayLike<number>;
-  readonly dims?: readonly number[];
-}
-
 interface RawDepthOutput {
-  readonly predicted_depth?: DepthTensorOutput;
+  readonly predicted_depth?: {
+    readonly data?: ArrayLike<number>;
+    readonly dims?: readonly number[];
+  };
   readonly depth?: {
     readonly data?: ArrayLike<number>;
     readonly width: number;
@@ -44,105 +28,100 @@ interface RawDepthOutput {
   };
 }
 
-type DepthPipeline = (image: RawImage) => Promise<RawDepthOutput>;
+type DepthPipeline = ((image: RawImage) => Promise<RawDepthOutput>) & {
+  dispose(): Promise<void>;
+};
 
-// 儲存目前已載入之 pipeline 實例與配置
 let currentPipeline: DepthPipeline | null = null;
 let loadedModel: DepthModelId | null = null;
 let loadedDevice: DeviceType = "webgpu";
+let loadedPreference: DeviceType = "webgpu";
+let latestRequestId = 0;
+let pendingRequest: Exclude<WorkerRequest, { type: "cancel" }> | null = null;
+let processing = false;
 
-/**
- * 取得或初始化深度估計 Pipeline
- */
+function postResponse(
+  response: WorkerResponse,
+  transfer: Transferable[] = [],
+): void {
+  if (response.requestId === latestRequestId)
+    workerScope.postMessage(response, transfer);
+}
+
+async function releasePipeline(): Promise<void> {
+  const previous = currentPipeline;
+  currentPipeline = null;
+  loadedModel = null;
+  await previous?.dispose();
+}
+
 async function getDepthPipeline(
   model: DepthModelId,
-  preferredDevice: DeviceType = "webgpu",
-  requestId = 0,
+  preference: DeviceType,
+  requestId: number,
 ): Promise<{ pipe: DepthPipeline; device: DeviceType }> {
   if (
     currentPipeline &&
     loadedModel === model &&
-    loadedDevice === preferredDevice
+    loadedPreference === preference
   ) {
     return { pipe: currentPipeline, device: loadedDevice };
   }
-
-  let chosenDevice = preferredDevice;
-
-  try {
+  await releasePipeline();
+  const load = async (device: DeviceType): Promise<DepthPipeline> => {
     const pipe = await pipeline("depth-estimation", model, {
-      device: chosenDevice,
-      progress_callback: (rawProgressData: unknown) => {
-        const progressData = readProgressData(rawProgressData);
-        const msg: WorkerResponse = {
+      device,
+      progress_callback: (raw: unknown) => {
+        const progress =
+          typeof raw === "object" && raw !== null
+            ? (raw as Record<string, unknown>)
+            : {};
+        postResponse({
           type: "progress",
           requestId,
           progress: {
             status: "downloading",
-            file: progressData?.file,
-            progress:
-              typeof progressData?.progress === "number"
-                ? Math.round(progressData.progress)
+            file:
+              typeof progress["file"] === "string"
+                ? progress["file"]
                 : undefined,
-            loaded: progressData?.loaded,
-            total: progressData?.total,
+            progress:
+              typeof progress["progress"] === "number"
+                ? Math.round(progress["progress"])
+                : undefined,
+            loaded:
+              typeof progress["loaded"] === "number"
+                ? progress["loaded"]
+                : undefined,
+            total:
+              typeof progress["total"] === "number"
+                ? progress["total"]
+                : undefined,
           },
-        };
-        self.postMessage(msg);
+        });
       },
     });
-
-    const typedPipe = pipe as unknown as DepthPipeline;
-    currentPipeline = typedPipe;
-    loadedModel = model;
-    loadedDevice = chosenDevice;
-    return { pipe: typedPipe, device: chosenDevice };
-  } catch (gpuError) {
-    if (chosenDevice === "webgpu") {
-      console.warn(
-        "WebGPU initialization failed, falling back to WASM (CPU)...",
-        gpuError,
-      );
-      chosenDevice = "wasm";
-
-      const pipe = await pipeline("depth-estimation", model, {
-        device: "wasm",
-        progress_callback: (rawProgressData: unknown) => {
-          const progressData = readProgressData(rawProgressData);
-          const msg: WorkerResponse = {
-            type: "progress",
-            requestId,
-            progress: {
-              status: "downloading",
-              file: progressData?.file,
-              progress:
-                typeof progressData?.progress === "number"
-                  ? Math.round(progressData.progress)
-                  : undefined,
-              loaded: progressData?.loaded,
-              total: progressData?.total,
-            },
-          };
-          self.postMessage(msg);
-        },
-      });
-
-      const typedPipe = pipe as unknown as DepthPipeline;
-      currentPipeline = typedPipe;
-      loadedModel = model;
-      loadedDevice = "wasm";
-      return { pipe: typedPipe, device: "wasm" };
-    }
-    throw gpuError;
+    return pipe as unknown as DepthPipeline;
+  };
+  let device = preference;
+  let pipe: DepthPipeline;
+  try {
+    pipe = await load(device);
+  } catch (error) {
+    if (device !== "webgpu") throw error;
+    device = "wasm";
+    pipe = await load(device);
   }
+  currentPipeline = pipe;
+  loadedModel = model;
+  loadedDevice = device;
+  loadedPreference = preference;
+  return { pipe, device };
 }
 
-/**
- * 處理來自 Angular 主線程的訊息
- */
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const req = event.data;
-
+async function processRequest(
+  req: Exclude<WorkerRequest, { type: "cancel" }>,
+): Promise<void> {
   try {
     if (req.type === "init") {
       const { device } = await getDepthPipeline(
@@ -150,140 +129,145 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         req.device ?? "webgpu",
         req.requestId,
       );
-      const readyMsg: WorkerResponse = {
-        type: "ready",
-        requestId: req.requestId,
-        device,
-      };
-      self.postMessage(readyMsg);
+      postResponse({ type: "ready", requestId: req.requestId, device });
       return;
     }
 
-    if (req.type === "estimate") {
-      self.postMessage({
-        type: "progress",
-        requestId: req.requestId,
-        progress: { status: "processing", message: "深度模型推論中..." },
-      } as WorkerResponse);
-
-      const { pipe, device } = await getDepthPipeline(
-        req.model,
-        req.device ?? "webgpu",
-        req.requestId,
-      );
-
-      // 將傳入的 ImageBitmap 繪製到 OffscreenCanvas 並轉為 RawImage
-      const bitmap = req.imageBitmap;
-      const width = bitmap.width;
-      const height = bitmap.height;
-
-      const offscreen = new OffscreenCanvas(width, height);
-      const ctx = offscreen.getContext("2d");
-      if (!ctx) {
-        throw new Error("無法建立 OffscreenCanvas 2D context");
-      }
+    const bitmap = req.imageBitmap;
+    const width = bitmap.width;
+    const height = bitmap.height;
+    let rawImage: RawImage;
+    // close() 也涵蓋 context/decode 失敗；模型下載期間不保留 bitmap。
+    try {
+      const canvas = new OffscreenCanvas(width, height);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("無法建立 OffscreenCanvas 2D context");
       ctx.drawImage(bitmap, 0, 0);
-      const imgData = ctx.getImageData(0, 0, width, height);
-      bitmap.close(); // 釋放 bitmap 記憶體
-
-      const rawImage = new RawImage(imgData.data, width, height, 4);
-
-      // 執行模型推論
-      const startTime = performance.now();
-      const output = await pipe(rawImage);
-      const endTime = performance.now();
-      const inferenceTimeMs = Math.round(endTime - startTime);
-
-      // 提取深度資料
-      // output 格式通常為 { depth: RawImage, predicted_depth: Tensor }
-      let outWidth = width;
-      let outHeight = height;
-      let depthFloatArray: Float32Array;
-
-      if (output.predicted_depth && output.predicted_depth.data) {
-        const tensorData = output.predicted_depth.data;
-        const dims = output.predicted_depth.dims; // [1, H, W] 或 [H, W]
-        if (!dims || dims.length < 2) {
-          throw new Error("模型深度輸出的尺寸資訊無效");
-        }
-        outHeight = dims[dims.length - 2] ?? 0;
-        outWidth = dims[dims.length - 1] ?? 0;
-        if (!outWidth || !outHeight) {
-          throw new Error("模型深度輸出的尺寸無效");
-        }
-
-        const totalPixels = outWidth * outHeight;
-        depthFloatArray = new Float32Array(totalPixels);
-
-        let minD = Infinity;
-        let maxD = -Infinity;
-
-        for (let i = 0; i < totalPixels; i++) {
-          const v = Number(tensorData[i]);
-          if (v < minD) minD = v;
-          if (v > maxD) maxD = v;
-        }
-
-        const range = maxD - minD || 1;
-        for (let i = 0; i < totalPixels; i++) {
-          depthFloatArray[i] = (Number(tensorData[i]) - minD) / range;
-        }
-
-        const resizedDepthArray = resizeDepthArray(
-          depthFloatArray,
-          outWidth,
-          outHeight,
-          width,
-          height,
-        );
-        const successMsg: WorkerResponse = {
-          type: "success",
-          requestId: req.requestId,
-          depthArray: resizedDepthArray,
-          width,
-          height,
-          minDepth: minD,
-          maxDepth: maxD,
-          inferenceTimeMs,
-          device,
-        };
-
-        self.postMessage(successMsg, [resizedDepthArray.buffer]);
-      } else if (output.depth && output.depth.data) {
-        outWidth = output.depth.width;
-        outHeight = output.depth.height;
-        const totalPixels = outWidth * outHeight;
-        depthFloatArray = new Float32Array(totalPixels);
-        const rawData = output.depth.data; // Uint8ClampedArray (grayscale or RGB)
-        const channels = output.depth.channels || 1;
-
-        for (let i = 0; i < totalPixels; i++) {
-          depthFloatArray[i] = rawData[i * channels] / 255.0;
-        }
-
-        const successMsg: WorkerResponse = {
-          type: "success",
-          requestId: req.requestId,
-          depthArray: depthFloatArray,
-          width: outWidth,
-          height: outHeight,
-          minDepth: 0,
-          maxDepth: 255,
-          inferenceTimeMs,
-          device,
-        };
-
-        self.postMessage(successMsg, [depthFloatArray.buffer]);
-      } else {
-        throw new Error("未能從模型輸出中解析深度資訊");
-      }
+      const image = ctx.getImageData(0, 0, width, height);
+      rawImage = new RawImage(image.data, width, height, 4);
+    } finally {
+      bitmap.close();
     }
-  } catch (err: unknown) {
-    const errorMsg: WorkerResponse = {
+    let { pipe, device } = await getDepthPipeline(
+      req.model,
+      req.device ?? "webgpu",
+      req.requestId,
+    );
+    if (req.requestId !== latestRequestId) return;
+    postResponse({
+      type: "progress",
+      requestId: req.requestId,
+      progress: { status: "processing", message: "深度模型推論中..." },
+    });
+    let startTime = performance.now();
+    let output: RawDepthOutput;
+    try {
+      output = await pipe(rawImage);
+    } catch (error) {
+      if (device !== "webgpu" || req.requestId !== latestRequestId) throw error;
+      await releasePipeline();
+      ({ pipe, device } = await getDepthPipeline(
+        req.model,
+        "wasm",
+        req.requestId,
+      ));
+      // 下次使用同一 GPU 偏好時直接重用已成功的 CPU fallback。
+      loadedPreference = req.device ?? "webgpu";
+      startTime = performance.now();
+      output = await pipe(rawImage);
+    }
+    const inferenceTimeMs = Math.round(performance.now() - startTime);
+    if (req.requestId !== latestRequestId) return;
+
+    let depthArray: Float32Array;
+    let minDepth: number;
+    let maxDepth: number;
+    let outWidth: number;
+    let outHeight: number;
+    if (output.predicted_depth?.data) {
+      const dims = output.predicted_depth.dims;
+      if (!dims || dims.length < 2)
+        throw new Error("模型深度輸出的尺寸資訊無效");
+      outHeight = dims[dims.length - 2] ?? 0;
+      outWidth = dims[dims.length - 1] ?? 0;
+      ({ depthArray, minDepth, maxDepth } = normalizeModelDepth(
+        output.predicted_depth.data,
+        outWidth,
+        outHeight,
+      ));
+    } else if (output.depth?.data) {
+      const raw = output.depth;
+      outWidth = raw.width;
+      outHeight = raw.height;
+      const channels = raw.channels ?? 1;
+      if (
+        !Number.isInteger(channels) ||
+        channels < 1 ||
+        channels > 4 ||
+        raw.data!.length !== outWidth * outHeight * channels
+      ) {
+        throw new Error("模型深度影像的資料尺寸無效");
+      }
+      depthArray = new Float32Array(outWidth * outHeight);
+      for (let i = 0; i < depthArray.length; i++) {
+        const value = Number(raw.data![i * channels]);
+        if (!Number.isFinite(value) || value < 0 || value > 255)
+          throw new Error("模型深度輸出含有無效數值");
+        depthArray[i] = value / 255;
+      }
+      minDepth = 0;
+      maxDepth = 255;
+    } else {
+      throw new Error("未能從模型輸出中解析深度資訊");
+    }
+    const resized =
+      width === outWidth && height === outHeight
+        ? depthArray
+        : resizeDepthArray(depthArray, outWidth, outHeight, width, height);
+    postResponse(
+      {
+        type: "success",
+        requestId: req.requestId,
+        depthArray: resized,
+        width,
+        height,
+        minDepth,
+        maxDepth,
+        inferenceTimeMs,
+        device,
+      },
+      [resized.buffer],
+    );
+  } catch (error) {
+    postResponse({
       type: "error",
       requestId: req.requestId,
-      message: err instanceof Error ? err.message : String(err),
-    };
-    self.postMessage(errorMsg);
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
+}
+
+// async onmessage 本身不會序列化。只跑一項推論，待執行佇列只留最新圖片。
+workerScope.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  const req = event.data;
+  if (req.requestId < latestRequestId) {
+    if (req.type === "estimate") req.imageBitmap.close();
+    return;
+  }
+  latestRequestId = req.requestId;
+  if (pendingRequest?.type === "estimate") pendingRequest.imageBitmap.close();
+  pendingRequest = req.type === "cancel" ? null : req;
+  if (processing) return;
+  processing = true;
+  void (async () => {
+    try {
+      while (pendingRequest) {
+        const next = pendingRequest;
+        pendingRequest = null;
+        await processRequest(next);
+      }
+    } finally {
+      processing = false;
+    }
+  })();
 };

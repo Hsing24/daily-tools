@@ -6,6 +6,7 @@ import {
   diffLines,
   diffWords,
   findDiffBlocks,
+  DiffBudgetExceededError,
 } from "./diff-checker-engine";
 
 describe("Diff Checker Engine", () => {
@@ -28,6 +29,11 @@ describe("Diff Checker Engine", () => {
   });
 
   describe("getLcs", () => {
+    it("should stop an expired computation instead of returning a partial diff", () => {
+      expect(() => getLcs(["a"], ["b"], undefined, -1)).toThrow(
+        DiffBudgetExceededError,
+      );
+    });
     it("should compute LCS for string arrays", () => {
       const a = ["A", "B", "C"];
       const b = ["A", "D", "C"];
@@ -43,6 +49,17 @@ describe("Diff Checker Engine", () => {
   });
 
   describe("diffLines", () => {
+    it("should preserve both original texts when highlighting multiple Unicode changes", () => {
+      const left = ["👨‍👩‍👧‍👦 e\u0301 old", "  old  "];
+      const right = ["👍🏽 e\u0301 new", "  new  "];
+      const rows = diffLines(left, right);
+      expect(
+        rows.map((row) => row.leftWords?.map((word) => word.text).join("")),
+      ).toEqual(left);
+      expect(
+        rows.map((row) => row.rightWords?.map((word) => word.text).join("")),
+      ).toEqual(right);
+    });
     it("should return equal rows for identical texts", () => {
       const linesA = ["line 1", "line 2"];
       const linesB = ["line 1", "line 2"];

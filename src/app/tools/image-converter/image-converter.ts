@@ -86,6 +86,7 @@ export class ImageConverter implements OnDestroy {
     string
   >();
   private destroyed = false;
+  private uploadGeneration = 0;
 
   // --- Computed ---
   protected readonly totalItems = computed(() => this.items().length);
@@ -102,6 +103,7 @@ export class ImageConverter implements OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.uploadGeneration += 1;
     this.cleanupUrls();
     if (this.alertTimer !== undefined) clearTimeout(this.alertTimer);
     for (const [timer, url] of this.pendingZipUrls) {
@@ -161,8 +163,9 @@ export class ImageConverter implements OnDestroy {
   }
 
   private async addFiles(fileList: FileList): Promise<void> {
+    const generation = this.uploadGeneration;
     await this.formatSupportPromise;
-    if (this.destroyed) return;
+    if (this.destroyed || generation !== this.uploadGeneration) return;
 
     const files = Array.from(fileList);
     const imageFiles = files.filter((file) => isSupportedInputFile(file));
@@ -174,9 +177,16 @@ export class ImageConverter implements OnDestroy {
 
     const defaultFormat = getDefaultOutputFormat(this.supportedFormats());
     const newItems: ImageItem[] = [];
+    let failedCount = 0;
+    const isCancelled = (): boolean => {
+      if (!this.destroyed && generation === this.uploadGeneration) return false;
+      for (const item of newItems) URL.revokeObjectURL(item.previewUrl);
+      return true;
+    };
     for (const file of imageFiles) {
       try {
         const { width, height } = await loadImage(file);
+        if (isCancelled()) return;
         const previewUrl = URL.createObjectURL(file);
         newItems.push({
           id: generateId(),
@@ -193,17 +203,19 @@ export class ImageConverter implements OnDestroy {
           errorMessage: "",
         });
       } catch {
-        this.showAlert(
-          `無法載入圖片 ${file.name}，請確認檔案格式正確。`,
-          "error",
-        );
+        if (isCancelled()) return;
+        failedCount += 1;
       }
     }
 
+    if (newItems.length === 0) {
+      this.showAlert("沒有可加入的圖片，請確認檔案格式與尺寸。", "error");
+      return;
+    }
     this.items.update((prev) => [...prev, ...newItems]);
-    if (rejectedCount > 0) {
+    if (rejectedCount + failedCount > 0) {
       this.showAlert(
-        `已加入 ${newItems.length} 張圖片，略過 ${rejectedCount} 個不支援的檔案。`,
+        `已加入 ${newItems.length} 張圖片，略過 ${rejectedCount + failedCount} 個不支援或無法載入的檔案。`,
         "warning",
       );
     } else {
@@ -261,7 +273,7 @@ export class ImageConverter implements OnDestroy {
   // --- 轉換功能 ---
   protected async convertSingle(id: string): Promise<void> {
     const item = this.items().find((i) => i.id === id);
-    if (!item) return;
+    if (!item || item.status === "converting") return;
 
     const snapshot = {
       file: item.file,
@@ -272,6 +284,9 @@ export class ImageConverter implements OnDestroy {
     this.setItemStatus(id, "converting");
     try {
       const { img } = await loadImage(snapshot.file);
+      const pending = this.items().find((candidate) => candidate.id === id);
+      if (this.destroyed || !pending || pending.revision !== snapshot.revision)
+        return;
       const blob = await convertImage(img, snapshot.format, snapshot.quality);
       const current = this.items().find((candidate) => candidate.id === id);
       if (
@@ -282,6 +297,7 @@ export class ImageConverter implements OnDestroy {
       ) {
         return;
       }
+      if (current.resultUrl) URL.revokeObjectURL(current.resultUrl);
       const resultUrl = URL.createObjectURL(blob);
       this.items.update((items) =>
         items.map((i) =>
@@ -355,6 +371,7 @@ export class ImageConverter implements OnDestroy {
         });
       }
 
+      if (this.destroyed) return;
       const zipBlob = createZipBlob(zipEntries);
       const zipUrl = URL.createObjectURL(zipBlob);
 
@@ -377,6 +394,7 @@ export class ImageConverter implements OnDestroy {
 
   // --- 清除與輔助 ---
   protected clearAll(): void {
+    this.uploadGeneration += 1;
     this.cleanupUrls();
     this.items.set([]);
     this.showAlert("已清除所有圖片清單。", "success");

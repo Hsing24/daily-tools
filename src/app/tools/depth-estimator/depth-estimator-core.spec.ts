@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { unzlibSync } from "fflate";
 import {
   adjustDepthArray,
+  normalizeModelDepth,
   getDepthColor,
   depthArrayToImageData,
   encodeGrayscalePng,
@@ -15,6 +17,32 @@ import {
 } from "./depth-estimator-core";
 
 describe("depth-estimator-core", () => {
+  describe("model normalization", () => {
+    it("preserves finite relative depth range and handles constant images", () => {
+      const result = normalizeModelDepth(new Float32Array([2, 4, 6, 8]), 2, 2);
+      expect(result.minDepth).toBe(2);
+      expect(result.maxDepth).toBe(8);
+      expect(result.depthArray[0]).toBe(0);
+      expect(result.depthArray[3]).toBe(1);
+      expect(
+        normalizeModelDepth(new Float32Array([3, 3]), 2, 1).depthArray,
+      ).toEqual(new Float32Array(2));
+    });
+    it.each([NaN, Infinity, -Infinity])(
+      "rejects nonfinite output %s",
+      (value) => {
+        expect(() =>
+          normalizeModelDepth(new Float32Array([0, value]), 2, 1),
+        ).toThrow("無效數值");
+      },
+    );
+    it("rejects incomplete tensors", () => {
+      expect(() => normalizeModelDepth(new Float32Array([0]), 2, 2)).toThrow(
+        "尺寸不符",
+      );
+    });
+  });
+
   describe("getDepthColor", () => {
     it("should return grayscale values correctly", () => {
       const black = getDepthColor(0, "grayscale", false);
@@ -118,6 +146,42 @@ describe("depth-estimator-core", () => {
       expect(fLines.length).toBe(18);
     });
 
+    it.each([
+      [1, 4],
+      [4, 1],
+      [1, 1],
+    ])("exports %i×%i without nonfinite vertices", (width, height) => {
+      const obj = exportDepthToObj(
+        new Float32Array(width * height).fill(0.5),
+        width,
+        height,
+      );
+      expect(obj).not.toMatch(/NaN|Infinity/);
+    });
+
+    it("covers source edges and faces the camera in positive Z", () => {
+      const obj = exportDepthToObj(
+        new Float32Array([0, 0.5, 1, 0, 0.5, 1]),
+        3,
+        2,
+        { step: 2, depthScale: 1 },
+      );
+      const lines = obj.split("\n");
+      const vertices = lines
+        .filter((line) => line.startsWith("v "))
+        .map((line) => line.split(" ").slice(1).map(Number));
+      const face = lines
+        .find((line) => line.startsWith("f "))!
+        .split(" ")
+        .slice(1)
+        .map((part) => Number(part.split("/")[0]) - 1);
+      const [a, b, c] = face.map((index) => vertices[index]);
+      const normalZ =
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      expect(normalZ).toBeGreaterThan(0);
+      expect(vertices[1][2]).toBe(1);
+    });
+
     it("should preserve source aspect ratio with a bounded grid", () => {
       const objStr = exportDepthToObj(
         new Float32Array(384 * 384).fill(0.5),
@@ -211,6 +275,58 @@ describe("depth-estimator-core", () => {
       },
     );
 
+    it.each([8, 16] as const)(
+      "roundtrips filtered %i-bit PNG samples across rows",
+      async (bitDepth) => {
+        const width = 63;
+        const height = 17;
+        const depth = Float32Array.from(
+          { length: width * height },
+          (_, i) => (i % width) / (width - 1),
+        );
+        const png = await encodeGrayscalePng(depth, width, height, bitDepth);
+        const view = new DataView(png.buffer);
+        let compressed = new Uint8Array();
+        for (let offset = 8; offset < png.length;) {
+          const length = view.getUint32(offset);
+          const type = new TextDecoder().decode(
+            png.subarray(offset + 4, offset + 8),
+          );
+          if (type === "IDAT")
+            compressed = png.slice(offset + 8, offset + 8 + length);
+          offset += length + 12;
+        }
+        const raw = unzlibSync(compressed);
+        const bpp = bitDepth / 8;
+        const rowBytes = width * bpp;
+        const pixels = new Uint8Array(rowBytes * height);
+        for (let y = 0; y < height; y++) {
+          const rowOffset = y * (rowBytes + 1);
+          const filter = raw[rowOffset];
+          expect([0, 1, 2]).toContain(filter);
+          for (let x = 0; x < rowBytes; x++) {
+            const idx = y * rowBytes + x;
+            const predictor =
+              filter === 1 && x >= bpp
+                ? pixels[idx - bpp]
+                : filter === 2 && y > 0
+                  ? pixels[idx - rowBytes]
+                  : 0;
+            pixels[idx] = (raw[rowOffset + x + 1] + predictor) & 255;
+          }
+        }
+        for (let i = 0; i < depth.length; i++) {
+          const actual =
+            bitDepth === 16
+              ? pixels[i * 2] * 256 + pixels[i * 2 + 1]
+              : pixels[i];
+          expect(actual).toBe(
+            Math.round(depth[i] * (bitDepth === 16 ? 65535 : 255)),
+          );
+        }
+      },
+    );
+
     it("should retain more than 256 distinct 16-bit samples", async () => {
       const depth = new Float32Array(1024).map((_, index) => index / 1023);
       const png = await encodeGrayscalePng(depth, 1024, 1, 16);
@@ -231,8 +347,15 @@ describe("depth-estimator-core", () => {
       ).body!.pipeThrough(new DecompressionStream("deflate"));
       const scanline = new Uint8Array(await new Response(stream).arrayBuffer());
       const samples = new Set<number>();
+      if (scanline[0] === 1) {
+        for (let i = 3; i < scanline.length; i++) {
+          scanline[i] = (scanline[i] + scanline[i - 2]) & 255;
+        }
+      }
       for (let i = 1; i < scanline.length; i += 2) {
-        samples.add((scanline[i] ?? 0) * 256 + (scanline[i + 1] ?? 0));
+        const sample = (scanline[i] ?? 0) * 256 + (scanline[i + 1] ?? 0);
+        expect(sample).toBe(Math.round((depth[(i - 1) / 2] ?? 0) * 65535));
+        samples.add(sample);
       }
       expect(samples.size).toBeGreaterThan(256);
     });
@@ -257,8 +380,8 @@ describe("depth-estimator-core", () => {
         new TextDecoder().decode(glb.subarray(20, 20 + jsonLength)).trim(),
       );
       expect(json.accessors[0].count).toBe(192 * 120);
-      expect(json.accessors[0].min[0]).toBe(-1.6);
-      expect(json.accessors[0].max[0]).toBe(1.6);
+      expect(json.accessors[0].min[0]).toBeCloseTo(-1.6);
+      expect(json.accessors[0].max[0]).toBeCloseTo(1.6);
       expect(json.images[0].mimeType).toBe("image/png");
       expect(json.images[0].bufferView).toBe(3);
 
@@ -267,6 +390,22 @@ describe("depth-estimator-core", () => {
         sourceDimensions: { width: 1600, height: 1000 },
       });
       expect(glb.length).toBeLessThan(new TextEncoder().encode(obj).length);
+    });
+
+    it("declares WebP support as required when there is no PNG/JPEG fallback", () => {
+      const webp = new Uint8Array([82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80]);
+      const glb = exportDepthToGlb(
+        new Float32Array(4),
+        2,
+        2,
+        webp,
+        "image/webp",
+      );
+      const length = new DataView(glb.buffer).getUint32(12, true);
+      const json = JSON.parse(
+        new TextDecoder().decode(glb.subarray(20, 20 + length)),
+      );
+      expect(json.extensionsRequired).toContain("EXT_texture_webp");
     });
 
     it("should reject a texture whose MIME does not match its signature", () => {
