@@ -9,6 +9,7 @@ import {
 } from "@angular/core";
 import {
   convertImageToAscii,
+  DEFAULT_CHAR_ASPECT_RATIO,
   generateTsCode,
   MAX_SOURCE_PIXELS,
   type AsciiAnimationType,
@@ -65,7 +66,8 @@ function renderAsciiInComponent(
   const safeCtx = ctx;
 
   const fontSize = 12;
-  const charWidth = fontSize * 0.6;
+  const charWidth =
+    fontSize * (result.charAspectRatio ?? DEFAULT_CHAR_ASPECT_RATIO);
   const charHeight = fontSize;
 
   const displayWidth = result.width * charWidth;
@@ -93,7 +95,7 @@ function renderAsciiInComponent(
   let lastTime = 0;
   const fps = 30;
   const frameInterval = 1000 / fps;
-  const isAnimated = options.animationType !== "none";
+  const isAnimated = options.animationType !== "none" || options.flicker;
 
   // 動畫狀態
   let typewriterIndex = 0;
@@ -183,7 +185,7 @@ function renderAsciiInComponent(
         }
 
         safeCtx.fillStyle = fillStyle;
-        safeCtx.fillText(char, renderX, renderY);
+        safeCtx.fillText(char, renderX, renderY, charWidth);
 
         if (opacity < 1.0) {
           safeCtx.restore();
@@ -398,7 +400,7 @@ export class ImageToAscii implements OnDestroy {
         contrast: this.contrast(),
         brightness: this.brightness(),
         colorMode: this.colorMode(),
-        charAspectRatio: 0.55,
+        charAspectRatio: DEFAULT_CHAR_ASPECT_RATIO,
       };
       const generation = ++this.conversionGeneration;
 

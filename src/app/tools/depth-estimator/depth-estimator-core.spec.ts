@@ -16,6 +16,31 @@ import {
   resizeDepthArray,
 } from "./depth-estimator-core";
 
+function readGlbMesh(glb: Uint8Array): {
+  positions: Float32Array;
+  indices: Uint16Array;
+} {
+  const jsonLength = new DataView(glb.buffer).getUint32(12, true);
+  const json = JSON.parse(
+    new TextDecoder().decode(glb.subarray(20, 20 + jsonLength)),
+  );
+  const binaryStart = 20 + jsonLength + 8;
+  const positions = json.bufferViews[0];
+  const indices = json.bufferViews[2];
+  return {
+    positions: new Float32Array(
+      glb.buffer,
+      binaryStart + positions.byteOffset,
+      positions.byteLength / 4,
+    ),
+    indices: new Uint16Array(
+      glb.buffer,
+      binaryStart + indices.byteOffset,
+      indices.byteLength / 2,
+    ),
+  };
+}
+
 describe("depth-estimator-core", () => {
   describe("model normalization", () => {
     it("preserves finite relative depth range and handles constant images", () => {
@@ -362,6 +387,75 @@ describe("depth-estimator-core", () => {
   });
 
   describe("exportDepthToGlb", () => {
+    it("matches OBJ triangles on a nonplanar depth surface", () => {
+      const depth = new Float32Array([0, 0, 0, 1]);
+      const options = { maxGridDimension: 2, depthScale: 1 };
+      const obj = exportDepthToObj(depth, 2, 2, options);
+      const objIndices = obj
+        .split("\n")
+        .filter((line) => line.startsWith("f "))
+        .flatMap((line) =>
+          line
+            .split(" ")
+            .slice(1)
+            .map((part) => Number(part.split("/")[0]) - 1),
+        );
+      const mesh = readGlbMesh(
+        exportDepthToGlb(
+          depth,
+          2,
+          2,
+          new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+          "image/png",
+          options,
+        ),
+      );
+
+      // A different diagonal changes the surface's centre height from 0.5 to 0.
+      expect(objIndices).toEqual([0, 3, 1, 0, 2, 3]);
+      expect(Array.from(mesh.indices)).toEqual(objIndices);
+    });
+
+    it.each([
+      [2, 2, 3],
+      [6, 4, 3],
+      [4, 6, 5],
+    ])(
+      "preserves a %i×%i planar ramp in both mesh formats at grid size %i",
+      (width, height, maxGridDimension) => {
+        const depth = Float32Array.from(
+          { length: width * height },
+          (_, i) =>
+            ((i % width) / (width - 1)) * 0.4 +
+            (Math.floor(i / width) / (height - 1)) * 0.6,
+        );
+        const options = { maxGridDimension, depthScale: 1 };
+        const objVertices = exportDepthToObj(depth, width, height, options)
+          .split("\n")
+          .filter((line) => line.startsWith("v "))
+          .map((line) => line.split(" ").slice(1).map(Number));
+        const { positions } = readGlbMesh(
+          exportDepthToGlb(
+            depth,
+            width,
+            height,
+            new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+            "image/png",
+            options,
+          ),
+        );
+
+        expect(positions.length).toBe(objVertices.length * 3);
+        for (let i = 0; i < objVertices.length; i++) {
+          const [x, y, z] = objVertices[i];
+          const expected =
+            (x / (width / height) + 1) * 0.2 + (1 - y) * 0.3;
+          expect(z).toBeCloseTo(expected, 3);
+          expect(positions[i * 3 + 2]).toBeCloseTo(expected, 3);
+        }
+      },
+    );
+
     it("should create a valid GLB with embedded texture and aspect-correct mesh", () => {
       const depth = new Float32Array(384 * 384).map(
         (_, index) => index / (384 * 384 - 1),

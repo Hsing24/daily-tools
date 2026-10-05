@@ -4,9 +4,53 @@ import {
   formatFileSize,
   WARNING_THRESHOLD_SECONDS,
   TRACE_PRESETS,
+  getExactTracePalette,
   validateSvgOutput,
 } from "./svg-draw-tracer";
 import { describe, it, expect } from "vitest";
+import ImageTracer from "imagetracerjs";
+
+describe("低色數描圖輸出", () => {
+  it.each(Object.entries(TRACE_PRESETS))(
+    "%s 保留透明背景上未落在取樣格點的半透明色塊",
+    (_name, options) => {
+      const data = new Uint8ClampedArray(64 * 64 * 4);
+      for (let y = 30; y < 34; y++) {
+        for (let x = 30; x < 34; x++) {
+          data.set([255, 0, 0, 128], (y * 64 + x) * 4);
+        }
+      }
+      const svg = ImageTracer.imagedataToSVG(
+        { width: 64, height: 64, data },
+        { ...options, pal: getExactTracePalette(data, options.numberofcolors) },
+      );
+      const document = new DOMParser().parseFromString(svg, "image/svg+xml");
+      const mark = document.querySelector('path[fill="rgb(255,0,0)"]');
+      expect(mark).not.toBeNull();
+      expect(Number(mark?.getAttribute("opacity"))).toBeCloseTo(128 / 255);
+      expect(mark?.getAttribute("d")).toContain("30 30");
+    },
+  );
+
+  it("相同 RGB、不同 alpha 保留為不同色彩", () => {
+    expect(
+      getExactTracePalette(
+        new Uint8ClampedArray([255, 0, 0, 0, 255, 0, 0, 128, 255, 0, 0, 255]),
+        3,
+      ),
+    ).toEqual([
+      { r: 255, g: 0, b: 0, a: 0 },
+      { r: 255, g: 0, b: 0, a: 128 },
+      { r: 255, g: 0, b: 0, a: 255 },
+    ]);
+  });
+
+  it("超出 preset 色數預算後回到既有量化流程", () => {
+    const data = new Uint8ClampedArray(65 * 4);
+    for (let i = 0; i < 65; i++) data.set([i, 0, 0, 255], i * 4);
+    expect(getExactTracePalette(data, 64)).toBeUndefined();
+  });
+});
 
 describe("estimateTraceTime", () => {
   it("100x100 pixel_perfect 應為 0.2 秒", () => {

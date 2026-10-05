@@ -70,6 +70,31 @@ function clampDepth(value: number | undefined): number {
   return Math.max(0, Math.min(1, value));
 }
 
+/** 網格 UV 從首像素延伸至末像素；以雙線性取樣保留斜面與邊界。 */
+export function sampleDepthAtUv(
+  depthArray: Float32Array,
+  width: number,
+  height: number,
+  u: number,
+  v: number,
+): number {
+  const x = clampDepth(u) * (width - 1);
+  const y = clampDepth(v) * (height - 1);
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const x1 = Math.min(width - 1, x0 + 1);
+  const y1 = Math.min(height - 1, y0 + 1);
+  const fx = x - x0;
+  const fy = y - y0;
+  const top =
+    clampDepth(depthArray[y0 * width + x0]) * (1 - fx) +
+    clampDepth(depthArray[y0 * width + x1]) * fx;
+  const bottom =
+    clampDepth(depthArray[y1 * width + x0]) * (1 - fx) +
+    clampDepth(depthArray[y1 * width + x1]) * fx;
+  return top * (1 - fy) + bottom * fy;
+}
+
 function hasPrefix(bytes: Uint8Array, prefix: readonly number[]): boolean {
   return prefix.every((value, index) => bytes[index] === value);
 }
@@ -770,17 +795,15 @@ export function exportDepthToObj(
 
   // 頂點 (v) 與 UV (vt)
   for (let r = 0; r < rows; r++) {
-    const yPixel = rows > 1 ? Math.round((r / (rows - 1)) * (height - 1)) : 0;
-    const vCoord = rows > 1 ? 1.0 - r / (rows - 1) : 1;
+    const sourceV = rows > 1 ? r / (rows - 1) : 0;
+    const vCoord = 1.0 - sourceV;
     const yWorld = (vCoord - 0.5) * 2.0;
 
     for (let c = 0; c < cols; c++) {
-      const xPixel = cols > 1 ? Math.round((c / (cols - 1)) * (width - 1)) : 0;
       const uCoord = cols > 1 ? c / (cols - 1) : 0;
       const xWorld = (uCoord - 0.5) * 2.0 * aspect;
 
-      const idx = yPixel * width + xPixel;
-      let d = clampDepth(depthArray[idx]);
+      let d = sampleDepthAtUv(depthArray, width, height, uCoord, sourceV);
       if (invert) d = 1.0 - d;
       const zWorld = d * depthScale;
 
@@ -862,12 +885,9 @@ export function exportDepthToGlb(
 
   for (let row = 0; row < rows; row++) {
     const v = row / (rows - 1);
-    const sourceY = Math.round(v * (height - 1));
     for (let col = 0; col < cols; col++) {
       const u = col / (cols - 1);
-      const sourceX = Math.round(u * (width - 1));
-      const depth =
-        clampDepth(depthArray[sourceY * width + sourceX]) * depthScale;
+      const depth = sampleDepthAtUv(depthArray, width, height, u, v) * depthScale;
       const vertex = row * cols + col;
       positions[vertex * 3] = (u - 0.5) * 2 * aspect;
       positions[vertex * 3 + 1] = (0.5 - v) * 2;
@@ -887,9 +907,9 @@ export function exportDepthToGlb(
       const bottomLeft = (row + 1) * cols + col;
       const bottomRight = bottomLeft + 1;
       indices[index++] = topLeft;
-      indices[index++] = bottomLeft;
+      indices[index++] = bottomRight;
       indices[index++] = topRight;
-      indices[index++] = topRight;
+      indices[index++] = topLeft;
       indices[index++] = bottomLeft;
       indices[index++] = bottomRight;
     }

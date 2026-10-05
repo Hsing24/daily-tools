@@ -62,17 +62,21 @@ function countWords(text: string): number {
   let count = 0;
   for (const word of segmentWords(text)) {
     if (word.isWordLike) {
-      if (!CJK_PATTERN.test(word.segment)) {
+      if (
+        !CJK_PATTERN.test(word.segment) &&
+        !EMOJI_PATTERN.test(word.segment)
+      ) {
         count += 1;
         continue;
       }
-      let cjkCount = 0;
       let hasOtherWordContent = false;
       for (const grapheme of segmentGraphemes(word.segment)) {
-        if (CJK_PATTERN.test(grapheme)) cjkCount += 1;
-        else if (!isWhitespace(grapheme)) hasOtherWordContent = true;
+        if (CJK_PATTERN.test(grapheme) || EMOJI_PATTERN.test(grapheme)) {
+          count += 1 + (hasOtherWordContent ? 1 : 0);
+          hasOtherWordContent = false;
+        } else if (!isWhitespace(grapheme)) hasOtherWordContent = true;
       }
-      count += cjkCount + (hasOtherWordContent ? 1 : 0);
+      count += hasOtherWordContent ? 1 : 0;
     } else {
       if (!EMOJI_PATTERN.test(word.segment)) continue;
       for (const grapheme of segmentGraphemes(word.segment)) {

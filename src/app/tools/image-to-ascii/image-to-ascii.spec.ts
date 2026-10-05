@@ -39,10 +39,51 @@ describe("ImageToAscii 元件", () => {
     expect(component).toBeTruthy();
   });
 
+  it("預覽沿用取樣字格比例，無字元動畫也能啟用 CRT 閃爍", async () => {
+    const raf = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockReturnValue(23);
+    const cancel = vi
+      .spyOn(globalThis, "cancelAnimationFrame")
+      .mockImplementation(() => {});
+    try {
+      component["uploadedImage"].set("data:image/png;base64,fixture");
+      await fixture.whenStable();
+      component["asciiResult"].set({
+        width: 2,
+        height: 1,
+        chars: ["👾", "田"],
+        charAspectRatio: 0.5,
+      });
+      await fixture.whenStable();
+      const canvas = element.querySelector("canvas")!;
+      expect(canvas.style.width).toBe("12px");
+      expect(canvas.style.height).toBe("12px");
+      const context = canvas.getContext("2d")!;
+      expect(context.fillText).toHaveBeenCalledWith("👾", 0, 0, 6);
+      expect(context.fillText).toHaveBeenCalledWith("田", 6, 0, 6);
+      // Angular 自身也會排 RAF；只檢查 ASCII draw callback。
+      expect(
+        raf.mock.calls.some(([callback]) => callback.name === "draw"),
+      ).toBe(false);
+
+      component["flicker"].set(true);
+      await fixture.whenStable();
+      expect(
+        raf.mock.calls.some(([callback]) => callback.name === "draw"),
+      ).toBe(true);
+      fixture.destroy();
+      expect(cancel).toHaveBeenCalledWith(23);
+    } finally {
+      raf.mockRestore();
+      cancel.mockRestore();
+    }
+  });
+
   it("初始狀態下不應顯示編輯區，而應顯示圖片拖放上傳區", () => {
     const dropZone = element.querySelector("input[type='file']");
     expect(dropZone).toBeTruthy();
-    
+
     // 不應有清除按鈕或 Canvas 預覽
     const clearBtn = element.querySelector("button.dt-button--warning");
     expect(clearBtn).toBeNull();

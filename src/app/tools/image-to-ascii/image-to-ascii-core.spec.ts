@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import ts from "typescript";
 import {
   convertImageToAscii,
+  DEFAULT_CHAR_ASPECT_RATIO,
   generateTsCode,
   type ConvertOptions,
 } from "./image-to-ascii-core";
@@ -9,7 +10,7 @@ import {
 describe("ImageToAscii Core 核心演算法", () => {
   it("產出的播放器通過 strict TypeScript 並保留靜態畫面與 destroy 行為", () => {
     const code = generateTsCode(
-      { width: 2, height: 1, chars: ["👾", "@"] },
+      { width: 2, height: 1, chars: ["👾", "@"], charAspectRatio: 0.5 },
       {
         colorMode: "monochrome",
         animationType: "none",
@@ -63,7 +64,7 @@ describe("ImageToAscii Core 核心演算法", () => {
     const runtime = {} as {
       renderAscii: (
         canvas: HTMLCanvasElement,
-        options?: { animationType: string },
+        options?: { animationType?: string; flicker?: boolean },
       ) => { destroy: () => void };
     };
     new Function("exports", javascript)(runtime);
@@ -80,9 +81,15 @@ describe("ImageToAscii Core 核心演算法", () => {
       .mockImplementation(() => {});
     try {
       const staticPlayer = runtime.renderAscii(canvas);
+      expect(canvas.style.width).toBe("12px");
+      expect(canvas.style.height).toBe("12px");
       expect(context.fillText.mock.calls.map((call) => call[0])).toEqual([
         "👾",
         "@",
+      ]);
+      expect(context.fillText.mock.calls).toEqual([
+        ["👾", 0, 0, 6],
+        ["@", 6, 0, 6],
       ]);
       expect(raf).not.toHaveBeenCalled();
       staticPlayer.destroy();
@@ -92,9 +99,47 @@ describe("ImageToAscii Core 核心演算法", () => {
       expect(raf).toHaveBeenCalledOnce();
       animatedPlayer.destroy();
       expect(cancel).toHaveBeenCalledWith(17);
+      raf.mockClear();
+      const flickerPlayer = runtime.renderAscii(canvas, { flicker: true });
+      expect(raf).toHaveBeenCalledOnce();
+      flickerPlayer.destroy();
     } finally {
       raf.mockRestore();
       cancel.mockRestore();
+    }
+  });
+
+  it("正方形來源的取樣與播放器字格比例相同", () => {
+    const context = vi
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue({
+        drawImage: vi.fn(),
+        getImageData: (
+          _x: number,
+          _y: number,
+          width: number,
+          height: number,
+        ) => ({
+          data: new Uint8ClampedArray(width * height * 4),
+        }),
+      } as unknown as CanvasRenderingContext2D);
+    try {
+      const result = convertImageToAscii(
+        { width: 80, height: 80 } as HTMLCanvasElement,
+        {
+          width: 80,
+          charSet: "@ ",
+          dither: false,
+          contrast: 0,
+          brightness: 0,
+          colorMode: "monochrome",
+          charAspectRatio: DEFAULT_CHAR_ASPECT_RATIO,
+        },
+      );
+      expect(result.charAspectRatio).toBe(DEFAULT_CHAR_ASPECT_RATIO);
+      expect(result.width * result.charAspectRatio!).toBe(result.height);
+    } finally {
+      context.mockRestore();
     }
   });
 

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import ImageTracer from "imagetracerjs";
+import { getExactTracePalette } from "./svg-draw-tracer";
 import type { TraceWorkerOutput, TraceWorkerRequest } from "./svg-draw-tracer";
 
 addEventListener("message", (event: MessageEvent) => {
@@ -13,7 +14,10 @@ addEventListener("message", (event: MessageEvent) => {
     const clampedArray = new Uint8ClampedArray(data);
     const imgd = { width, height, data: clampedArray };
 
-    const svgString: string = ImageTracer.imagedataToSVG(imgd, options);
+    const svgString: string = ImageTracer.imagedataToSVG(imgd, {
+      ...options,
+      pal: getExactTracePalette(clampedArray, options.numberofcolors),
+    });
 
     const elapsedMs = performance.now() - start;
 

@@ -38,6 +38,7 @@ import {
   GlbImageMimeType,
   MAX_DEPTH_IMAGE_PIXELS,
   prepareDepthForExport,
+  sampleDepthAtUv,
 } from "./depth-estimator-core";
 
 function isDepthModelId(value: string): value is DepthModelId {
@@ -1051,19 +1052,14 @@ export class DepthEstimator implements OnInit, OnDestroy {
       let indexOffset = 0;
 
       for (let r = 0; r < rows; r++) {
-        const yPixel =
-          rows > 1 ? Math.round((r * (res.height - 1)) / (rows - 1)) : 0;
-        const v = res.height > 1 ? 1.0 - yPixel / (res.height - 1) : 1;
-        const yWorld = (v - 0.5) * 2.0;
+        const v = rows > 1 ? r / (rows - 1) : 0;
+        const yWorld = (0.5 - v) * 2.0;
 
         for (let c = 0; c < cols; c++) {
-          const xPixel =
-            cols > 1 ? Math.round((c * (res.width - 1)) / (cols - 1)) : 0;
-          const u = res.width > 1 ? xPixel / (res.width - 1) : 0;
+          const u = cols > 1 ? c / (cols - 1) : 0;
           const xWorld = (u - 0.5) * 2.0 * aspect;
 
-          const idx = yPixel * res.width + xPixel;
-          const d = processedDepth[idx] ?? 0;
+          const d = sampleDepthAtUv(processedDepth, res.width, res.height, u, v);
           const zWorld = d * scaleZ;
 
           const vertex = r * cols + c;
@@ -1071,7 +1067,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
           positions[vertex * 3 + 1] = yWorld;
           positions[vertex * 3 + 2] = zWorld;
           texCoords[vertex * 2] = u;
-          texCoords[vertex * 2 + 1] = 1.0 - v;
+          texCoords[vertex * 2 + 1] = v;
         }
       }
 
@@ -1418,6 +1414,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.triggerDownload(href, `depth-map-${bitDepth}bit-${Date.now()}.png`);
     } catch {
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.alertState.set({
         type: "error",
         message: "PNG 編碼失敗，請改用較小的圖片後再試",
@@ -1497,6 +1494,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
     };
     const imageMimeType = this.sourceImageMimeType();
     const processedDepth = this.getProcessedDepth(res.width, res.height);
+    const depthScale = (this.depthScale3D() / 100) * 0.8;
     if (!imageMimeType) return;
 
     try {
@@ -1518,7 +1516,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
         imageMimeType,
         {
           maxGridDimension: 192,
-          depthScale: (this.depthScale3D() / 100) * 0.8,
+          depthScale,
           sourceDimensions: dimensions,
         },
       );
@@ -1528,6 +1526,7 @@ export class DepthEstimator implements OnInit, OnDestroy {
       const url = URL.createObjectURL(blob);
       this.triggerDownload(url, `depth-scene-${Date.now()}.glb`);
     } catch {
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.alertState.set({
         type: "error",
         message: "GLB 匯出失敗：原始貼圖必須是有效的 PNG、JPEG 或 WebP",
@@ -1578,11 +1577,13 @@ export class DepthEstimator implements OnInit, OnDestroy {
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
       ]);
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.alertState.set({
         type: "success",
         message: "深度圖已成功複製至剪貼簿！",
       });
     } catch (e) {
+      if (generation !== this.fileGeneration || this.isDestroyed) return;
       this.alertState.set({
         type: "error",
         message: "剪貼簿寫入失敗，請改用下載功能",

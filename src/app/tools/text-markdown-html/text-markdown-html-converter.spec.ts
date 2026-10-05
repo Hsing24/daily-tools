@@ -69,7 +69,7 @@ describe("convertTextToMarkdownAndHtml", () => {
     );
     expect(result).not.toContain("javascript:");
     expect(result).not.toContain("<script");
-    expect(result).not.toContain("<b>");
+    expect(result).toContain("<b>粗體</b>");
   });
 
   it("應支援巢狀清單、有序清單、程式碼區塊與括號 URL", () => {
@@ -79,7 +79,7 @@ describe("convertTextToMarkdownAndHtml", () => {
 
     expect(result).toContain("<ol>");
     expect(result).toContain("<li>巢狀項目</li>");
-    expect(result).toContain("<pre><code>");
+    expect(result).toContain('<pre><code class="language-ts">');
     expect(result).toContain('href="https://example.com/a_(b)"');
   });
 
@@ -219,5 +219,163 @@ describe("convertTextToMarkdownAndHtml", () => {
     expect(
       convertTextToMarkdownAndHtml("<script>alert(1)</script>\n\n"),
     ).toEqual({ markdown: "", html: "" });
+  });
+
+  it("富文本 b / i 應保留粗體與斜體語意", () => {
+    const markdown = convertHtmlToMarkdown(
+      '<p><b onclick="evil()">粗體</b>與<i>斜體</i></p>',
+    );
+    expect(markdown).toBe("**粗體**與*斜體*");
+    expect(convertMarkdownToHtml(markdown)).toBe(
+      "<p><strong>粗體</strong>與<em>斜體</em></p>",
+    );
+  });
+
+  it("只保留 code 的安全 language class，雙向轉換保留語言", () => {
+    for (const language of ["c++", "c#", "f#", "js"]) {
+      const markdown = convertHtmlToMarkdown(
+        `<pre class="layout"><code class="hidden language-${language} other" onclick="evil()">code\n</code></pre>`,
+      );
+      expect(markdown).toBe(`\`\`\`${language}\ncode\n\`\`\``);
+      expect(convertMarkdownToHtml(markdown)).toBe(
+        `<pre><code class="language-${language}">code\n</code></pre>`,
+      );
+    }
+    const html = convertMarkdownToHtml(
+      '<p class="language-js">字</p><code class="hidden">a</code>',
+    );
+    expect(html).not.toContain("class=");
+  });
+
+  it("HTML pre 應成為 code block 並保留空白行、縮排與內嵌 fence", () => {
+    for (const code of [
+      "one\n  two\n\nthree\n",
+      "\n\nconst x = 1;\n\n",
+      "\n \t\n",
+      "  ```\nconst x = '<tag>';\n  ```\n",
+    ]) {
+      const pre = document.createElement("pre");
+      pre.textContent = code;
+      // A leading newline immediately after <pre> is consumed by HTML parsing.
+      const codeElement = document.createElement("code");
+      codeElement.textContent = code;
+      const html = `<pre>${codeElement.outerHTML}</pre>`;
+      for (const input of [
+        html,
+        ...(code.startsWith("\n") ? [] : [pre.outerHTML]),
+      ]) {
+        const output = document.createElement("div");
+        output.innerHTML = convertMarkdownToHtml(convertHtmlToMarkdown(input));
+        expect(output.querySelector("pre code")?.textContent).toBe(code);
+      }
+    }
+  });
+
+  it("fenced code 的末端空白行不應被 renderer 吃掉", () => {
+    const output = document.createElement("div");
+    output.innerHTML = convertMarkdownToHtml("```\na\n\n\n```");
+    expect(output.querySelector("code")?.textContent).toBe("a\n\n\n");
+  });
+
+  it("GFM 無法表達的 table 結構應保留 sanitized HTML", () => {
+    for (const html of [
+      "<table><tr><th>h</th></tr><tr><td><pre><code>a\nb\n</code></pre></td></tr></table>",
+      "<table><tr><th>h</th></tr><tr><td><ul><li>one</li><li>two</li></ul></td></tr></table>",
+      "<table><tr><th>h</th></tr><tr><td>a</td><td>b</td></tr></table>",
+      "<table><caption>說明</caption><tr><th>h</th></tr><tr><td>值</td></tr></table>",
+      "<table><tr><th>h</th></tr><tr><th>row</th></tr></table>",
+    ]) {
+      const expected = document.createElement("div");
+      expected.innerHTML = html;
+      const markdown = convertHtmlToMarkdown(html);
+      expect(markdown).toContain("<table>");
+      const output = document.createElement("div");
+      output.innerHTML = convertMarkdownToHtml(markdown);
+      expect(output.innerHTML).toBe(expected.innerHTML);
+    }
+  });
+
+  it("task list 的勾選狀態應以靜態文字雙向保留，包含巢狀與多段落", () => {
+    for (const source of [
+      "- [x] done\n- [ ] todo",
+      "- [x] parent\n  - [ ] child",
+      "- [x] first paragraph\n\n  second paragraph",
+      "3. [ ] ordered task\n4. [x] done",
+    ]) {
+      const html = convertMarkdownToHtml(source);
+      expect(html).not.toContain("<input");
+      expect(html).toMatch(/\[[x ]\]/);
+      const markdown = convertHtmlToMarkdown(html);
+      expect(markdown).not.toContain("\\[");
+      expect(convertMarkdownToHtml(markdown)).toBe(html);
+    }
+  });
+
+  it("一般文字與 code 的 task 範例不應當成真正 task，input 仍禁止", () => {
+    const html =
+      '<p>[x] literal paragraph</p><ul><li><code>[x] literal code</code></li><li>before [ ] after</li></ul><input type="checkbox" checked>';
+    const markdown = convertHtmlToMarkdown(html);
+    expect(markdown).toContain("\\[x\\] literal paragraph");
+    expect(markdown).toContain("`[x] literal code`");
+    expect(markdown).toContain("before \\[ \\] after");
+    expect(convertMarkdownToHtml(markdown)).not.toContain("<input");
+    const code = "```md\n- [x] literal task\n```";
+    expect(convertTextToMarkdownAndHtml(code).markdown).toBe(code);
+    expect(convertMarkdownToHtml(code)).toContain(
+      "- [x] literal task\n</code>",
+    );
+  });
+
+  it("inline code 應完整保留多空白、兩端空白、純空白與 backtick", () => {
+    for (const text of [
+      "a  b",
+      " a ",
+      "  a  ",
+      " a",
+      "a ",
+      " ",
+      "  ",
+      "\t",
+      "`a`",
+      "a`b``c",
+      " `` a ` ",
+      "",
+    ]) {
+      const code = document.createElement("code");
+      code.textContent = text;
+      for (const html of [
+        `<p>before ${code.outerHTML} after</p>`,
+        `<p>${code.outerHTML}</p>`,
+        `<ul><li>${code.outerHTML}</li></ul>`,
+      ]) {
+        const markdown = convertHtmlToMarkdown(html);
+        const output = document.createElement("div");
+        output.innerHTML = convertMarkdownToHtml(markdown);
+        expect(output.querySelector("code")?.textContent).toBe(text);
+      }
+    }
+  });
+
+  it("inline code 換行無法由 code span 保真時保留安全 HTML", () => {
+    for (const text of [
+      "a\nb",
+      "a\n\nb",
+      "\n \n",
+      "<tag>\n**literal**",
+      "https://example.com\n[a](./path) &amp; `raw` ~~text~~",
+    ]) {
+      const code = document.createElement("code");
+      code.textContent = text;
+      code.setAttribute("onclick", "evil()");
+      const markdown = convertHtmlToMarkdown(
+        `<p>before ${code.outerHTML} after</p>`,
+      );
+      expect(markdown).toContain("<code>");
+      expect(markdown).not.toContain("onclick");
+      const output = document.createElement("div");
+      output.innerHTML = convertMarkdownToHtml(markdown);
+      expect(output.querySelector("code")?.textContent).toBe(text);
+      expect(output.querySelectorAll("p")).toHaveLength(1);
+    }
   });
 });

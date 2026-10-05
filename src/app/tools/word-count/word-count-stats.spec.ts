@@ -95,6 +95,18 @@ describe("computeTextStats", () => {
     expect(computeTextStats("#️⃣ *️⃣ 1️⃣").words).toBe(3);
   });
 
+  it("連續 keycap emoji 與夾在詞中的 emoji 應各自算一字", () => {
+    expect(computeTextStats("1️⃣2️⃣3️⃣")).toEqual({
+      charactersWithSpaces: 3,
+      charactersNoSpaces: 3,
+      words: 3,
+      lines: 1,
+    });
+    expect(computeTextStats("go1️⃣now2️⃣").words).toBe(4);
+    expect(computeTextStats("123").words).toBe(1);
+    expect(computeTextStats("中文1️⃣English").words).toBe(4);
+  });
+
   it("長文統計應與重複段落的 grapheme / word contract 一致", () => {
     const paragraph = "你好 world 👨‍👩‍👧‍👦e\u0301\r\n";
     const single = computeTextStats(paragraph);

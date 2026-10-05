@@ -162,10 +162,9 @@ function pairChangedLines(
       index += 1;
     }
 
-    const pairCount = Math.min(removed.length, added.length);
-    for (let pairIndex = 0; pairIndex < pairCount; pairIndex += 1) {
-      const left = removed[pairIndex];
-      const right = added[pairIndex];
+    let leftIndex = 0;
+    let rightIndex = 0;
+    const appendPair = (left: AlignedLine, right: AlignedLine) => {
       const words = diffWordPair(left.leftText, right.rightText, deadline);
       merged.push({
         type: "modified",
@@ -176,11 +175,93 @@ function pairChangedLines(
         leftWords: words.left,
         rightWords: words.right,
       });
+    };
+    const appendUntil = (leftEnd: number, rightEnd: number) => {
+      while (leftIndex < leftEnd && rightIndex < rightEnd) {
+        appendPair(removed[leftIndex++], added[rightIndex++]);
+      }
+      while (leftIndex < leftEnd) merged.push(removed[leftIndex++]);
+      while (rightIndex < rightEnd) merged.push(added[rightIndex++]);
+    };
+    for (const [leftAnchor, rightAnchor] of similarLinePairs(
+      removed,
+      added,
+      deadline,
+    )) {
+      appendUntil(leftAnchor, rightAnchor);
+      appendPair(removed[leftIndex++], added[rightIndex++]);
     }
-    merged.push(...removed.slice(pairCount), ...added.slice(pairCount));
+    appendUntil(removed.length, added.length);
   }
 
   return merged;
+}
+
+/** Find ordered similar-line anchors before pairing the remaining replacements.
+ * A small bounded matrix keeps inserted/deleted lines from shifting a hunk's
+ * word highlights, without introducing an unbounded second diff search. */
+function similarLinePairs(
+  removed: AlignedLine[],
+  added: AlignedLine[],
+  deadline: number,
+): [number, number][] {
+  const pairCount = removed.length * added.length;
+  if (
+    pairCount <= 1 ||
+    pairCount > 4096 ||
+    removed.reduce((size, line) => size + line.leftText.length, 0) +
+      added.reduce((size, line) => size + line.rightText.length, 0) >
+      20_000
+  )
+    return [];
+  const describeLine = (text: string) => {
+    if (Date.now() > deadline) throw new DiffBudgetExceededError();
+    const words = new Map<string, number>();
+    let weight = 0;
+    for (const token of tokenizeLine(text)) {
+      if (!/[\p{L}\p{N}\p{Extended_Pictographic}]/u.test(token)) continue;
+      words.set(token, (words.get(token) ?? 0) + 1);
+      weight += token.length;
+    }
+    return { words, weight };
+  };
+  const left = removed.map((line) => describeLine(line.leftText));
+  const right = added.map((line) => describeLine(line.rightText));
+  const width = added.length + 1;
+  const scores = new Float64Array((removed.length + 1) * width);
+  const choices = new Uint8Array(scores.length);
+  for (let i = removed.length - 1; i >= 0; i -= 1) {
+    if (Date.now() > deadline) throw new DiffBudgetExceededError();
+    for (let j = added.length - 1; j >= 0; j -= 1) {
+      if (Date.now() > deadline) throw new DiffBudgetExceededError();
+      const index = i * width + j;
+      const skipLeft = scores[index + width];
+      const skipRight = scores[index + 1];
+      scores[index] = Math.max(skipLeft, skipRight);
+      choices[index] = skipLeft >= skipRight ? 1 : 2;
+      let shared = 0;
+      for (const [word, count] of left[i].words) {
+        shared += Math.min(count, right[j].words.get(word) ?? 0) * word.length;
+      }
+      const total = left[i].weight + right[j].weight;
+      const similarity = total === 0 ? 0 : (2 * shared) / total;
+      const paired = similarity + scores[index + width + 1];
+      if (similarity >= 0.5 && paired > scores[index]) {
+        scores[index] = paired;
+        choices[index] = 3;
+      }
+    }
+  }
+  const pairs: [number, number][] = [];
+  let i = 0;
+  let j = 0;
+  while (i < removed.length && j < added.length) {
+    const choice = choices[i * width + j];
+    if (choice === 3) pairs.push([i++, j++]);
+    else if (choice === 1) i += 1;
+    else j += 1;
+  }
+  return pairs;
 }
 
 /** 比對完整行內容，保留空白行、縮排、trailing spaces 與換行差異。 */

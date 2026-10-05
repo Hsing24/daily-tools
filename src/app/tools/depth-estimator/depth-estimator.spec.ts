@@ -1,7 +1,7 @@
 import { TestBed, ComponentFixture } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
 import { DepthEstimator } from "./depth-estimator";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 describe("DepthEstimator 元件", () => {
   let fixture: ComponentFixture<DepthEstimator>;
@@ -211,6 +211,40 @@ describe("DepthEstimator 元件", () => {
     expect(gl.texImage2D).toHaveBeenCalledOnce();
   });
 
+  it("3D preview preserves a planar ramp on an evenly spaced mesh", async () => {
+    component.inputImageUrl.set("data:image/png;base64,mock");
+    component.inputImageElement.set(new Image());
+    component.imageDimensions.set({ width: 6, height: 4 });
+    component.edgeSoftening.set(0);
+    component.depthScale3D.set(100);
+    component.depthResult.set({
+      depthArray: Float32Array.from(
+        { length: 24 },
+        (_, i) => ((i % 6) / 5) * 0.4 + (Math.floor(i / 6) / 3) * 0.6,
+      ),
+      width: 6,
+      height: 4,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 1,
+      device: "wasm",
+    });
+    component.previewMode.set("mesh3d");
+    await fixture.whenStable();
+    component["renderCurrentView"]();
+    const gl = component["gl"]!;
+    const uploads = vi.mocked(gl.bufferData).mock.calls;
+    const positions = uploads[0][1] as Float32Array;
+    const indices = uploads[2][1] as Uint16Array;
+
+    // The centre column falls between source pixels 2 and 3.
+    expect(positions[3]).toBeCloseTo(0);
+    expect(positions[5]).toBeCloseTo(0.2 * 0.8);
+    expect(positions[12]).toBeCloseTo(0);
+    expect(positions[14]).toBeCloseTo(0.8 * 0.8);
+    expect(Array.from(indices)).toEqual([0, 4, 1, 0, 3, 4, 1, 5, 2, 1, 4, 5]);
+  });
+
   it("只提供已確認可公開載入的 Small 模型", () => {
     expect(component.modelOptions.map((option) => option.value)).toEqual([
       "onnx-community/depth-anything-v2-small",
@@ -334,5 +368,150 @@ describe("DepthEstimator 元件", () => {
 
     expect(hrefs[0]).toBe(hrefs[1]);
     expect(hrefs[2]).not.toBe(hrefs[1]);
+  });
+
+  it("GLB 匯出使用點擊當下的深度調整與拉伸比例", async () => {
+    component.sourceImageUrl.set("data:image/png;base64,mock");
+    component.sourceImageMimeType.set("image/png");
+    component.sourceDimensions.set({ width: 2, height: 2 });
+    component.brightness.set(-25);
+    component.depthScale3D.set(35);
+    component.depthResult.set({
+      depthArray: new Float32Array(4).fill(1),
+      width: 2,
+      height: 2,
+      minDepth: 0,
+      maxDepth: 1,
+      inferenceTimeMs: 1,
+      device: "wasm",
+    });
+    let finishFetch!: (response: Response) => void;
+    vi.spyOn(globalThis, "fetch").mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finishFetch = resolve;
+      }),
+    );
+    const createUrl = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:mesh");
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    const downloading = component["downloadGlb"]();
+    component.brightness.set(0);
+    component.depthScale3D.set(100);
+    finishFetch(
+      new Response(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])),
+    );
+    await downloading;
+
+    expect(createUrl).toHaveBeenCalledOnce();
+    const blob = createUrl.mock.calls[0][0] as Blob;
+    const bytes = await new Promise<ArrayBuffer>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.readAsArrayBuffer(blob);
+    });
+    const jsonLength = new DataView(bytes).getUint32(12, true);
+    const json = JSON.parse(
+      new TextDecoder().decode(new Uint8Array(bytes, 20, jsonLength)),
+    );
+    expect(json.accessors[0].min[2]).toBeCloseTo(0.75 * 0.35 * 0.8);
+    expect(json.accessors[0].max[2]).toBeCloseTo(0.75 * 0.35 * 0.8);
+  });
+
+  describe.each(["清除", "銷毀"] as const)("%s後的非同步結果", (action) => {
+    const invalidate = () => {
+      if (action === "清除") component.clearImage();
+      else fixture.destroy();
+    };
+
+    beforeEach(() => {
+      component.sourceImageUrl.set("data:image/png;base64,mock");
+      component.sourceImageMimeType.set("image/png");
+      component.sourceDimensions.set({ width: 1, height: 1 });
+      component.depthResult.set({
+        depthArray: new Float32Array([0.5]),
+        width: 1,
+        height: 1,
+        minDepth: 0,
+        maxDepth: 1,
+        inferenceTimeMs: 1,
+        device: "wasm",
+      });
+      component.alertState.set({ type: "success", message: "目前的圖片" });
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it.each(["成功", "失敗"] as const)(
+      "clipboard 寫入%s不應覆蓋目前提示",
+      async (outcome) => {
+        let finishWrite!: () => void;
+        let failWrite!: (error: Error) => void;
+        const write = vi.fn().mockReturnValue(
+          new Promise<void>((resolve, reject) => {
+            finishWrite = resolve;
+            failWrite = reject;
+          }),
+        );
+        vi.stubGlobal("navigator", { clipboard: { write } });
+        vi.stubGlobal("ClipboardItem", class {});
+        vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+          (callback) => callback(new Blob(["png"], { type: "image/png" })),
+        );
+
+        const copying = component["copyToClipboard"]();
+        await vi.waitFor(() => expect(write).toHaveBeenCalledOnce());
+        invalidate();
+        const currentAlert = component.alertState();
+        if (outcome === "成功") finishWrite();
+        else failWrite(new Error("Clipboard denied"));
+        await copying;
+
+        expect(component.alertState()).toBe(currentAlert);
+      },
+    );
+
+    it("PNG 讀取失敗不應覆蓋目前提示", async () => {
+      let failRead!: (error: Error) => void;
+      const readPng = vi
+        .spyOn(
+          component as unknown as {
+            pngBytesToDataUrl(bytes: Uint8Array): Promise<string>;
+          },
+          "pngBytesToDataUrl",
+        )
+        .mockReturnValue(
+          new Promise<string>((_, reject) => {
+            failRead = reject;
+          }),
+        );
+
+      const downloading = component["downloadPng"]();
+      await vi.waitFor(() => expect(readPng).toHaveBeenCalledOnce());
+      invalidate();
+      const currentAlert = component.alertState();
+      failRead(new Error("FileReader failed"));
+      await downloading;
+
+      expect(component.alertState()).toBe(currentAlert);
+    });
+
+    it("GLB 貼圖讀取失敗不應覆蓋目前提示", async () => {
+      let failFetch!: (error: Error) => void;
+      vi.spyOn(globalThis, "fetch").mockReturnValue(
+        new Promise<Response>((_, reject) => {
+          failFetch = reject;
+        }),
+      );
+
+      const downloading = component["downloadGlb"]();
+      invalidate();
+      const currentAlert = component.alertState();
+      failFetch(new Error("Texture fetch failed"));
+      await downloading;
+
+      expect(component.alertState()).toBe(currentAlert);
+    });
   });
 });

@@ -108,10 +108,17 @@ try {
         colorMode,
         charAspectRatio: 1,
       };
-      assert.deepEqual(
-        oldAscii.convertImageToAscii(source, options),
-        newAscii.convertImageToAscii(source, options),
-      );
+      const previous = oldAscii.convertImageToAscii(source, options);
+      const current = newAscii.convertImageToAscii(source, options);
+      const comparable = ({ width, height, chars, colors }) => ({
+        width,
+        height,
+        chars,
+        colors,
+      });
+      assert.deepEqual(comparable(previous), comparable(current));
+      if (current.charAspectRatio !== undefined)
+        assert.equal(current.charAspectRatio, options.charAspectRatio);
       measure(
         `ascii 199800 cells ${colorMode} dither=${dither}`,
         () => oldAscii.convertImageToAscii(source, options),

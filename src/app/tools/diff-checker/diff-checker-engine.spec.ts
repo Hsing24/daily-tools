@@ -128,6 +128,53 @@ describe("Diff Checker Engine", () => {
       expect(result).toHaveLength(2);
       expect(result.every((line) => line.type === "modified")).toBe(true);
     });
+
+    it("should align related edits when a new line precedes a changed block", () => {
+      const left = ["const count = 1;", "const active = true;"];
+      const right = [
+        "// new comment",
+        "const count = 2;",
+        "const active = false;",
+      ];
+      const result = diffLines(left, right);
+      expect(result.map((line) => line.type)).toEqual([
+        "added",
+        "modified",
+        "modified",
+      ]);
+      expect(result[1].leftLineNum).toBe(1);
+      expect(result[1].rightLineNum).toBe(2);
+      expect(
+        result[1].leftWords?.filter((word) => word.type === "removed"),
+      ).toEqual([{ type: "removed", text: "1" }]);
+      expect(
+        result[2].rightWords?.filter((word) => word.type === "added"),
+      ).toEqual([{ type: "added", text: "false" }]);
+      expect(
+        result.filter((row) => row.leftLineNum).map((row) => row.leftText),
+      ).toEqual(left);
+      expect(
+        result.filter((row) => row.rightLineNum).map((row) => row.rightText),
+      ).toEqual(right);
+    });
+
+    it("should leave a deleted line separate before a related modification", () => {
+      const result = diffLines(
+        ["obsolete unrelated", "const count = 1;"],
+        ["const count = 2;"],
+      );
+      expect(result.map((line) => line.type)).toEqual(["removed", "modified"]);
+      expect(result[1].leftLineNum).toBe(2);
+      expect(result[1].rightLineNum).toBe(1);
+    });
+
+    it("should preserve every input line with bounded fallback for a large hunk", () => {
+      const left = Array.from({ length: 65 }, (_, i) => `left${i}`);
+      const right = Array.from({ length: 65 }, (_, i) => `right${i}`);
+      const result = diffLines(left, right);
+      expect(result.map((line) => line.leftText)).toEqual(left);
+      expect(result.map((line) => line.rightText)).toEqual(right);
+    });
   });
 
   describe("findDiffBlocks", () => {

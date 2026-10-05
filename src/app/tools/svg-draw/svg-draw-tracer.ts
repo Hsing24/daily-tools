@@ -8,12 +8,38 @@ export interface TraceOptions {
   pathomit: number;
   /** 色彩數量 */
   numberofcolors: number;
-  /** 取色方式 (0=random, 1=deterministic, 2=precise) */
+  /** 取色方式 (0=generated palette, 1=random, 2=deterministic grid) */
   colorsampling: number;
   /** 縮放比例 */
   scale: number;
   /** 座標小數位數 */
   roundcoords: number;
+}
+
+interface TraceColor {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+/** 低色數圖片保留每種 RGBA，避免規則取樣漏掉細小圖案；超出預算即停止。 */
+export function getExactTracePalette(
+  data: Uint8ClampedArray,
+  maxColors: number,
+): TraceColor[] | undefined {
+  const colors = new Map<number, TraceColor>();
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const a = data[i + 3];
+    const key = (r << 24) | (g << 16) | (b << 8) | a;
+    if (colors.has(key)) continue;
+    if (colors.size === maxColors) return undefined;
+    colors.set(key, { r, g, b, a });
+  }
+  return [...colors.values()];
 }
 
 /** 預設組合名稱 */

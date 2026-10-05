@@ -9,7 +9,7 @@ export interface ConvertOptions {
   contrast: number; // -100 到 100
   brightness: number; // -100 到 100
   colorMode: "monochrome" | "retro-green" | "retro-amber" | "original";
-  charAspectRatio: number; // 通常為 0.55
+  charAspectRatio: number; // 字格寬 / 字格高，取樣與播放共用
 }
 
 export interface ConvertResult {
@@ -17,8 +17,10 @@ export interface ConvertResult {
   height: number;
   chars: string[];
   colors?: string[]; // 只有在 original 模式下需要
+  charAspectRatio?: number;
 }
 
+export const DEFAULT_CHAR_ASPECT_RATIO = 0.6;
 export const MAX_SOURCE_PIXELS = 20_000_000;
 export const MAX_OUTPUT_CELLS = 200_000;
 export const DEFAULT_ALPHA_BACKGROUND: readonly [number, number, number] = [
@@ -224,6 +226,7 @@ export function convertImageToAscii(
     height: targetH,
     chars: asciiChars,
     colors: asciiColors,
+    charAspectRatio: options.charAspectRatio,
   };
 }
 
@@ -247,7 +250,9 @@ export function generateTsCode(
     result.height <= 0 ||
     result.chars.length !== result.width * result.height ||
     (result.colors !== undefined &&
-      result.colors.length !== result.chars.length)
+      result.colors.length !== result.chars.length) ||
+    (result.charAspectRatio !== undefined &&
+      (!Number.isFinite(result.charAspectRatio) || result.charAspectRatio <= 0))
   ) {
     throw new Error("ASCII 結果尺寸或字元資料無效");
   }
@@ -368,7 +373,7 @@ export function renderAscii(
 
   // 設定 Canvas 解析度（防鋸齒、高 DPI）
   const dpr = window.devicePixelRatio || 1;
-  const charWidth = options.fontSize * 0.6; // 估計等寬字型寬度
+  const charWidth = options.fontSize * ${result.charAspectRatio ?? DEFAULT_CHAR_ASPECT_RATIO}; // 與取樣時使用相同字格比例
   const charHeight = options.fontSize;
 
   const displayWidth = WIDTH * charWidth;
@@ -386,7 +391,7 @@ export function renderAscii(
   let animationId: number | undefined;
   let lastTime = 0;
   const frameInterval = 1000 / options.fps;
-  const shouldAnimate = options.animationType !== 'none';
+  const shouldAnimate = options.animationType !== 'none' || options.flicker;
 
   // 動態效果專用狀態
   let typewriterIndex = 0; // 打字機印出的字元數
@@ -468,7 +473,7 @@ export function renderAscii(
         }
 
         ctx.fillStyle = fillStyle;
-        ctx.fillText(char, renderX, renderY);
+        ctx.fillText(char, renderX, renderY, charWidth);
 
         if (opacity < 1.0) {
           ctx.restore();
