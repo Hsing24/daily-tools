@@ -39,6 +39,39 @@ describe("ImageToAscii 元件", () => {
     expect(component).toBeTruthy();
   });
 
+  it("反相 checkbox 預設未勾選，切換後重新產生對應字元與匯出資料", async () => {
+    const context = document.createElement("canvas").getContext("2d")!;
+    vi.mocked(context.getImageData).mockReturnValue({
+      data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
+    } as ImageData);
+    component["uploadedImage"].set("data:image/png;base64,fixture");
+    component["charWidth"].set(2);
+    component["selectedCharSetType"].set("custom");
+    component["customCharSet"].set("👾 ");
+    component["colorMode"].set("original");
+    component["sourceCanvasSignal"].set({ width: 2, height: 1 } as HTMLCanvasElement);
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(component["asciiResult"]()?.chars).toEqual([" ", "👾"]));
+    const checkbox = element.querySelector<HTMLInputElement>("#ascii-invert")!;
+    expect(checkbox.checked).toBe(false);
+    expect(element.querySelector('label[for="ascii-invert"]')?.textContent).toContain("反相");
+    const positiveCode = component["generatedTsCode"]();
+    const originalColors = component["asciiResult"]()?.colors;
+
+    checkbox.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(component["asciiResult"]()?.chars).toEqual(["👾", " "]));
+    expect(checkbox.checked).toBe(true);
+    expect(component["invert"]()).toBe(true);
+    expect(component["asciiResult"]()?.colors).toEqual(originalColors);
+    expect(component["generatedTsCode"]()).not.toBe(positiveCode);
+
+    checkbox.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(component["asciiResult"]()?.chars).toEqual([" ", "👾"]));
+    expect(component["generatedTsCode"]()).toBe(positiveCode);
+  });
+
   it("預覽沿用取樣字格比例，無字元動畫也能啟用 CRT 閃爍", async () => {
     const raf = vi
       .spyOn(globalThis, "requestAnimationFrame")

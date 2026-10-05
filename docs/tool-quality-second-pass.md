@@ -28,14 +28,26 @@
 
 root 最終整合驗證：Node 26.10.0，`pnpm exec ng test --watch=false`，24 files／303 tests 通過（首輪為 269 tests）。圖片子範圍為 6 files／85 tests，最終 depth 為 3 files／62 tests，Markdown converter 為 30 tests；`pnpm run build`、`pnpm run lint` 與 `git diff --check` 亦已通過。production browser 的 8 個工具 route 全部正常載入。initial bundle 維持 305.03 kB，estimated transfer 84.15 kB；文字轉換 lazy chunk 為 99.17 kB，estimated transfer 29.41 kB。
 
-獨立 browser 驗收已確認 8 個 inline-code roundtrip fixture 的 `code.textContent` 完全相等（含換行／Markdown literal，沒有多出子元素），且混合不安全 HTML／URL fixture 不含危險節點或屬性；實際下載 sample GLB 經 Khronos glTF Validator 得 0 errors、0 warnings、1 info（384×384 NPOT texture）。root 亦確認實際 SVG 保留原先遺失的半透明紅色區塊，重新 strict compile 下載的 ASCII TypeScript，並執行 `node scripts/benchmark-tool-cores.mjs --baseline 8954848`，固定 ratio 下的 ASCII 字元／顏色與基線一致，新的比例 metadata 另外驗證。已完成的修正提交為第二輪 commit；ASCII 亮暗預設仍待使用者選擇。
+獨立 browser 驗收已確認 8 個 inline-code roundtrip fixture 的 `code.textContent` 完全相等（含換行／Markdown literal，沒有多出子元素），且混合不安全 HTML／URL fixture 不含危險節點或屬性；實際下載 sample GLB 經 Khronos glTF Validator 得 0 errors、0 warnings、1 info（384×384 NPOT texture）。root 亦確認實際 SVG 保留原先遺失的半透明紅色區塊，重新 strict compile 下載的 ASCII TypeScript，並執行 `node scripts/benchmark-tool-cores.mjs --baseline 8954848`，固定 ratio 下的 ASCII 字元／顏色與基線一致，新的比例 metadata 另外驗證。上述修正提交於 `72a5782`；當時 ASCII 亮暗預設尚待使用者選擇，後續確認與實作見下方記錄。
 
 目前未宣稱解決的品質題目：
 
-- ASCII 預設仍採原本由暗至亮的字元序列；正片／負片選擇需依使用者確認調整。font 的實際 glyph coverage、原色黑字與背景對比，需要另立視覺 fixture，不能從字元序列推算最佳密度。
+- 使用者已確認 ASCII 預設正像並保留反相選項，後續實作見下方記錄。font 的實際 glyph coverage、原色黑字與背景對比，需要另立視覺 fixture，不能從字元序列推算最佳密度。
 - ImageTracer 原本的 `stroke-width=1` 會讓邊界延伸半個像素；直接移除可能造成曲線間 antialias 接縫，本輪未作未驗證變更。
 - Task list 的 HTML 產物是靜態狀態文字，不提供互動 checkbox；一般表格只用 GFM 能表達的子集，其餘以 sanitized HTML 保留。
 - Depth 的 bilinear interpolation 修正取樣誤差，無法恢復模型沒有推論出的細節，也不是 metric depth。未進行不同模型的真實 inference 精度比較。
 - Diff 相似度是有限預算內的顯示啟發式，不宣稱語意理解或對大型 hunk 的最佳配對。
 
 Markdown 的 code 內容與 info string 語意依 [CommonMark fenced code blocks](https://spec.commonmark.org/0.31.2/#fenced-code-blocks) 檢查，renderer 擴充依 [Marked 官方文件](https://marked.js.org/using_pro#renderer)。既有第三方方案的授權、browser 條件、候選比較及採用前需量測項目，延續[首輪套件審查](tool-quality-review.md#第三方方案比較)；本輪新增的證據支持小範圍修正，尚不支持加入重量級替代套件。
+
+## ASCII 正像／反相確認後實作
+
+使用者確認採用預設正像，保留反相設定。GPT-6-Astra（xhigh）續作，root 獨立驗收：
+
+- 字元集由密至疏；預設亮部密、暗部疏，勾選「反相（負片效果）」恢復舊方向，內建及自訂 grapheme 字元集皆適用。
+- 反相只改字元對應，不反轉原色 RGB；dither 保留原亮度的誤差擴散。全透明 cell 最終保持空白，不改相鄰畫素的量化結果；半透明仍使用既有白底合成。
+- 反相與 dither checkbox 皆有可見 label 與 accessible name；反相說明連至 `aria-describedby`，提供 `focus-visible` 樣式。
+- 子範圍 2 files／31 tests；root 完整驗收 24 files／319 tests、build、lint、diff check 全通過。initial bundle 仍為 305.03 kB；ASCII lazy chunk 41.39 kB，estimated transfer 11.10 kB。
+- root 在 Chrome 實際上傳黑／白／灰／透明／紅色 PNG，確認正反像字元交換、透明維持空白、RGB 一致；實際下載的兩份 TypeScript 均通過 strict compile，內嵌矩陣等於轉換結果。production page 的內建字元集同樣通過正反像切換驗收。
+- 實作代理另外驗證 80×80 八欄 alpha fixture，原色與 dither 開啟，兩方向 preview／export 皆為 576×576，RGBA 差異 0；半透明紅色維持 `#ff7f7f`。
+- benchmark helper 使用明示 `invert=true` 與舊版本比較，僅將基線的全透明 glyph 正規化為空格；`--baseline 72a5782` 的其他字元、顏色及尺寸完全一致。此輪為品質修改，未以執行波動宣稱加速。

@@ -294,6 +294,7 @@ export class ImageToAscii implements OnDestroy {
   protected readonly selectedCharSetType = signal<CharSetType>("standard");
   protected readonly customCharSet = signal("@#W$9876543210?!abc;:+=-,._ ");
   protected readonly dither = signal(true);
+  protected readonly invert = signal(false);
   protected readonly contrast = signal(0);
   protected readonly brightness = signal(0);
 
@@ -397,6 +398,7 @@ export class ImageToAscii implements OnDestroy {
         width: this.charWidth(),
         charSet: this.getCharSetString(),
         dither: this.dither(),
+        invert: this.invert(),
         contrast: this.contrast(),
         brightness: this.brightness(),
         colorMode: this.colorMode(),

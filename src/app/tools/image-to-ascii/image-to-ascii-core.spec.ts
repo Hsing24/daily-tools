@@ -8,6 +8,200 @@ import {
 } from "./image-to-ascii-core";
 
 describe("ImageToAscii Core 核心演算法", () => {
+  it.each([
+    "@#W$9876543210?!abc;:+=-,._ ",
+    "#+- ",
+    "01 ",
+    "█田口甲十卜人一 ",
+    "█▓▒░ ",
+    "👾田 ",
+  ])("內建與自訂字元集 %s 都預設正像，反相恢復暗部密集", (charSet) => {
+    const context = vi
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue({
+        drawImage: vi.fn(),
+        getImageData: () => ({
+          data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
+        }),
+      } as unknown as CanvasRenderingContext2D);
+    try {
+      for (const dither of [false, true]) {
+        const options: ConvertOptions = {
+          width: 2,
+          charSet,
+          dither,
+          contrast: 0,
+          brightness: 0,
+          colorMode: "original",
+          charAspectRatio: 0.6,
+        };
+        const source = { width: 2, height: 1 } as HTMLCanvasElement;
+        const positive = convertImageToAscii(source, options);
+        const negative = convertImageToAscii(source, {
+          ...options,
+          invert: true,
+        });
+        const dense = [
+          ...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
+            charSet,
+          ),
+        ][0].segment;
+        expect(positive.chars).toEqual([" ", dense]);
+        expect(negative.chars).toEqual([dense, " "]);
+        expect(positive.colors).toEqual(["#000000", "#ffffff"]);
+        expect(negative.colors).toEqual(positive.colors);
+      }
+    } finally {
+      context.mockRestore();
+    }
+  });
+
+  it.each([false, true])(
+    "灰階的正反像保留同一誤差擴散：invert=%s",
+    (invert) => {
+      const data = new Uint8ClampedArray(8 * 4);
+      for (let i = 0; i < 8; i++) data.set([96, 96, 96, 255], i * 4);
+      const context = vi
+        .spyOn(HTMLCanvasElement.prototype, "getContext")
+        .mockReturnValue({
+          drawImage: vi.fn(),
+          getImageData: () => ({ data }),
+        } as unknown as CanvasRenderingContext2D);
+      try {
+        const options: ConvertOptions = {
+          width: 8,
+          charSet: "@ ",
+          dither: true,
+          invert,
+          contrast: 0,
+          brightness: 0,
+          colorMode: "monochrome",
+          charAspectRatio: 1,
+        };
+        const source = { width: 8, height: 1 } as HTMLCanvasElement;
+        expect(convertImageToAscii(source, options).chars.join("")).toBe(
+          invert ? "@ @@ @@ " : " @  @  @",
+        );
+        expect(
+          convertImageToAscii(source, { ...options, dither: false }).chars.join(
+            "",
+          ),
+        ).toBe(invert ? "@@@@@@@@" : "        ");
+      } finally {
+        context.mockRestore();
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "匯出播放器保留轉換方向與原色：invert=%s",
+    (invert) => {
+      const context = vi
+        .spyOn(HTMLCanvasElement.prototype, "getContext")
+        .mockReturnValue({
+          drawImage: vi.fn(),
+          getImageData: () => ({
+            data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
+          }),
+        } as unknown as CanvasRenderingContext2D);
+      try {
+        const result = convertImageToAscii(
+          { width: 2, height: 1 } as HTMLCanvasElement,
+          {
+            width: 2,
+            charSet: "@ ",
+            dither: true,
+            invert,
+            contrast: 0,
+            brightness: 0,
+            colorMode: "original",
+            charAspectRatio: 0.5,
+          },
+        );
+        const code = generateTsCode(result, {
+          colorMode: "original",
+          animationType: "none",
+          scanlines: false,
+          flicker: false,
+        });
+        const javascript = ts.transpileModule(code, {
+          compilerOptions: {
+            module: ts.ModuleKind.CommonJS,
+            target: ts.ScriptTarget.ES2022,
+          },
+        }).outputText;
+        const runtime = {} as {
+          ASCII_ROWS: string[][];
+          renderAscii: (canvas: HTMLCanvasElement) => { destroy: () => void };
+        };
+        new Function("exports", javascript)(runtime);
+        expect(runtime.ASCII_ROWS).toEqual([invert ? ["@", " "] : [" ", "@"]]);
+        const drawn: { glyph: string; x: number; color: string }[] = [];
+        const drawing = {
+          scale: vi.fn(),
+          fillRect: vi.fn(),
+          fillStyle: "",
+          fillText(glyph: string, x: number) {
+            drawn.push({ glyph, x, color: this.fillStyle });
+          },
+        };
+        const player = runtime.renderAscii({
+          style: {},
+          getContext: () => drawing,
+        } as unknown as HTMLCanvasElement);
+        expect(drawn).toEqual([
+          {
+            glyph: "@",
+            x: invert ? 0 : 6,
+            color: invert ? "#000000" : "#ffffff",
+          },
+        ]);
+        player.destroy();
+      } finally {
+        context.mockRestore();
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "透明 glyph 覆寫不改變相鄰畫素的誤差擴散：invert=%s",
+    (invert) => {
+      const data = new Uint8ClampedArray([
+        96, 96, 96, 255, 0, 0, 0, 0, 96, 96, 96, 255, 96, 96, 96, 255, 96, 96,
+        96, 255, 96, 96, 96, 255,
+      ]);
+      const context = vi
+        .spyOn(HTMLCanvasElement.prototype, "getContext")
+        .mockReturnValue({
+          drawImage: vi.fn(),
+          getImageData: () => ({ data }),
+        } as unknown as CanvasRenderingContext2D);
+      try {
+        const source = { width: 6, height: 1 } as HTMLCanvasElement;
+        const options: ConvertOptions = {
+          width: 6,
+          charSet: "@. ",
+          dither: true,
+          invert,
+          contrast: -40,
+          brightness: -20,
+          colorMode: "original",
+          charAspectRatio: 1,
+        };
+        const transparent = convertImageToAscii(source, options);
+        data.set([255, 255, 255, 255], 4);
+        const white = convertImageToAscii(source, options);
+        expect(transparent.chars[1]).toBe(" ");
+        expect(transparent.chars.filter((_, index) => index !== 1)).toEqual(
+          white.chars.filter((_, index) => index !== 1),
+        );
+        expect(transparent.colors).toEqual(white.colors);
+      } finally {
+        context.mockRestore();
+      }
+    },
+  );
+
   it("產出的播放器通過 strict TypeScript 並保留靜態畫面與 destroy 行為", () => {
     const code = generateTsCode(
       { width: 2, height: 1, chars: ["👾", "@"], charAspectRatio: 0.5 },
@@ -170,7 +364,7 @@ describe("ImageToAscii Core 核心演算法", () => {
             charAspectRatio: 0.55,
           },
         );
-        expect(result.chars).toEqual(["@", ".", " ", "."]);
+        expect(result.chars).toEqual([" ", ".", "@", "."]);
         expect(result.colors).toEqual([
           "#000000",
           "#808080",
@@ -307,7 +501,12 @@ describe("ImageToAscii Core 核心演算法", () => {
     }
   });
 
-  it("透明像素以白色背景合成，避免被誤判為黑色密集字元", () => {
+  it.each([
+    { invert: false, dither: false },
+    { invert: false, dither: true },
+    { invert: true, dither: false },
+    { invert: true, dither: true },
+  ])("全透明畫素保持空格：$invert / dither=$dither", ({ invert, dither }) => {
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const mockContext = {
       drawImage: vi.fn(),
@@ -327,7 +526,8 @@ describe("ImageToAscii Core 核心演算法", () => {
         {
           width: 1,
           charSet: "@ ",
-          dither: false,
+          dither,
+          invert,
           contrast: 0,
           brightness: 0,
           colorMode: "monochrome",

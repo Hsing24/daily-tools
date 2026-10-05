@@ -254,14 +254,40 @@ const player = renderAscii(canvas, {{ '{' }} fontSize: 12 {{ '}' }});
               />
             </div>
 
+            <!-- 正像 / 反相 -->
+            <div
+              class="d:flex align-items:center justify-content:space-between gap:12 p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)"
+            >
+              <div>
+                <label
+                  for="ascii-invert"
+                  class="d:block f:12 color:var(--ink-bright) font-weight:600 cursor:pointer"
+                  >反相（負片效果）</label
+                >
+                <span id="ascii-invert-help" class="d:block f:11 color:var(--ink-muted) mt:2"
+                  >預設亮部密、暗部疏；勾選交換明暗，原色不變。</span
+                >
+              </div>
+              <input
+                id="ascii-invert"
+                type="checkbox"
+                [checked]="invert()"
+                (change)="invert.set(invertInput.checked)"
+                #invertInput
+                aria-describedby="ascii-invert-help"
+                class="w:16 h:16 flex-shrink:0 accent-color:var(--primary) cursor:pointer outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible"
+              />
+            </div>
+
             <!-- 誤差擴散抖動 (Dithering) -->
             <div
               class="d:flex align-items:center justify-content:space-between p:10 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted)"
             >
               <div>
-                <span
+                <label
+                  for="ascii-dither"
                   class="d:block f:12 color:var(--ink-bright) font-weight:600"
-                  >誤差擴散抖動 (Dither)</span
+                  >誤差擴散抖動 (Dither)</label
                 >
                 <span class="d:block f:11 color:var(--ink-muted) mt:2"
                   >點化漸層，增加細節感</span
@@ -269,6 +295,7 @@ const player = renderAscii(canvas, {{ '{' }} fontSize: 12 {{ '}' }});
               </div>
               <label class="d:inline-flex align-items:center cursor:pointer">
                 <input
+                  id="ascii-dither"
                   type="checkbox"
                   [checked]="dither()"
                   (change)="dither.set(!dither())"
@@ -331,7 +358,7 @@ const player = renderAscii(canvas, {{ '{' }} fontSize: 12 {{ '}' }});
                   [value]="customCharSet()"
                   (input)="onCustomCharSetInput(customInput.value)"
                   #customInput
-                  placeholder="自訂字元 (由暗至亮)"
+                  placeholder="自訂字元（由密至疏）"
                   class="w:100% bg:var(--canvas-input) color:var(--ink-bright) border:1px|solid|var(--border-muted) border-color:var(--primary):focus outline:none:focus p:6 f:11 font-family:var(--font-mono)"
                 />
               </div>

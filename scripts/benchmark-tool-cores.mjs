@@ -107,9 +107,15 @@ try {
         brightness: 7,
         colorMode,
         charAspectRatio: 1,
+        // Preserve the legacy mapping for comparisons with pre-invert cores.
+        invert: true,
       };
       const previous = oldAscii.convertImageToAscii(source, options);
       const current = newAscii.convertImageToAscii(source, options);
+      // Fully transparent cells intentionally remain blank in either polarity.
+      previous.chars = previous.chars.map((char, index) =>
+        pixels[index * 4 + 3] === 0 ? " " : char,
+      );
       const comparable = ({ width, height, chars, colors }) => ({
         width,
         height,
@@ -120,7 +126,7 @@ try {
       if (current.charAspectRatio !== undefined)
         assert.equal(current.charAspectRatio, options.charAspectRatio);
       measure(
-        `ascii 199800 cells ${colorMode} dither=${dither}`,
+        `ascii 199800 cells ${colorMode} dither=${dither} invert=true`,
         () => oldAscii.convertImageToAscii(source, options),
         () => newAscii.convertImageToAscii(source, options),
       );

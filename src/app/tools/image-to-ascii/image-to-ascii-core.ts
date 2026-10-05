@@ -6,6 +6,7 @@ export interface ConvertOptions {
   width: number;
   charSet: string;
   dither: boolean;
+  invert?: boolean; // 預設正像；true 以密集字元表示暗部
   contrast: number; // -100 到 100
   brightness: number; // -100 到 100
   colorMode: "monochrome" | "retro-green" | "retro-amber" | "original";
@@ -117,6 +118,8 @@ export function convertImageToAscii(
   const imgH = sourceCanvas.height;
 
   const charSet = getGraphemeCharset(options.charSet);
+  // 字元集由密至疏；深色畫布上的正像需以密集字元表示亮部。
+  if (!options.invert) charSet.reverse();
   validateOptions(sourceCanvas, options, charSet);
 
   const targetW = options.width;
@@ -178,7 +181,9 @@ export function convertImageToAscii(
     );
     const lum = getLuminance(r, g, b);
     if (lums) lums[i] = lum;
-    else asciiChars[i] = charSet[Math.round((lum / 255) * (charSetLen - 1))];
+    else
+      asciiChars[i] =
+        alpha === 0 ? " " : charSet[Math.round((lum / 255) * (charSetLen - 1))];
     if (asciiColors) asciiColors[i] = rgbToHex(r, g, b);
   }
 
@@ -216,7 +221,8 @@ export function convertImageToAscii(
           lums[idx + targetW + 1] += err * (1 / 16);
         }
 
-        asciiChars[idx] = charSet[charIdx];
+        // 只覆寫透明 glyph，保留原亮度誤差擴散，避免影響相鄰不透明像素。
+        asciiChars[idx] = data[idx * 4 + 3] === 0 ? " " : charSet[charIdx];
       }
     }
   }
