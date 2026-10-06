@@ -161,7 +161,8 @@ export class PasswordGenerator {
         poolSize: 0,
         strength: "weak",
       });
-      this.alertMessage.set(this.getGenerationError(result.code));
+      const errorMsg = this.getGenerationError(result.code);
+      this.alertMessage.set(errorMsg);
       return;
     }
 

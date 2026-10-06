@@ -9,6 +9,7 @@ import {
 import { RouterLink, RouterOutlet, Router, NavigationEnd } from "@angular/router";
 import { filter } from "rxjs/operators";
 import { CommandPalette } from "./command-palette";
+import { ToastContainer } from "../shared/ui/toast-container/toast-container";
 
 interface ToolItem {
   readonly label: string;
@@ -24,7 +25,7 @@ interface ToolGroup {
 
 @Component({
   selector: "app-layout",
-  imports: [RouterOutlet, RouterLink, CommandPalette],
+  imports: [RouterOutlet, RouterLink, CommandPalette, ToastContainer],
   templateUrl: "./layout.html",
   styleUrl: "./layout.css",
   host: {
@@ -33,6 +34,11 @@ interface ToolGroup {
 })
 export class Layout {
   protected readonly isPaletteOpen = signal(false);
+  protected readonly isScanlineOn = signal<boolean>(
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("scanline") !== "off"
+      : true
+  );
 
   private readonly cmdKBtn =
     viewChild<ElementRef<HTMLButtonElement>>("cmdKBtn");
@@ -58,6 +64,21 @@ export class Layout {
           route: "diff-checker",
           available: true,
           keywords: ["diff-checker", "diff", "checker"],
+        },
+        {
+          label: "符號百寶箱",
+          route: "emoji-n-symbols",
+          available: true,
+          keywords: [
+            "emoji-n-symbols",
+            "emoji",
+            "symbol",
+            "表情符號",
+            "特殊字元",
+            "unicode",
+            "箭頭",
+            "數學符號",
+          ],
         },
       ],
     },
@@ -151,6 +172,14 @@ export class Layout {
       document.documentElement.setAttribute("data-theme", "solarized");
     } else {
       document.documentElement.removeAttribute("data-theme");
+    }
+  }
+
+  protected toggleScanline(): void {
+    const next = !this.isScanlineOn();
+    this.isScanlineOn.set(next);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("scanline", next ? "on" : "off");
     }
   }
 

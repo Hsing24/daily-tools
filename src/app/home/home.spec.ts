@@ -40,6 +40,7 @@ describe('Home', () => {
     expect(links).toContain('/image-to-ascii');
     expect(links).toContain('/depth-estimator');
     expect(links).toContain('/password-generator');
+    expect(links).toContain('/emoji-n-symbols');
   });
 });
 

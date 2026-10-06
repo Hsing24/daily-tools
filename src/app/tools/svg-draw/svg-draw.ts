@@ -1,4 +1,4 @@
-import { Component, computed, OnDestroy, signal } from "@angular/core";
+import { Component, computed, inject, OnDestroy, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
@@ -438,6 +438,6 @@ export class SvgDraw implements OnDestroy {
     this.alertTimer = setTimeout(() => {
       this.alertMessage.set("");
       this.alertTimer = undefined;
-    }, 4000);
+    }, 3000);
   }
 }

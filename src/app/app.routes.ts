@@ -62,6 +62,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "emoji-n-symbols",
+        loadComponent: () =>
+          import("./tools/emoji-n-symbols/emoji-n-symbols").then(
+            (m) => m.EmojiNSymbols
+          ),
+      },
+      {
         path: "design",
         loadComponent: () => import("./design/design").then((m) => m.Design),
       },

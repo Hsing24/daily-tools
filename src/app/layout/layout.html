@@ -1,6 +1,8 @@
 <a class="skip-link fixed left:8 top:8 z:150 p:10|16 bg:var(--primary) color:var(--on-primary) font-family:var(--font-mono) font-weight:600 ls:1 text-decoration:none translateY(-160%) transition:transform|0.15s|ease translateY(0):focus outline:2px|solid|var(--primary-bright):focus-visible outline-offset:4:focus-visible" href="#main-content">跳至主要內容</a>
 
-<div class="scanline-overlay" aria-hidden="true"></div>
+@if (isScanlineOn()) {
+  <div class="scanline-overlay" aria-hidden="true"></div>
+}
 
 <div class="app-shell d:flex flex:col min-h:100vh w:100% min-w:0 bg:var(--canvas)">
   <header class="prompt-bar fixed top:0 left:0 right:0 z:20 d:flex min-h:40 ai:center jc:space-between gap:16 px:32 px:16@<1024 bg:var(--canvas-deep) bb:2px|solid|var(--primary) color:var(--primary) font-family:var(--font-mono) f:16 f:medium lh:1" role="status" aria-live="polite">
@@ -8,6 +10,7 @@
       <a class="prompt-brand d:inline-flex ai:center gap:6 text-decoration:none font-family:var(--font-mono) f:14 font-weight:600 lh:1 outline:1px|solid|var(--primary-bright):focus-visible outline-offset:2:focus-visible" routerLink="/" aria-label="回到首頁">
         <span class="brand-mark-small color:var(--primary) font-family:var(--font-pixel) f:18">&gt;_</span>
         <span class="brand-name-small color:var(--ink-bright) ls:0.5">Daily Tools</span>
+        <span class="terminal-cursor d:inline-block w:8 h:14 ml:2 bg:var(--primary)" aria-hidden="true"></span>
       </a>
       <span class="prompt-path min-w:0 overflow:hidden text-overflow:ellipsis white-space:nowrap d:none@<1024">user@daily-tools {{ currentPath() }} $ inspect --theme {{ currentTheme() === 'default' ? 'crt' : 'solarized' }}</span>
     </div>
@@ -30,6 +33,18 @@
           (click)="setTheme('solarized')"
         >LIGHT</button>
       </div>
+      <button
+        id="scanline-toggle-btn"
+        class="theme-btn d:inline-flex ai:center jc:center p:4|8 border:2px|solid|var(--primary) font-family:var(--font-mono) f:11 font-weight:600 ls:0.5 cursor:pointer transition:background-color|0.05s|ease,color|0.05s|ease outline:1px|solid|var(--primary-bright):focus-visible outline-offset:-2:focus-visible"
+        [class]="isScanlineOn() ? 'bg:transparent color:var(--primary) bg:var(--canvas-elevated-2):hover color:var(--primary-bright):hover' : 'bg:var(--primary) color:var(--on-primary)'"
+        type="button"
+        [attr.aria-pressed]="!isScanlineOn()"
+        [attr.aria-label]="isScanlineOn() ? '切換為清晰閱讀模式（關閉掃描線）' : '切換為 CRT 終端機模式（開啟掃描線）'"
+        (click)="toggleScanline()"
+        title="清晰閱讀模式開關"
+      >
+        {{ isScanlineOn() ? 'CRT:ON' : 'CRT:OFF' }}
+      </button>
       <button
         #cmdKBtn
         id="cmd-k-btn"
@@ -54,7 +69,7 @@
       <span class="color:var(--primary) font-weight:600" aria-hidden="true">$</span>
       <span>daily-tools --version alpha</span>
     </span>
-    <span class="text:center">theme: DevTool Terminal / scanline 4%</span>
+    <span class="text:center">theme: DevTool Terminal // scanline: {{ isScanlineOn() ? '4% [ACTIVE]' : 'DISABLED' }}</span>
     <a class="color:var(--ink-muted) text-decoration:none color:var(--primary):hover text:right@>=768" href="https://github.com/Hsing24/daily-tools" target="_blank" rel="noopener noreferrer">GitHub</a>
   </footer>
 </div>
@@ -62,3 +77,6 @@
 @if (isPaletteOpen()) {
   <app-command-palette [toolGroups]="toolGroups" (close)="closePalette()" />
 }
+
+<app-toast-container />
+

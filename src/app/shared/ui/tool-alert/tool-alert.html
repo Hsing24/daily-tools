@@ -3,6 +3,7 @@
   role="alert"
   aria-live="assertive"
   [class]="alertClasses()"
+  [class.d:none]="!inline()"
 >
   {{ variant() === "success" ? "✓" : "⚠️" }} {{ message() }}
 </div>

@@ -5,7 +5,10 @@
   aria-live="polite"
 >
   <div class="bg:var(--canvas-elevated-2) bb:2px|solid|var(--border-default) d:flex ai:center jc:space-between p:8|16">
-    <span class="color:var(--primary) f:12 font-weight:600 ls:0.5">{{ title() }}</span>
+    <div class="d:flex ai:center gap:8">
+      <span class="color:var(--primary) f:10 font-family:var(--font-mono) select:none font-weight:700" aria-hidden="true">[■]</span>
+      <span class="color:var(--primary) f:12 font-weight:600 ls:0.5">{{ title() }}</span>
+    </div>
     <span class="color:var(--ink-muted) f:11">{{ status() }}</span>
   </div>
   <div class="p:16 color:var(--ink) lh:1.6">

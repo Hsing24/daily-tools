@@ -88,4 +88,24 @@ describe("Layout", () => {
 
     expect(compiled.querySelector("app-command-palette")).toBeNull();
   });
+
+  it("should toggle scanline overlay when scanline button is clicked", async () => {
+    const fixture = TestBed.createComponent(Layout);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const scanlineBtn = compiled.querySelector("#scanline-toggle-btn") as HTMLButtonElement;
+    expect(scanlineBtn).toBeTruthy();
+    expect(compiled.querySelector(".scanline-overlay")).toBeTruthy();
+
+    scanlineBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(compiled.querySelector(".scanline-overlay")).toBeNull();
+
+    scanlineBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(compiled.querySelector(".scanline-overlay")).toBeTruthy();
+  });
 });

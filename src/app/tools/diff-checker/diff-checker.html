@@ -220,17 +220,17 @@
               <!-- 左側文字 -->
               <td
                 class="px:8 py:2 border-right:1px|solid|var(--border-muted) white-space:pre-wrap break-all"
-                [class.bg:#8A2018|0.35]="line.type === 'removed'"
-                [class.bg:#122339]="line.type === 'added'"
-                [class.bg:#8A2018|0.2]="line.type === 'modified'"
+                [class.bg:var(--warning-dim)|0.35]="line.type === 'removed'"
+                [class.bg:var(--canvas-elevated)]="line.type === 'added'"
+                [class.bg:var(--warning-dim)|0.2]="line.type === 'modified'"
               >
                 @if (line.type === 'removed') {
-                <span class="color:#FFD166">{{ line.leftText || ' ' }}</span>
+                <span class="color:var(--gold-bright)">{{ line.leftText || ' ' }}</span>
                 } @else if (line.type === 'modified') { @for (w of
                 line.leftWords; track $index) {
                 <span
-                  [class.bg:#8A2018|0.8]="w.type === 'removed'"
-                  [class.color:#FFD166]="w.type === 'removed'"
+                  [class.bg:var(--warning-dim)|0.8]="w.type === 'removed'"
+                  [class.color:var(--gold-bright)]="w.type === 'removed'"
                   >{{ w.text }}</span
                 >
                 } } @else if (line.type === 'added') {
@@ -252,17 +252,17 @@
               <!-- 右側文字 -->
               <td
                 class="px:8 py:2 white-space:pre-wrap break-all"
-                [class.bg:#2BAE96|0.35]="line.type === 'added'"
-                [class.bg:#122339]="line.type === 'removed'"
-                [class.bg:#2BAE96|0.2]="line.type === 'modified'"
+                [class.bg:var(--primary-dim)|0.35]="line.type === 'added'"
+                [class.bg:var(--canvas-elevated)]="line.type === 'removed'"
+                [class.bg:var(--primary-dim)|0.2]="line.type === 'modified'"
               >
                 @if (line.type === 'added') {
-                <span class="color:#FFD166">{{ line.rightText || ' ' }}</span>
+                <span class="color:var(--primary-bright)">{{ line.rightText || ' ' }}</span>
                 } @else if (line.type === 'modified') { @for (w of
                 line.rightWords; track $index) {
                 <span
-                  [class.bg:#2BAE96|0.8]="w.type === 'added'"
-                  [class.color:#FFD166]="w.type === 'added'"
+                  [class.bg:var(--primary-dim)|0.8]="w.type === 'added'"
+                  [class.color:var(--primary-bright)]="w.type === 'added'"
                   >{{ w.text }}</span
                 >
                 } } @else if (line.type === 'removed') {

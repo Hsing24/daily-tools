@@ -1,0 +1,14 @@
+/* Scoped CSS for emoji-n-symbols component */
+@keyframes section-flash {
+  0%, 60% {
+    outline: 3px solid var(--primary-bright);
+    outline-offset: 4px;
+  }
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: 4px;
+  }
+}
+.category-highlight {
+  animation: section-flash 1.8s ease-out forwards;
+}

@@ -1,0 +1,201 @@
+<div id="symbol-top-anchor">
+  <app-tool-breadcrumb category="文字工具" current="符號百寶箱" />
+
+  <app-tool-panel>
+    <app-tool-header
+      eyebrow="UNICODE & EMOJI UTILITIES v1.0.0"
+      title="符號百寶箱 (Emoji & Symbols)"
+      description="收錄超過 200 種常用表情符號、手勢人物、動物自然、數學、箭頭、標點與希臘字母等萬用字元。支援 Unicode 碼位搜尋與一鍵複製。"
+    />
+
+    @if (alertMessage()) {
+    <app-tool-alert [message]="alertMessage()" [variant]="alertVariant()" />
+    }
+
+    <!-- 搜尋框 -->
+    <div class="d:block mb:16">
+      <label
+        for="symbol-search-input"
+        class="d:block mb:8 color:var(--ink-bright) f:14 font-weight:600"
+      >
+        搜尋字元、名稱、關鍵字或 Unicode 碼位（例如「笑臉」、「arrow」、「2192」或「U+2192」）：
+      </label>
+      <input
+        id="symbol-search-input"
+        type="search"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        placeholder="請輸入關鍵字或 Unicode 碼位進行即時篩選..."
+        class="w:100% h:40 px:12 bg:var(--canvas-input) color:var(--ink-bright) font-family:var(--font-mono) f:14 border:2px|solid|var(--border-muted) outline:none:focus border-color:var(--primary):focus box:border-box caret-color:var(--primary)"
+      />
+    </div>
+
+    <!-- 分類錨點導覽列 (Sticky) -->
+    <nav
+      class="position:sticky top:40 z:15 bg:var(--canvas-elevated-2) p:12 border:1px|solid|var(--border-muted) mb:24"
+      aria-label="符號分類快速跳轉"
+    >
+      <div class="f:12 color:var(--ink-muted) mb:8 font-weight:600">
+        分類導覽（點擊快速跳轉至對應區塊）：
+      </div>
+      <div class="d:flex gap:8 flex:wrap ai:center">
+        @for (cat of categories; track cat) {
+        <button
+          type="button"
+          [attr.data-testid]="'cat-anchor-' + cat"
+          (click)="scrollToCategory(cat)"
+          class="dt-button dt-button--ghost f:12 py:4 px:8"
+        >
+          # {{ cat }}
+        </button>
+        }
+      </div>
+    </nav>
+
+    <!-- 符號列表依分類展示 -->
+    @if (totalFilteredCount() > 0) {
+    <div class="mb:20">
+      <div class="d:flex jc:space-between ai:center mb:12">
+        <span role="status" class="color:var(--ink-muted) f:12">
+          共顯示 {{ totalFilteredCount() }} 個符號（點擊任一符號即複製到剪貼簿）
+        </span>
+      </div>
+
+      @for (group of symbolGroups(); track group.category) {
+      <section
+        [id]="'category-section-' + group.category"
+        [attr.data-testid]="'category-section-' + group.category"
+        class="mb:24 p:16 bg:var(--canvas-elevated-2) border:1px|solid|var(--border-muted) scroll-margin-top:140"
+        [class.category-highlight]="highlightedCategory() === group.category"
+        [attr.aria-label]="group.category + ' 分類符號列表'"
+      >
+        <div class="d:flex jc:space-between ai:center mb:12 pb:8 border-bottom:1px|dashed|var(--border-muted)">
+          <h2 class="m:0 color:var(--ink-bright) f:15 font-weight:600 d:flex ai:center gap:8">
+            <span>{{ group.category }}</span>
+            <span class="color:var(--ink-muted) f:12 font-weight:normal">({{ group.items.length }})</span>
+          </h2>
+          <button
+            type="button"
+            (click)="scrollToTop()"
+            class="dt-button dt-button--ghost f:11 py:2 px:8"
+            title="回到頂部"
+          >
+            ↑ 頂部
+          </button>
+        </div>
+
+        <div
+          class="d:grid grid-cols:4 grid-cols:6@xs grid-cols:8@sm grid-cols:10@md grid-cols:12@lg gap:8"
+        >
+          @for (item of group.items; track item.char) {
+          <button
+            type="button"
+            [attr.data-testid]="'symbol-btn-' + item.name"
+            [attr.data-char]="item.char"
+            [attr.aria-label]="'複製 ' + item.name"
+            (click)="copyChar(item)"
+            (mouseenter)="selectSymbol(item)"
+            (focus)="selectSymbol(item)"
+            [class]="selectedSymbol()?.char === item.char ? 'h:48 d:flex ai:center jc:center bg:var(--canvas-elevated-2) color:var(--ink-bright) f:22 cursor:pointer border:2px|solid|var(--primary) outline:2px|solid|var(--primary-bright):focus-visible outline-offset:2px:focus-visible' : 'h:48 d:flex ai:center jc:center bg:var(--canvas-elevated-2) color:var(--ink-bright) f:22 cursor:pointer border:1px|solid|var(--border-muted) border-color:var(--primary):hover outline:2px|solid|var(--primary-bright):focus-visible outline-offset:2px:focus-visible'"
+          >
+            {{ item.char }}
+          </button>
+          }
+        </div>
+      </section>
+      }
+    </div>
+    } @else {
+    <!-- 空狀態 -->
+    <div
+      data-testid="empty-state"
+      role="status"
+      class="p:32 mb:24 text:center bg:var(--canvas-elevated-2) border:2px|dashed|var(--border-muted)"
+    >
+      <div class="f:36 mb:12" aria-hidden="true">🛸</div>
+      <p class="color:var(--ink-bright) font-weight:600 f:16 mb:4">
+        找不到符合條件的符號！
+      </p>
+      <p class="color:var(--ink-muted) f:14 m:0">
+        試試搜尋其他關鍵字，例如「笑臉」、「arrow」或 Unicode 碼位「2192」？
+      </p>
+    </div>
+    }
+
+    <!-- 選中項目詳細資訊面板 -->
+    @if (selectedSymbol(); as item) {
+    <section
+      data-testid="symbol-inspector"
+      class="p:20 bg:var(--canvas-elevated-2) border:2px|solid|var(--border-default)"
+      aria-label="選中符號詳細資訊"
+    >
+      <div class="d:flex gap:20 ai:center flex:wrap">
+        <!-- 大字元預覽 -->
+        <div
+          class="w:80 h:80 d:flex ai:center jc:center bg:var(--canvas-input) border:2px|solid|var(--primary) color:var(--ink-bright) f:48 select:all"
+          role="img"
+          [attr.aria-label]="'字元大圖預覽：' + item.name"
+        >
+          {{ item.char }}
+        </div>
+
+        <!-- 符號中繼資料 -->
+        <div class="flex:1 min-w:240">
+          <div class="d:flex ai:center gap:8 mb:6">
+            <h2 class="m:0 color:var(--ink-bright) f:18 font-weight:600">
+              {{ item.name }}
+            </h2>
+            <span class="px:6 py:2 bg:var(--canvas-deep) color:var(--primary) f:11 border:1px|solid|var(--border-muted)">
+              {{ item.category }}
+            </span>
+          </div>
+
+          <div class="d:flex gap:16 flex:wrap ai:center mt:8">
+            <div class="d:flex ai:center gap:8">
+              <span class="color:var(--ink-muted) f:12">Unicode:</span>
+              <code class="color:var(--ink-bright) f:13 bg:var(--canvas-deep) px:6 py:2 border:1px|solid|var(--border-muted)">
+                {{ getCodePointText(item.char) }}
+              </code>
+              <button
+                type="button"
+                data-testid="btn-copy-codepoint"
+                (click)="copyCodePoint(item)"
+                class="dt-button dt-button--ghost f:12 py:2 px:8"
+              >
+                複製碼位
+              </button>
+            </div>
+
+            <div class="d:flex ai:center gap:8">
+              <span class="color:var(--ink-muted) f:12">HTML Entity:</span>
+              <code class="color:var(--ink-bright) f:13 bg:var(--canvas-deep) px:6 py:2 border:1px|solid|var(--border-muted)">
+                {{ getHtmlEntityText(item.char) }}
+              </code>
+              <button
+                type="button"
+                data-testid="btn-copy-entity"
+                (click)="copyHtmlEntity(item)"
+                class="dt-button dt-button--ghost f:12 py:2 px:8"
+              >
+                複製 Entity
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 複製主按鈕 -->
+        <div>
+          <button
+            type="button"
+            data-testid="btn-copy-main-char"
+            (click)="copyChar(item)"
+            class="dt-button dt-button--primary"
+          >
+            複製字元 ({{ item.char }})
+          </button>
+        </div>
+      </div>
+    </section>
+    }
+  </app-tool-panel>
+</div>

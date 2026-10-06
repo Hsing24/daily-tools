@@ -7,7 +7,7 @@
 - [x] 字數統計 (word-count)：貼上文字後，統計字數。
 - [x] Text to Markdown/HTML (text-markdown-html)：將文字轉換為 Markdown 或 HTML 格式。
 - [x] Diff checker (diff-checker)：比較兩段文字的差異。
-- [ ] 萬用字元與表情符號集 (emoji-n-symbols)：常用表情符號與特殊字元表。
+- [x] 萬用字元與表情符號集 (emoji-n-symbols)：常用表情符號與特殊字元表。
 
 ## 資料與解析
 - [ ] JSON formatter：將 JSON 格式化為易讀格式。

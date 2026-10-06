@@ -1,0 +1,66 @@
+@if (toasts().length > 0) {
+  <div
+    class="toast-container fixed bottom:24 right:24 z:1000 d:flex flex:col-reverse gap:8 ai:flex-end pointer-events:none max-w:calc(100vw|-|32px) w:360"
+    role="region"
+    aria-label="即時通知"
+  >
+    @for (toast of toasts(); track toast.id) {
+      <div
+        class="toast-item pointer-events:auto d:flex flex:col p:10|14 bg:var(--canvas-elevated) color:var(--ink) border:2px|solid box:border-box w:100% max-w:360"
+        [class.toast-item--exiting]="toast.isExiting"
+        [class.border-color:var(--primary)]="toast.variant === 'success' || toast.variant === 'info'"
+        [class.border-color:var(--border-gold)]="toast.variant === 'warning'"
+        [class.border-color:var(--border-warning)]="toast.variant === 'error'"
+        [attr.data-testid]="'toast-item'"
+        [attr.data-variant]="toast.variant"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="d:flex ai:center jc:space-between bb:1px|solid|var(--border-muted) pb:6 mb:8 f:11 color:var(--ink-muted) font-family:var(--font-mono) ls:1 select:none">
+          <span
+            class="font-weight:600"
+            [class.color:var(--primary)]="toast.variant === 'success' || toast.variant === 'info'"
+            [class.color:var(--gold)]="toast.variant === 'warning'"
+            [class.color:var(--warning)]="toast.variant === 'error'"
+          >
+            @switch (toast.variant) {
+              @case ('success') { [SYS.MSG // OK] }
+              @case ('warning') { [SYS.MSG // WARN] }
+              @case ('error') { [SYS.MSG // ERR] }
+              @default { [SYS.MSG // INFO] }
+            }
+          </span>
+          <button
+            type="button"
+            (click)="dismiss(toast.id)"
+            class="bg:transparent border:none color:var(--ink-muted) color:var(--ink-bright):hover cursor:pointer p:0 f:12 font-family:var(--font-mono) font-weight:700 lh:1 outline:none:focus-visible"
+            aria-label="關閉通知"
+            [attr.data-testid]="'btn-close-toast'"
+          >
+            [×]
+          </button>
+        </div>
+
+        <div class="d:flex ai:flex-start gap:10 min-w:0 flex:1">
+          <span
+            class="f:15 font-weight:700 select:none flex-shrink:0"
+            [class.color:var(--primary)]="toast.variant === 'success' || toast.variant === 'info'"
+            [class.color:var(--gold)]="toast.variant === 'warning'"
+            [class.color:var(--warning)]="toast.variant === 'error'"
+            aria-hidden="true"
+          >
+            @switch (toast.variant) {
+              @case ('success') { ✓ }
+              @case ('warning') { ⚠️ }
+              @case ('error') { ✗ }
+              @default { ℹ }
+            }
+          </span>
+          <div class="f:13 font-family:var(--font-mono) font-weight:600 lh:1.4 color:var(--ink-bright) word-break:break-word">
+            {{ toast.message }}
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

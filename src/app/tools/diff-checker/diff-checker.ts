@@ -1,9 +1,10 @@
-import { Component, computed, OnDestroy, signal } from "@angular/core";
+import { Component, computed, OnDestroy, signal, inject } from "@angular/core";
 import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolAlert } from "../../shared/ui/tool-alert/tool-alert";
 import { TerminalOutput } from "../../shared/ui/terminal-output/terminal-output";
+import { ToastService } from "../../shared/services/toast.service";
 import {
   AlignedLine,
   diffLines,
@@ -24,6 +25,7 @@ import {
   },
 })
 export class DiffChecker implements OnDestroy {
+  private readonly toastService = inject(ToastService);
   protected readonly textA = signal("");
   protected readonly textB = signal("");
   protected readonly isComparing = signal(false);
@@ -104,9 +106,9 @@ export class DiffChecker implements OnDestroy {
       this.invalidateResult();
     } catch {
       if (generation === this.inputGeneration) {
-        this.alertMessage.set(
-          "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。",
-        );
+        const errorMsg =
+          "無法讀取剪貼簿，請使用 Ctrl+V / ⌘+V 鍵貼入內容，或手動開啟瀏覽器剪貼簿權限。";
+        this.alertMessage.set(errorMsg);
       }
     }
   }
@@ -131,9 +133,9 @@ export class DiffChecker implements OnDestroy {
       leftLines.length + rightLines.length > MAX_DIFF_LINES
     ) {
       this.hasResult.set(false);
-      this.alertMessage.set(
-        "文字內容過大，請縮小至 200,000 字元與 10,000 行內再比較。",
-      );
+      const warnMsg =
+        "文字內容過大，請縮小至 200,000 字元與 10,000 行內再比較。";
+      this.alertMessage.set(warnMsg);
       return;
     }
 
@@ -156,14 +158,21 @@ export class DiffChecker implements OnDestroy {
         this.currentBlockIndex.set(-1);
         this.isComparing.set(false);
         this.hasResult.set(true);
+
+        const diffs = findDiffBlocks(result);
+        if (diffs.length === 0) {
+          this.toastService.success("兩份文字內容完全一致！", 3000);
+        } else {
+          this.toastService.info(`比對完成，共發現 ${diffs.length} 處差異。`, 3000);
+        }
       } catch (error) {
         if (generation !== this.compareGeneration) return;
         this.isComparing.set(false);
-        this.alertMessage.set(
+        const errorMsg =
           error instanceof DiffBudgetExceededError
             ? "差異過於複雜，請縮小文字範圍後再比較。"
-            : "比對過程中發生錯誤。",
-        );
+            : "比對過程中發生錯誤。";
+        this.alertMessage.set(errorMsg);
       }
     }, 0);
   }

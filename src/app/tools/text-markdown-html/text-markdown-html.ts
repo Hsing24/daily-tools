@@ -5,6 +5,7 @@ import { ToolBreadcrumb } from "../../shared/ui/tool-breadcrumb/tool-breadcrumb"
 import { ToolHeader } from "../../shared/ui/tool-header/tool-header";
 import { ToolPanel } from "../../shared/ui/tool-panel/tool-panel";
 import { ToolRadioGroup } from "../../shared/ui/tool-radio-group/tool-radio-group";
+import { ToastService } from "../../shared/services/toast.service";
 import {
   convertTextToMarkdownAndHtml,
   convertHtmlToMarkdown,
@@ -29,6 +30,7 @@ import {
 })
 export class TextMarkdownHtml {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toastService = inject(ToastService);
   protected readonly sourceText = signal("");
   protected readonly isProcessing = signal(false);
   protected readonly clipboardAlert = signal("");
@@ -183,6 +185,7 @@ export class TextMarkdownHtml {
       await navigator.clipboard.writeText(markdown);
       if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyMarkdownStatus.set("已複製！");
+      this.toastService.success("已複製 Markdown 格式至剪貼簿！", 3000);
       this.markdownCopyTimer = setTimeout(() => {
         this.copyMarkdownStatus.set("");
         this.markdownCopyTimer = undefined;
@@ -190,6 +193,7 @@ export class TextMarkdownHtml {
     } catch (err) {
       if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyMarkdownStatus.set("複製失敗");
+      this.toastService.error("複製失敗，請手動選取複製。", 3000);
     }
   }
 
@@ -209,6 +213,7 @@ export class TextMarkdownHtml {
       await navigator.clipboard.writeText(html);
       if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyHtmlStatus.set("已複製！");
+      this.toastService.success("已複製 HTML 格式至剪貼簿！", 3000);
       this.htmlCopyTimer = setTimeout(() => {
         this.copyHtmlStatus.set("");
         this.htmlCopyTimer = undefined;
@@ -216,6 +221,7 @@ export class TextMarkdownHtml {
     } catch (err) {
       if (revision !== this.revision || this.destroyRef.destroyed) return;
       this.copyHtmlStatus.set("複製失敗");
+      this.toastService.error("複製失敗，請手動選取複製。", 3000);
     }
   }
 

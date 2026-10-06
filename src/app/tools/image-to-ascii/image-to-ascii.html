@@ -116,7 +116,7 @@
         @if (activeTab() === 'preview') {
         <div
           [class.pr:340]="showSettings()"
-          class="flex:1 d:flex align-items:center justify-content:center bg:#050e1c p:16 overflow:auto transition:padding-right|0.25s|ease-in-out"
+          class="flex:1 d:flex align-items:center justify-content:center bg:var(--canvas-deep) p:16 overflow:auto transition:padding-right|0.25s|ease-in-out"
         >
           <div
             class="max-w:100% max-h:100% d:flex justify-content:center align-items:center"
@@ -133,7 +133,7 @@
         @if (activeTab() === 'code') {
         <div
           [class.pr:340]="showSettings()"
-          class="flex:1 d:flex flex:col p:16 bg:#050e1c gap:12 overflow-y:auto transition:padding-right|0.25s|ease-in-out"
+          class="flex:1 d:flex flex:col p:16 bg:var(--canvas-deep) gap:12 overflow-y:auto transition:padding-right|0.25s|ease-in-out"
         >
           <div
             class="d:flex justify-content:space-between align-items:center flex:wrap gap:8"
