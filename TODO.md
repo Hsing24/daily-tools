@@ -15,6 +15,7 @@
 - [x] 密碼產生器 (password-generator)：可以自訂強度。
 
 ## 圖片與視覺
+- [x] 圖片抖色工具 (image-dither)：誤差擴散與 Bayer 點陣，雙色／彩色減色與原尺寸 PNG 匯出。
 - [x] image converter (image-converter)：將圖片轉換為不同格式。
 - [x] SVG draw (svg-draw)：將上傳的點陣圖繪製呈 SVG 圖形。
 - [x] image-to-ascii (image-to-ascii)：將圖片轉換為 ASCII 藝術圖形與動態播放器。

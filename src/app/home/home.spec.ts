@@ -36,6 +36,7 @@ describe('Home', () => {
     expect(links).toContain('/text-markdown-html');
     expect(links).toContain('/diff-checker');
     expect(links).toContain('/image-converter');
+    expect(links).toContain('/image-dither');
     expect(links).toContain('/svg-draw');
     expect(links).toContain('/image-to-ascii');
     expect(links).toContain('/depth-estimator');

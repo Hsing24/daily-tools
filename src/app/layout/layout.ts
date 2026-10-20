@@ -92,6 +92,15 @@ export class Layout {
           keywords: ["image-converter", "image", "converter"],
         },
         {
+          label: "圖片抖色工具",
+          route: "image-dither",
+          available: true,
+          keywords: [
+            "image-dither", "image", "dither", "dithering", "抖色", "點陣",
+            "像素", "bayer", "floyd-steinberg",
+          ],
+        },
+        {
           label: "SVG 描圖",
           route: "svg-draw",
           available: true,

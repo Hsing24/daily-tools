@@ -31,6 +31,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "image-dither",
+        loadComponent: () =>
+          import("./tools/image-dither/image-dither").then((m) => m.ImageDither),
+      },
+      {
         path: "svg-draw",
         loadComponent: () =>
           import("./tools/svg-draw/svg-draw").then((m) => m.SvgDraw),
